@@ -68,7 +68,9 @@ jobs:
               echo '$SSH_PASS' | sudo -S usermod -aG docker $SSH_USER
               rm get-docker.sh
             fi
-
+            
+            # Ensure deployment directory exists
+            mkdir -p $DEPLOY_PATH
             cd $DEPLOY_PATH
             # Fix permissions (Docker containers might have created files as root)
             echo '$SSH_PASS' | sudo -S chown -R $SSH_USER:$SSH_USER .
