@@ -73,7 +73,13 @@ jobs:
 
           sshpass -p "$SSH_PASS" ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
             # Ensure deployment directory exists
-            mkdir -p $DEPLOY_PATH
+            if [ ! -d \"$DEPLOY_PATH/.git\" ]; then
+              echo \"Repository not found at $DEPLOY_PATH. Cloning...\"
+              echo '$SSH_PASS' | sudo -S mkdir -p $DEPLOY_PATH
+              echo '$SSH_PASS' | sudo -S chown -R $SSH_USER:$SSH_USER $DEPLOY_PATH
+              git clone -b prod https://github.com/kimlong8892/goouty_backend_api.git $DEPLOY_PATH
+            fi
+
             cd $DEPLOY_PATH
             # Fix permissions (Docker containers might have created files as root)
             echo '$SSH_PASS' | sudo -S chown -R $SSH_USER:$SSH_USER .
