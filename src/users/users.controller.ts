@@ -4,6 +4,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { UploadAvatarResponseDto, DeleteAvatarResponseDto } from './dto/upload-avatar-response.dto';
 
 @ApiTags('Users')
@@ -11,7 +12,7 @@ import { UploadAvatarResponseDto, DeleteAvatarResponseDto } from './dto/upload-a
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Get('profile')
   @ApiOperation({ summary: 'Get user profile' })
@@ -66,5 +67,16 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async deleteAvatar(@Request() req): Promise<DeleteAvatarResponseDto> {
     return this.usersService.deleteAvatar(req.user.userId);
+  }
+
+  @Post('change-password')
+  @ApiOperation({ summary: 'Change user password' })
+  @ApiResponse({ status: 200, description: 'Password successfully changed' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  async changePassword(
+    @Request() req,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    return this.usersService.changePassword(req.user.userId, changePasswordDto);
   }
 }

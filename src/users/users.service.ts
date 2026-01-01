@@ -2,13 +2,15 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
   constructor(
     private prisma: PrismaService,
     private uploadService: UploadService,
-  ) {}
+  ) { }
 
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -21,6 +23,7 @@ export class UsersService {
         profilePicture: true,
         bankId: true,
         bankNumber: true,
+        password: true, // Temporarily select to check if exists
         createdAt: true,
         updatedAt: true,
       },
@@ -30,7 +33,12 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    return user;
+    // Return profile with hasPassword flag, but don't expose the actual password
+    const { password, ...profileData } = user;
+    return {
+      ...profileData,
+      hasPassword: !!password, // Convert to boolean
+    };
   }
 
   async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
@@ -174,6 +182,78 @@ export class UsersService {
       data: {
         user: updatedUser,
       },
+    };
+  }
+
+  async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
+    const { currentPassword, newPassword, confirmPassword } = changePasswordDto;
+
+    // Validate new password and confirmation match
+    if (newPassword !== confirmPassword) {
+      throw new BadRequestException('Mật khẩu mới và xác nhận mật khẩu không khớp');
+    }
+
+    // Validate new password length
+    if (newPassword.length < 6) {
+      throw new BadRequestException('Mật khẩu mới phải có ít nhất 6 ký tự');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy người dùng');
+    }
+
+    // Case 1: User has no password (registered via Google/Social login)
+    if (!user.password) {
+      // Allow them to set a password without providing current password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          password: hashedPassword,
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Đặt mật khẩu thành công. Bạn có thể sử dụng mật khẩu này để đăng nhập.',
+        isNewPassword: true,
+      };
+    }
+
+    // Case 2: User has existing password - must provide current password
+    if (!currentPassword) {
+      throw new BadRequestException('Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu');
+    }
+
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      throw new BadRequestException('Mật khẩu hiện tại không chính xác. Vui lòng kiểm tra lại.');
+    }
+
+    // Check if new password is same as current password
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      throw new BadRequestException('Mật khẩu mới không được trùng với mật khẩu hiện tại');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Đổi mật khẩu thành công',
+      isNewPassword: false,
     };
   }
 }
