@@ -12,6 +12,7 @@ services:
     env_file:
       - .env.dev
     environment:
+      NODE_ENV: development
       REDIS_HOST: redis
       REDIS_PORT: 6379
     volumes:
@@ -31,38 +32,38 @@ services:
       retries: 3
       start_period: 40s
 
-  # db:
-  #   image: postgres:15
-  #   container_name: db_dev
-  #   restart: unless-stopped
-  #   ports:
-  #     - "5433:5432"
-  #   environment:
-  #     POSTGRES_USER: admin
-  #     POSTGRES_PASSWORD: Admin123
-  #     POSTGRES_DB: goouty
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U admin -d goouty"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
+  db:
+    image: postgres:15
+    container_name: db_dev
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: Admin123
+      POSTGRES_DB: goouty
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d goouty"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: redis_dev
-  #   restart: unless-stopped
-  #   ports:
-  #     - "6380:6379"
-  #   volumes:
-  #     - redis_data:/data
-  #   command: redis-server --appendonly yes --appendfsync everysec --save 900 1 --save 300 10 --save 60 10000
-  #   healthcheck:
-  #     test: ["CMD", "redis-cli", "ping"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
+  redis:
+    image: redis:7-alpine
+    container_name: redis_dev
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --appendfsync everysec --save 900 1 --save 300 10 --save 60 10000
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # dozzle:
   #   image: amir20/dozzle:latest
@@ -76,8 +77,9 @@ services:
   #   restart: unless-stopped
 
 volumes:
-  # postgres_data:
-  # redis_data:
+  postgres_data:
+  pgadmin_data:
+  redis_data:
   node_modules_dev:
 
 networks:
