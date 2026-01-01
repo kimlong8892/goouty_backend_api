@@ -56,6 +56,18 @@ jobs:
           [ -z "$DEPLOY_PATH" ] && DEPLOY_PATH="${{ secrets.DEPLOY_PATH_DEV }}"
 
           sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o "ProxyCommand=cloudflared access ssh --hostname %h" $SSH_USER@$SSH_HOST "
+            # Auto-install Docker if missing
+            if ! command -v docker &> /dev/null; then
+              echo 'Docker not found. Installing...'
+              if ! command -v curl &> /dev/null; then
+                echo '$SSH_PASS' | sudo -S apt-get update && echo '$SSH_PASS' | sudo -S apt-get install -y curl
+              fi
+              curl -fsSL https://get.docker.com -o get-docker.sh
+              echo '$SSH_PASS' | sudo -S sh get-docker.sh
+              echo '$SSH_PASS' | sudo -S usermod -aG docker $SSH_USER
+              rm get-docker.sh
+            fi
+
             cd $DEPLOY_PATH
             # Fix permissions (Docker containers might have created files as root)
             echo '$SSH_PASS' | sudo -S chown -R $SSH_USER:$SSH_USER .
