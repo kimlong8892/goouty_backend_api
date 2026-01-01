@@ -15,9 +15,16 @@ jobs:
 
       - name: Install cloudflared, sshpass and jq
         run: |
-          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-          sudo dpkg -i cloudflared.deb
           sudo apt-get update && sudo apt-get install -y sshpass jq
+          
+          # Check if Cloudflare is needed (reading from appropriate env.json)
+          USE_CLOUDFLARE_SSH=$(grep USE_CLOUDFLARE_SSH .github/env-config/dev/env.json | awk -F'"' '{print $4}')
+          if [ "$USE_CLOUDFLARE_SSH" = "true" ]; then
+            echo "Installing cloudflared..."
+            curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+            sudo dpkg -i cloudflared.deb
+            rm cloudflared.deb
+          fi
 
       - name: Generate .env.dev
         id: gen_env
@@ -65,16 +72,22 @@ jobs:
           fi
 
           sshpass -p "$SSH_PASS" ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
-            # Auto-install Docker if missing
-            if ! command -v docker &> /dev/null; then
-              echo 'Docker not found. Installing...'
-              if ! command -v curl &> /dev/null; then
-                echo '$SSH_PASS' | sudo -S apt-get update && echo '$SSH_PASS' | sudo -S apt-get install -y curl
-              fi
-              curl -fsSL https://get.docker.com -o get-docker.sh
-              echo '$SSH_PASS' | sudo -S sh get-docker.sh
+            # Auto-install Docker and Docker Compose if missing
+            if ! command -v docker &> /dev/null || ! command -v docker-compose &> /dev/null; then
+              echo 'Docker or Docker Compose not found. Installing...'
+              echo '$SSH_PASS' | sudo -S apt-get update -y
+              echo '$SSH_PASS' | sudo -S apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | echo '$SSH_PASS' | sudo -S apt-key add -
+              echo '$SSH_PASS' | sudo -S add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable" -y
+              echo '$SSH_PASS' | sudo -S apt-get update -y
+              echo '$SSH_PASS' | sudo -S apt-get install -y docker-ce
+              
+              echo 'Installing Docker Compose v2.2.3...'
+              echo '$SSH_PASS' | sudo -S curl -L "https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-\$(uname -s)-\$(uname -m)" -o /usr/bin/docker-compose
+              echo '$SSH_PASS' | sudo -S chmod +x /usr/bin/docker-compose
+              
               echo '$SSH_PASS' | sudo -S usermod -aG docker $SSH_USER
-              rm get-docker.sh
+              echo '$SSH_PASS' | sudo -S systemctl start docker
             fi
             
             # Ensure deployment directory exists
