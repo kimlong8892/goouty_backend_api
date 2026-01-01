@@ -14,7 +14,7 @@ export class SocialLoginService {
     private configService: ConfigService,
     @Inject(forwardRef(() => TripsService))
     private tripsService: any, // Use any to avoid circular dependency type issues
-  ) {}
+  ) { }
 
   /**
    * Verify Google ID token and extract user information
@@ -24,7 +24,7 @@ export class SocialLoginService {
       // For development, we'll decode the JWT token
       // In production, you should verify with Google's servers using google-auth-library
       const decoded = jwt.decode(credential) as any;
-      
+
       if (!decoded || !decoded.sub || !decoded.email) {
         throw new UnauthorizedException('Invalid Google token');
       }
@@ -61,12 +61,13 @@ export class SocialLoginService {
    */
   async handleGoogleAuth(googleAuthDto: GoogleAuthDto): Promise<GoogleAuthResponseDto> {
     const { credential, googleId, email, fullName, picture } = googleAuthDto;
+    const normalizedEmail = email.toLowerCase();
 
     // Verify the Google token
     const googleUserInfo = await this.verifyGoogleToken(credential);
 
     // Validate that the provided data matches the token
-    if (googleUserInfo.googleId !== googleId || googleUserInfo.email !== email) {
+    if (googleUserInfo.googleId !== googleId || googleUserInfo.email.toLowerCase() !== normalizedEmail) {
       throw new UnauthorizedException('Token data mismatch');
     }
 
@@ -86,7 +87,7 @@ export class SocialLoginService {
     if (existingSocialAccount) {
       // User already exists, return token
       const token = this.generateToken(existingSocialAccount.user.id, existingSocialAccount.user.email);
-      
+
       return {
         id: existingSocialAccount.user.id,
         email: existingSocialAccount.user.email,
@@ -98,7 +99,7 @@ export class SocialLoginService {
 
     // Check if user with this email already exists
     const existingUser = await this.prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     let user;
@@ -107,12 +108,12 @@ export class SocialLoginService {
     if (existingUser) {
       // User exists but doesn't have Google account linked
       user = existingUser;
-      
+
       // Update user info if needed
       if (!user.fullName && fullName) {
         user = await this.prisma.user.update({
           where: { id: user.id },
-          data: { 
+          data: {
             fullName,
             profilePicture: picture || user.profilePicture,
           },
@@ -122,7 +123,7 @@ export class SocialLoginService {
       // Create new user
       user = await this.prisma.user.create({
         data: {
-          email,
+          email: normalizedEmail,
           fullName,
           profilePicture: picture,
           // password is null for social login users
@@ -136,7 +137,7 @@ export class SocialLoginService {
       data: {
         provider: 'google',
         providerId: googleId,
-        email,
+        email: normalizedEmail,
         name: fullName,
         picture,
         userId: user.id,
@@ -146,7 +147,7 @@ export class SocialLoginService {
     // Link pending trip invitations for this email (if new user)
     if (isNewUser) {
       try {
-        await (this.tripsService as any).linkPendingInvitationsByEmail(user.id, email);
+        await (this.tripsService as any).linkPendingInvitationsByEmail(user.id, normalizedEmail);
       } catch (error) {
         // Log but don't fail registration if linking invitations fails
         console.error('Failed to link pending invitations:', error);
@@ -250,7 +251,7 @@ export class SocialLoginService {
     try {
       const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
       const clientSecret = this.configService.get<string>('GOOGLE_CLIENT_SECRET');
-      
+
       if (!clientId || !clientSecret) {
         throw new UnauthorizedException('Google OAuth not configured');
       }

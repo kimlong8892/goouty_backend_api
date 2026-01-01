@@ -323,9 +323,10 @@ export class TripsService {
       throw new ForbiddenException('Only trip owner can add members');
     }
 
-    // Find user by email
+    // Find user by email (case-insensitive)
+    const normalizedEmail = addMemberDto.email.toLowerCase();
     const userToAdd = await this.prisma.user.findUnique({
-      where: { email: addMemberDto.email },
+      where: { email: normalizedEmail },
     });
 
     // Check if user is already a member (if user exists)
@@ -347,7 +348,10 @@ export class TripsService {
       const existingInvitation = await this.prisma.tripMember.findFirst({
         where: {
           tripId: tripId,
-          invitedEmail: addMemberDto.email,
+          invitedEmail: {
+            equals: normalizedEmail,
+            mode: 'insensitive'
+          },
           status: 'pending',
         },
       });
@@ -369,7 +373,7 @@ export class TripsService {
           inviteToken,
           invitedAt: new Date(),
           invitedById: requestUserId,
-          invitedEmail: addMemberDto.email, // Lưu email để link sau khi user đăng ký
+          invitedEmail: normalizedEmail, // Lưu email đã lowercase để link sau khi user đăng ký
         },
         include: {
           user: userToAdd ? {
@@ -395,7 +399,7 @@ export class TripsService {
         console.error('APP_URL is not set in environment variables');
       }
       void this.emailService.sendTripInviteEmail({
-        toEmail: addMemberDto.email,
+        toEmail: normalizedEmail,
         inviteeName: userToAdd?.fullName || addMemberDto.email.split('@')[0],
         tripTitle: trip.title,
         inviterName: inviter?.fullName || inviter?.email,
@@ -423,7 +427,7 @@ export class TripsService {
           profilePicture: userToAdd.profilePicture,
         } : {
           id: null,
-          email: addMemberDto.email,
+          email: normalizedEmail,
           fullName: null,
           profilePicture: null,
         },
@@ -813,10 +817,26 @@ export class TripsService {
    * Link pending invitations by email when user registers/logs in
    */
   async linkPendingInvitationsByEmail(userId: string, email: string) {
-    // Find all pending invitations for this email
+    const normalizedEmail = email.toLowerCase();
+    // Find all pending invitations for this email (case-insensitive)
     const pendingInvitations = await this.prisma.tripMember.findMany({
       where: {
-        invitedEmail: email,
+        OR: [
+          {
+            invitedEmail: {
+              equals: normalizedEmail,
+              mode: 'insensitive'
+            }
+          },
+          {
+            user: {
+              email: {
+                equals: normalizedEmail,
+                mode: 'insensitive'
+              }
+            }
+          }
+        ],
         status: 'pending',
         userId: null, // Only link invitations that don't have userId yet
       },

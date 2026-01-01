@@ -23,11 +23,12 @@ export class AuthService {
   ) { }
 
   async register(registerDto: RegisterDto) {
-    const { email, password, fullName } = registerDto;
+    const { password, fullName } = registerDto;
+    const normalizedEmail = registerDto.email.toLowerCase();
 
     // Check if user already exists
     const existingUser = await this.prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     if (existingUser) {
@@ -41,10 +42,10 @@ export class AuthService {
 
     // Create new user - use upsert to prevent race conditions
     const user = await this.prisma.user.upsert({
-      where: { email },
+      where: { email: normalizedEmail },
       update: {}, // No update if exists
       create: {
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
         fullName,
       },
@@ -52,7 +53,7 @@ export class AuthService {
 
     // Link pending trip invitations for this email
     try {
-      await (this.tripsService as any).linkPendingInvitationsByEmail(user.id, email);
+      await (this.tripsService as any).linkPendingInvitationsByEmail(user.id, normalizedEmail);
     } catch (error) {
       // Log but don't fail registration if linking invitations fails
       console.error('Failed to link pending invitations:', error);
@@ -70,11 +71,12 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const { email, password } = loginDto;
+    const normalizedEmail = loginDto.email.toLowerCase();
+    const { password } = loginDto;
 
     // Find user by email
     const user = await this.prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     if (!user) {
@@ -111,8 +113,9 @@ export class AuthService {
   }
 
   async validateUser(email: string, password: string) {
+    const normalizedEmail = email.toLowerCase();
     const user = await this.prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     if (user && user.password && await bcrypt.compare(password, user.password)) {
