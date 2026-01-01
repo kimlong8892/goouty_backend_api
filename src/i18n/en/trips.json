@@ -1,0 +1,35 @@
+{
+    "trip": {
+        "created": "Trip created successfully",
+        "updated": "Trip updated successfully",
+        "deleted": "Trip deleted successfully",
+        "notFound": "Trip not found",
+        "listSuccess": "Trips retrieved successfully",
+        "detailSuccess": "Trip details retrieved successfully"
+    },
+    "day": {
+        "created": "Day added to trip",
+        "updated": "Day updated successfully",
+        "deleted": "Day deleted successfully",
+        "notFound": "Day not found"
+    },
+    "activity": {
+        "created": "Activity added successfully",
+        "updated": "Activity updated successfully",
+        "deleted": "Activity deleted successfully",
+        "notFound": "Activity not found"
+    },
+    "expense": {
+        "created": "Expense added successfully",
+        "updated": "Expense updated successfully",
+        "deleted": "Expense deleted successfully",
+        "notFound": "Expense not found"
+    },
+    "template": {
+        "created": "Trip template created successfully",
+        "updated": "Trip template updated successfully",
+        "deleted": "Trip template deleted successfully",
+        "notFound": "Trip template not found",
+        "applied": "Template applied successfully"
+    }
+}

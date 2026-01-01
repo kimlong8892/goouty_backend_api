@@ -1,0 +1,597 @@
+import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('🌱 Starting demo data seeding...');
+
+  // Create demo user
+  const hashedPassword = await bcrypt.hash('demo123', 10);
+  
+  const demoUser = await prisma.user.upsert({
+    where: { email: 'longshare9201@gmail.com' },
+    update: {},
+    create: {
+      email: 'longshare9201@gmail.com',
+      password: hashedPassword,
+      fullName: 'Demo User',
+      phoneNumber: '0123456789',
+      notificationsEnabled: true,
+    },
+  });
+
+  console.log('✅ Demo user created:', demoUser.email);
+
+  // Create additional users for trips with natural names
+  const additionalUsers: any[] = [];
+  const userNames = [
+    'Nguyễn Văn An', 'Trần Thị Bình', 'Lê Minh Cường', 'Phạm Thị Dung', 'Hoàng Văn Em',
+    'Vũ Thị Phương', 'Đặng Minh Giang', 'Bùi Thị Hoa', 'Ngô Văn Ích', 'Dương Thị Kim'
+  ];
+  
+  for (let i = 0; i < 10; i++) {
+    const hashedPassword = await bcrypt.hash('demo123', 10);
+    const user = await prisma.user.upsert({
+      where: { email: `user${i + 1}@demo.com` },
+      update: {},
+      create: {
+        email: `user${i + 1}@demo.com`,
+        password: hashedPassword,
+        fullName: userNames[i],
+        phoneNumber: `012345678${i + 1}`,
+        notificationsEnabled: true,
+      },
+    });
+    additionalUsers.push(user);
+  }
+
+  console.log('✅ Additional users created:', additionalUsers.length);
+
+  // Get some provinces for trips
+  const hanoi = await prisma.province.findFirst({
+    where: { codename: 'thanh_pho_ha_noi' }
+  });
+  
+  const hcm = await prisma.province.findFirst({
+    where: { codename: 'thanh_pho_ho_chi_minh' }
+  });
+
+  const danang = await prisma.province.findFirst({
+    where: { codename: 'thanh_pho_da_nang' }
+  });
+
+  const hoiAn = await prisma.province.findFirst({
+    where: { codename: 'tinh_quang_nam' }
+  });
+
+  const hue = await prisma.province.findFirst({
+    where: { codename: 'tinh_thua_thien_hue' }
+  });
+
+  const nhaTrang = await prisma.province.findFirst({
+    where: { codename: 'tinh_khanh_hoa' }
+  });
+
+  const phuQuoc = await prisma.province.findFirst({
+    where: { codename: 'tinh_kien_giang' }
+  });
+
+  const sapa = await prisma.province.findFirst({
+    where: { codename: 'tinh_lao_cai' }
+  });
+
+  // Create 20 trips with different destinations and durations
+  const tripData = [
+    {
+      title: 'Khám phá Hà Nội 3 ngày 2 đêm',
+      description: 'Chuyến du lịch khám phá thủ đô Hà Nội với những địa điểm nổi tiếng',
+      provinceId: hanoi?.id,
+      startDate: new Date('2024-12-15'),
+      endDate: new Date('2024-12-17'),
+      shareToken: 'hanoi-demo-2024',
+      avatar: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Du lịch Sài Gòn 2 ngày 1 đêm',
+      description: 'Khám phá thành phố Hồ Chí Minh sôi động',
+      provinceId: hcm?.id,
+      startDate: new Date('2024-12-20'),
+      endDate: new Date('2024-12-21'),
+      shareToken: 'saigon-demo-2024',
+      avatar: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Du lịch Đà Nẵng - Hội An 4 ngày 3 đêm',
+      description: 'Khám phá miền Trung với Đà Nẵng và Hội An cổ kính',
+      provinceId: danang?.id,
+      startDate: new Date('2024-12-25'),
+      endDate: new Date('2024-12-28'),
+      shareToken: 'danang-hoian-demo-2024',
+      avatar: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Nghỉ dưỡng Nha Trang 5 ngày 4 đêm',
+      description: 'Tận hưởng biển đẹp và ẩm thực hải sản',
+      provinceId: nhaTrang?.id,
+      startDate: new Date('2025-01-05'),
+      endDate: new Date('2025-01-09'),
+      shareToken: 'nhatrang-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Khám phá Huế 3 ngày 2 đêm',
+      description: 'Tìm hiểu cố đô Huế với kiến trúc cổ kính',
+      provinceId: hue?.id,
+      startDate: new Date('2025-01-12'),
+      endDate: new Date('2025-01-14'),
+      shareToken: 'hue-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Du lịch Phú Quốc 4 ngày 3 đêm',
+      description: 'Thiên đường biển đảo với bãi biển tuyệt đẹp',
+      provinceId: phuQuoc?.id,
+      startDate: new Date('2025-01-20'),
+      endDate: new Date('2025-01-23'),
+      shareToken: 'phuquoc-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Sapa trekking 3 ngày 2 đêm',
+      description: 'Khám phá vùng núi Tây Bắc và văn hóa dân tộc',
+      provinceId: sapa?.id,
+      startDate: new Date('2025-01-28'),
+      endDate: new Date('2025-01-30'),
+      shareToken: 'sapa-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Hà Nội - Hạ Long 4 ngày 3 đêm',
+      description: 'Kết hợp thủ đô và vịnh Hạ Long kỳ quan',
+      provinceId: hanoi?.id,
+      startDate: new Date('2025-02-05'),
+      endDate: new Date('2025-02-08'),
+      shareToken: 'hanoi-halong-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'TP.HCM - Cần Thơ 3 ngày 2 đêm',
+      description: 'Khám phá miền Tây sông nước',
+      provinceId: hcm?.id,
+      startDate: new Date('2025-02-12'),
+      endDate: new Date('2025-02-14'),
+      shareToken: 'saigon-cantho-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Đà Nẵng - Bà Nà Hills 2 ngày 1 đêm',
+      description: 'Tham quan khu du lịch Bà Nà Hills',
+      provinceId: danang?.id,
+      startDate: new Date('2025-02-18'),
+      endDate: new Date('2025-02-19'),
+      shareToken: 'danang-bana-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Hội An - Cù Lao Chàm 3 ngày 2 đêm',
+      description: 'Phố cổ Hội An và đảo Cù Lao Chàm',
+      provinceId: hoiAn?.id,
+      startDate: new Date('2025-02-25'),
+      endDate: new Date('2025-02-27'),
+      shareToken: 'hoian-culaocham-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Nha Trang - Đà Lạt 5 ngày 4 đêm',
+      description: 'Biển và núi - hai trong một',
+      provinceId: nhaTrang?.id,
+      startDate: new Date('2025-03-05'),
+      endDate: new Date('2025-03-09'),
+      shareToken: 'nhatrang-dalat-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Huế - Lăng Cô 3 ngày 2 đêm',
+      description: 'Cố đô Huế và bãi biển Lăng Cô',
+      provinceId: hue?.id,
+      startDate: new Date('2025-03-12'),
+      endDate: new Date('2025-03-14'),
+      shareToken: 'hue-langco-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Phú Quốc - Rừng U Minh 4 ngày 3 đêm',
+      description: 'Đảo ngọc và rừng U Minh Thượng',
+      provinceId: phuQuoc?.id,
+      startDate: new Date('2025-03-20'),
+      endDate: new Date('2025-03-23'),
+      shareToken: 'phuquoc-uminh-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Sapa - Bắc Hà 4 ngày 3 đêm',
+      description: 'Khám phá vùng cao Tây Bắc',
+      provinceId: sapa?.id,
+      startDate: new Date('2025-03-28'),
+      endDate: new Date('2025-03-31'),
+      shareToken: 'sapa-bacha-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Hà Nội - Mai Châu 2 ngày 1 đêm',
+      description: 'Thung lũng Mai Châu xanh mát',
+      provinceId: hanoi?.id,
+      startDate: new Date('2025-04-05'),
+      endDate: new Date('2025-04-06'),
+      shareToken: 'hanoi-maichau-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'TP.HCM - Vũng Tàu 2 ngày 1 đêm',
+      description: 'Biển Vũng Tàu gần Sài Gòn',
+      provinceId: hcm?.id,
+      startDate: new Date('2025-04-12'),
+      endDate: new Date('2025-04-13'),
+      shareToken: 'saigon-vungtau-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Đà Nẵng - Hội An - Huế 5 ngày 4 đêm',
+      description: 'Tour miền Trung trọn gói',
+      provinceId: danang?.id,
+      startDate: new Date('2025-04-20'),
+      endDate: new Date('2025-04-24'),
+      shareToken: 'mientrung-tron-goi-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Nha Trang - Cam Ranh 3 ngày 2 đêm',
+      description: 'Biển Nha Trang và sân bay Cam Ranh',
+      provinceId: nhaTrang?.id,
+      startDate: new Date('2025-04-28'),
+      endDate: new Date('2025-04-30'),
+      shareToken: 'nhatrang-camranh-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+    {
+      title: 'Phú Quốc - Hòn Thơm 4 ngày 3 đêm',
+      description: 'Đảo Phú Quốc và Hòn Thơm Paradise',
+      provinceId: phuQuoc?.id,
+      startDate: new Date('2025-05-05'),
+      endDate: new Date('2025-05-08'),
+      shareToken: 'phuquoc-honthom-demo-2025',
+      avatar: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop&auto=format&q=80',
+    },
+  ];
+
+  // Create all trips
+  const trips: any[] = [];
+  for (const tripInfo of tripData) {
+    const trip = await prisma.trip.create({
+      data: {
+        ...tripInfo,
+      userId: demoUser.id,
+      isPublic: true,
+    },
+  });
+    trips.push(trip);
+    console.log(`✅ Trip created: ${trip.title}`);
+  }
+
+  // Add TripMembers for all trips (demo user + 10 additional users)
+  const allTripMembers: any[] = [];
+  for (const trip of trips) {
+    const tripMembers = [demoUser, ...additionalUsers];
+    allTripMembers.push(tripMembers);
+    
+    for (const user of tripMembers) {
+      await prisma.tripMember.create({
+    data: {
+          userId: user.id,
+          tripId: trip.id,
+          status: 'accepted',
+          joinedAt: new Date(),
+    },
+  });
+    }
+    console.log(`✅ Added ${tripMembers.length} members to ${trip.title}`);
+  }
+
+  // Create expenses and settlements for all 20 trips
+  console.log('💰 Creating expenses and settlements for all trips...');
+  
+  for (let tripIndex = 0; tripIndex < trips.length; tripIndex++) {
+    const trip = trips[tripIndex];
+    const members = allTripMembers[tripIndex];
+    
+    // Generate 30-35 expenses per trip with even amounts
+    const expenseTypes = [
+      { title: 'Khách sạn', baseAmount: 2000000, description: 'Chi phí khách sạn cho cả nhóm' },
+      { title: 'Ăn sáng', baseAmount: 200000, description: 'Bữa sáng tại khách sạn' },
+      { title: 'Ăn trưa', baseAmount: 800000, description: 'Bữa trưa tại nhà hàng địa phương' },
+      { title: 'Ăn tối', baseAmount: 1000000, description: 'Bữa tối tại nhà hàng' },
+      { title: 'Vé tham quan', baseAmount: 1200000, description: 'Vé vào các địa điểm tham quan' },
+      { title: 'Taxi/Grab', baseAmount: 600000, description: 'Chi phí di chuyển' },
+      { title: 'Xăng xe', baseAmount: 500000, description: 'Chi phí xăng xe thuê' },
+      { title: 'Mua sắm', baseAmount: 1500000, description: 'Mua quà lưu niệm' },
+      { title: 'Bảo hiểm du lịch', baseAmount: 300000, description: 'Bảo hiểm du lịch' },
+      { title: 'Hướng dẫn viên', baseAmount: 800000, description: 'Thuê hướng dẫn viên' },
+      { title: 'Vé máy bay', baseAmount: 3000000, description: 'Vé máy bay khứ hồi' },
+      { title: 'Vé tàu', baseAmount: 1200000, description: 'Vé tàu hỏa' },
+      { title: 'Vé xe khách', baseAmount: 800000, description: 'Vé xe khách' },
+      { title: 'Thuê xe máy', baseAmount: 400000, description: 'Thuê xe máy tham quan' },
+      { title: 'Thuê xe đạp', baseAmount: 200000, description: 'Thuê xe đạp' },
+      { title: 'Massage', baseAmount: 600000, description: 'Massage thư giãn' },
+      { title: 'Spa', baseAmount: 1000000, description: 'Dịch vụ spa' },
+      { title: 'Karaoke', baseAmount: 500000, description: 'Karaoke giải trí' },
+      { title: 'Bar/Club', baseAmount: 800000, description: 'Chi phí bar/club' },
+      { title: 'Cà phê', baseAmount: 300000, description: 'Cà phê thư giãn' },
+      { title: 'Trà sữa', baseAmount: 150000, description: 'Trà sữa giải khát' },
+      { title: 'Bánh kẹo', baseAmount: 200000, description: 'Bánh kẹo đặc sản' },
+      { title: 'Hoa quả', baseAmount: 250000, description: 'Hoa quả tươi' },
+      { title: 'Nước uống', baseAmount: 100000, description: 'Nước uống giải khát' },
+      { title: 'Thuốc men', baseAmount: 200000, description: 'Thuốc men y tế' },
+      { title: 'Giặt ủi', baseAmount: 150000, description: 'Dịch vụ giặt ủi' },
+      { title: 'Internet', baseAmount: 100000, description: 'Chi phí internet' },
+      { title: 'Điện thoại', baseAmount: 200000, description: 'Chi phí điện thoại' },
+      { title: 'Tip', baseAmount: 100000, description: 'Tiền tip dịch vụ' },
+      { title: 'Phí phát sinh', baseAmount: 300000, description: 'Các chi phí phát sinh khác' },
+    ];
+
+    const expenses: any[] = [];
+    const numExpenses = 30 + Math.floor(Math.random() * 6); // 30-35 expenses
+    
+    for (let i = 0; i < numExpenses; i++) {
+      const expenseType = expenseTypes[Math.floor(Math.random() * expenseTypes.length)];
+      const variation = 0.8 + Math.random() * 0.4; // ±20% variation
+      const amount = Math.round(expenseType.baseAmount * variation / 1000) * 1000; // Round to nearest 1000
+      
+      expenses.push({
+        title: expenseType.title,
+        amount: amount,
+        date: new Date(trip.startDate!.getTime() + Math.random() * (trip.endDate!.getTime() - trip.startDate!.getTime())),
+        description: expenseType.description,
+        payerId: members[Math.floor(Math.random() * members.length)].id,
+        participantIds: members.map(m => m.id),
+      });
+    }
+
+    // Create expenses in database
+    for (const expenseData of expenses) {
+      const expense = await prisma.expense.create({
+    data: {
+          title: expenseData.title,
+          amount: expenseData.amount,
+          date: expenseData.date,
+          description: expenseData.description,
+          payerId: expenseData.payerId,
+          tripId: trip.id,
+    },
+  });
+
+      // Create ExpenseParticipant records for each participant
+      const amountPerPerson = Math.round(expenseData.amount / expenseData.participantIds.length / 1000) * 1000; // Round to nearest 1000
+      for (const participantId of expenseData.participantIds) {
+        await prisma.expenseParticipant.create({
+          data: {
+            expenseId: expense.id,
+            userId: participantId,
+            amount: amountPerPerson,
+          },
+        });
+      }
+    }
+    
+    console.log(`✅ Created ${expenses.length} expenses for ${trip.title}`);
+  }
+
+  // Create PaymentSettlements for all trips
+  console.log('💳 Creating payment settlements for all trips...');
+  
+  for (let tripIndex = 0; tripIndex < trips.length; tripIndex++) {
+    const trip = trips[tripIndex];
+    const members = allTripMembers[tripIndex];
+    
+    // Get all expenses for this trip
+    const tripExpenses = await prisma.expense.findMany({
+      where: { tripId: trip.id },
+      include: {
+        participants: true,
+        payer: true,
+      },
+    });
+
+    // Calculate net amounts for each user
+    const userBalances = new Map<string, number>();
+    
+    // Initialize balances
+    members.forEach(member => {
+      userBalances.set(member.id, 0);
+    });
+
+    // Calculate what each user paid vs what they owe
+    tripExpenses.forEach(expense => {
+      const payerId = expense.payerId;
+      const totalAmount = Number(expense.amount);
+      
+      // Add to payer's balance (they paid)
+      userBalances.set(payerId, userBalances.get(payerId)! + totalAmount);
+      
+      // Subtract from each participant's balance (they owe)
+      expense.participants.forEach(participant => {
+        const amountOwed = Number(participant.amount);
+        userBalances.set(participant.userId, userBalances.get(participant.userId)! - amountOwed);
+      });
+    });
+
+    // Create settlements between users
+    const settlements: any[] = [];
+    const balances = Array.from(userBalances.entries()).map(([userId, balance]) => ({
+      userId,
+      balance,
+      user: members.find(m => m.id === userId)!
+    }));
+
+    // Sort by balance (creditors first, then debtors)
+    balances.sort((a, b) => b.balance - a.balance);
+
+    let i = 0; // creditor index
+    let j = balances.length - 1; // debtor index
+
+    while (i < j) {
+      const creditor = balances[i];
+      const debtor = balances[j];
+
+      if (Math.abs(creditor.balance) < 0.01 && Math.abs(debtor.balance) < 0.01) {
+        break; // Both are settled
+      }
+
+      if (creditor.balance <= 0) {
+        i++;
+        continue;
+      }
+
+      if (debtor.balance >= 0) {
+        j--;
+        continue;
+      }
+
+      // Calculate settlement amount
+      const settlementAmount = Math.min(creditor.balance, Math.abs(debtor.balance));
+      
+      if (settlementAmount > 0.01) { // Only create if amount is significant
+        const settlement = await prisma.paymentSettlement.create({
+    data: {
+            amount: Math.round(settlementAmount / 1000) * 1000, // Round to nearest 1000
+            status: 'pending',
+            description: `${debtor.user.fullName} nợ ${creditor.user.fullName} ${Math.round(settlementAmount / 1000) * 1000} VND`,
+            tripId: trip.id,
+            creditorId: creditor.userId,
+            debtorId: debtor.userId,
+    },
+  });
+
+        settlements.push(settlement);
+        
+        // Update balances
+        creditor.balance -= settlementAmount;
+        debtor.balance += settlementAmount;
+      }
+
+      // Move to next pair if current one is settled
+      if (Math.abs(creditor.balance) < 0.01) i++;
+      if (Math.abs(debtor.balance) < 0.01) j--;
+    }
+    
+    console.log(`✅ Created ${settlements.length} payment settlements for ${trip.title}`);
+  }
+
+  console.log('🎉 Demo data seeding completed!');
+  console.log(`📊 Created:`);
+  console.log(`   - 11 users total (1 demo + 10 additional)`);
+  console.log(`   - 20 trips total`);
+  console.log(`   - 220 trip members (11 users × 20 trips)`);
+  console.log(`   - ${await prisma.expense.count()} expenses (30+ per trip)`);
+  console.log(`   - ${await prisma.paymentSettlement.count()} payment settlements`);
+  console.log(`   - All amounts rounded to nearest 1000 VND`);
+
+  // Create days and activities for all trips
+  console.log('📅 Creating days and activities for all trips...');
+  
+  for (let tripIndex = 0; tripIndex < trips.length; tripIndex++) {
+    const trip = trips[tripIndex];
+    const tripStartDate = new Date(trip.startDate!);
+    const tripEndDate = new Date(trip.endDate!);
+    const daysDiff = Math.ceil((tripEndDate.getTime() - tripStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    console.log(`📅 Creating ${daysDiff} days for ${trip.title}`);
+    
+    // Create days for the trip
+    const days: any[] = [];
+    for (let dayIndex = 0; dayIndex < daysDiff; dayIndex++) {
+      const dayDate = new Date(tripStartDate);
+      dayDate.setDate(dayDate.getDate() + dayIndex);
+      
+      const day = await prisma.day.create({
+        data: {
+          title: `Ngày ${dayIndex + 1}`,
+          description: `Ngày ${dayIndex + 1} của chuyến du lịch`,
+          date: dayDate,
+          startTime: new Date(dayDate.getTime() + 8 * 60 * 60 * 1000), // 8:00 AM
+          tripId: trip.id,
+        },
+      });
+      days.push(day);
+    }
+    
+    // Create activities for each day
+    const activityTemplates = [
+      { title: 'Ăn sáng', duration: 60, location: 'Khách sạn', notes: 'Bữa sáng tại khách sạn' },
+      { title: 'Tham quan địa điểm nổi tiếng', duration: 120, location: 'Địa điểm tham quan', notes: 'Khám phá địa điểm du lịch', important: true },
+      { title: 'Ăn trưa', duration: 90, location: 'Nhà hàng địa phương', notes: 'Thử ẩm thực địa phương' },
+      { title: 'Mua sắm', duration: 120, location: 'Chợ/Trung tâm thương mại', notes: 'Mua quà lưu niệm' },
+      { title: 'Tham quan bảo tàng', duration: 90, location: 'Bảo tàng', notes: 'Tìm hiểu văn hóa lịch sử' },
+      { title: 'Đi dạo phố cổ', duration: 60, location: 'Phố cổ', notes: 'Tận hưởng không khí cổ kính' },
+      { title: 'Ăn tối', duration: 90, location: 'Nhà hàng', notes: 'Bữa tối thư giãn' },
+      { title: 'Xem biểu diễn', duration: 120, location: 'Nhà hát/Sân khấu', notes: 'Thưởng thức nghệ thuật', important: true },
+      { title: 'Tắm biển', duration: 180, location: 'Bãi biển', notes: 'Thư giãn và tắm biển' },
+      { title: 'Leo núi', duration: 240, location: 'Núi', notes: 'Khám phá thiên nhiên', important: true },
+      { title: 'Tham quan chùa', duration: 60, location: 'Chùa', notes: 'Tìm hiểu tôn giáo' },
+      { title: 'Uống cà phê', duration: 45, location: 'Quán cà phê', notes: 'Thư giãn và trò chuyện' },
+      { title: 'Chụp ảnh', duration: 30, location: 'Địa điểm đẹp', notes: 'Lưu lại kỷ niệm' },
+      { title: 'Massage', duration: 90, location: 'Spa', notes: 'Thư giãn và chăm sóc sức khỏe' },
+      { title: 'Karaoke', duration: 120, location: 'Karaoke', notes: 'Giải trí và ca hát' },
+    ];
+    
+    for (let dayIndex = 0; dayIndex < days.length; dayIndex++) {
+      const day = days[dayIndex];
+      const dayDate = new Date(day.date);
+      
+      // Create 3-5 activities per day
+      const numActivities = 3 + Math.floor(Math.random() * 3); // 3-5 activities
+      let currentTime = new Date(dayDate.getTime() + 8 * 60 * 60 * 1000); // Start at 8:00 AM
+      
+      for (let activityIndex = 0; activityIndex < numActivities; activityIndex++) {
+        const template = activityTemplates[Math.floor(Math.random() * activityTemplates.length)];
+        const activity = await prisma.activity.create({
+          data: {
+            title: template.title,
+            startTime: new Date(currentTime),
+            durationMin: template.duration,
+            location: template.location,
+            notes: template.notes,
+            important: template.important || false,
+            dayId: day.id,
+          },
+        });
+
+        
+        // Move to next activity time
+        currentTime = new Date(currentTime.getTime() + template.duration * 60 * 1000 + 30 * 60 * 1000); // Add 30 min break
+      }
+    }
+    
+    console.log(`✅ Created ${days.length} days with activities for ${trip.title}`);
+  }
+  
+  console.log('🎉 Demo data seeding completed!');
+  console.log(`📊 Created:`);
+  console.log(`   - 11 users total (1 demo + 10 additional)`);
+  console.log(`   - 20 trips total`);
+  console.log(`   - 220 trip members (11 users × 20 trips)`);
+  console.log(`   - ${await prisma.expense.count()} expenses (30+ per trip)`);
+  console.log(`   - ${await prisma.paymentSettlement.count()} payment settlements`);
+  console.log(`   - ${await prisma.day.count()} days with activities`);
+  console.log(`   - ${await prisma.activity.count()} activities`);
+  console.log(`   - All amounts rounded to nearest 1000 VND`);
+}
+
+main()
+  .catch((e) => {
+    console.error('❌ Error seeding demo data:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

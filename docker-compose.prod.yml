@@ -1,0 +1,87 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: nestjs_app_prod
+    working_dir: /usr/src/app
+    ports:
+      - "3002:3000"
+    env_file:
+      - .env.prod
+    environment:
+      NODE_ENV: development
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - ./:/usr/src/app
+      - node_modules_prod:/usr/src/app/node_modules
+    command: npm run start:dev
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    image: postgres:15
+    container_name: db_prod
+    restart: unless-stopped
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: Admin123
+      POSTGRES_DB: goouty
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d goouty"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_prod
+    restart: unless-stopped
+    ports:
+      - "6381:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --appendfsync everysec --save 900 1 --save 300 10 --save 60 10000
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle_prod
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8890:8080"
+    environment:
+      DOZZLE_FILTER: "name=_prod"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  redis_data:
+  node_modules_prod:
+
+networks:
+  default:
+    name: goouty-network

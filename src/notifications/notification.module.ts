@@ -1,0 +1,33 @@
+import { Module, forwardRef } from '@nestjs/common';
+import { NotificationService } from './notification.service';
+import { EnhancedNotificationService } from './enhanced-notification.service';
+import { NotificationTemplateService } from './notification-template.service';
+import { NotificationController } from './notification.controller';
+import { PrismaModule } from '../prisma/prisma.module';
+import { DevicesModule } from '../devices/devices.module';
+import { EmailModule } from '../email/email.module';
+import { WebPushService } from './web-push.service';
+import { QueueModule } from '../queue/queue.module';
+
+@Module({
+  imports: [
+    PrismaModule, 
+    DevicesModule, 
+    EmailModule, 
+    forwardRef(() => QueueModule)
+  ],
+  providers: [
+    NotificationService, 
+    EnhancedNotificationService, 
+    NotificationTemplateService, 
+    WebPushService
+  ],
+  controllers: [NotificationController],
+  exports: [
+    NotificationService, 
+    EnhancedNotificationService, 
+    NotificationTemplateService, 
+    WebPushService
+  ],
+})
+export class NotificationModule {}

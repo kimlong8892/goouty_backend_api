@@ -1,0 +1,8 @@
+node_modules
+dist
+frontend/node_modules
+.env
+.env.dev
+.env.prod
+.env.local
+frontend/.env

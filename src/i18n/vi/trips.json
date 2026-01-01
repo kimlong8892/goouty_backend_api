@@ -1,0 +1,35 @@
+{
+    "trip": {
+        "created": "Chuyến đi đã được tạo thành công",
+        "updated": "Chuyến đi đã được cập nhật",
+        "deleted": "Chuyến đi đã được xóa",
+        "notFound": "Không tìm thấy chuyến đi",
+        "listSuccess": "Lấy danh sách chuyến đi thành công",
+        "detailSuccess": "Lấy chi tiết chuyến đi thành công"
+    },
+    "day": {
+        "created": "Ngày đã được thêm vào chuyến đi",
+        "updated": "Ngày đã được cập nhật",
+        "deleted": "Ngày đã được xóa",
+        "notFound": "Không tìm thấy ngày"
+    },
+    "activity": {
+        "created": "Hoạt động đã được thêm",
+        "updated": "Hoạt động đã được cập nhật",
+        "deleted": "Hoạt động đã được xóa",
+        "notFound": "Không tìm thấy hoạt động"
+    },
+    "expense": {
+        "created": "Chi phí đã được thêm",
+        "updated": "Chi phí đã được cập nhật",
+        "deleted": "Chi phí đã được xóa",
+        "notFound": "Không tìm thấy chi phí"
+    },
+    "template": {
+        "created": "Mẫu chuyến đi đã được tạo",
+        "updated": "Mẫu chuyến đi đã được cập nhật",
+        "deleted": "Mẫu chuyến đi đã được xóa",
+        "notFound": "Không tìm thấy mẫu chuyến đi",
+        "applied": "Áp dụng mẫu thành công"
+    }
+}

@@ -1,0 +1,25 @@
+{
+    "user": {
+        "created": "User created successfully",
+        "updated": "User information updated successfully",
+        "deleted": "User deleted successfully",
+        "notFound": "User not found",
+        "profileUpdated": "Profile updated successfully",
+        "avatarUpdated": "Avatar updated successfully",
+        "avatarDeleted": "Avatar deleted successfully"
+    },
+    "notification": {
+        "sent": "Notification sent successfully",
+        "read": "Marked as read successfully",
+        "deleted": "Notification deleted successfully",
+        "notFound": "Notification not found",
+        "settingsUpdated": "Notification settings updated successfully"
+    },
+    "upload": {
+        "success": "Upload successful",
+        "failed": "Upload failed",
+        "invalidFile": "Invalid file",
+        "fileTooLarge": "File too large",
+        "unsupportedFormat": "Unsupported file format"
+    }
+}

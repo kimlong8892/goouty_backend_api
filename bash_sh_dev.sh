@@ -1,0 +1,1 @@
+docker exec -ti nestjs_app_dev /bin/bash

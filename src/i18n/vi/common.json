@@ -1,0 +1,22 @@
+{
+    "success": "Thành công",
+    "error": "Lỗi",
+    "notFound": "Không tìm thấy",
+    "unauthorized": "Không có quyền truy cập",
+    "forbidden": "Bị cấm",
+    "badRequest": "Yêu cầu không hợp lệ",
+    "internalServerError": "Lỗi máy chủ nội bộ",
+    "created": "Tạo thành công",
+    "updated": "Cập nhật thành công",
+    "deleted": "Xóa thành công",
+    "validation": {
+        "required": "{field} là bắt buộc",
+        "invalid": "{field} không hợp lệ",
+        "tooShort": "{field} quá ngắn",
+        "tooLong": "{field} quá dài",
+        "min": "{field} phải lớn hơn hoặc bằng {min}",
+        "max": "{field} phải nhỏ hơn hoặc bằng {max}",
+        "email": "Email không hợp lệ",
+        "phone": "Số điện thoại không hợp lệ"
+    }
+}

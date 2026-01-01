@@ -1,0 +1,25 @@
+{
+    "user": {
+        "created": "Người dùng đã được tạo",
+        "updated": "Thông tin người dùng đã được cập nhật",
+        "deleted": "Người dùng đã được xóa",
+        "notFound": "Không tìm thấy người dùng",
+        "profileUpdated": "Cập nhật hồ sơ thành công",
+        "avatarUpdated": "Cập nhật ảnh đại diện thành công",
+        "avatarDeleted": "Xóa ảnh đại diện thành công"
+    },
+    "notification": {
+        "sent": "Thông báo đã được gửi",
+        "read": "Đánh dấu đã đọc thành công",
+        "deleted": "Thông báo đã được xóa",
+        "notFound": "Không tìm thấy thông báo",
+        "settingsUpdated": "Cài đặt thông báo đã được cập nhật"
+    },
+    "upload": {
+        "success": "Tải lên thành công",
+        "failed": "Tải lên thất bại",
+        "invalidFile": "File không hợp lệ",
+        "fileTooLarge": "File quá lớn",
+        "unsupportedFormat": "Định dạng file không được hỗ trợ"
+    }
+}

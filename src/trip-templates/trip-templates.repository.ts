@@ -1,0 +1,251 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateTripTemplateDto } from './dto/create-trip-template.dto';
+import { UpdateTripTemplateDto } from './dto/update-trip-template.dto';
+import { GetTripTemplatesQueryDto } from './dto/get-trip-templates-query.dto';
+
+@Injectable()
+export class TripTemplatesRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(data: CreateTripTemplateDto & { userId: string }) {
+    return this.prisma.tripTemplate.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        avatar: data.avatar,
+        provinceId: data.provinceId,
+        isPublic: data.isPublic || false,
+        userId: data.userId,
+        days: data.days ? {
+          create: data.days.map(day => ({
+            title: day.title,
+            description: day.description,
+            dayOrder: day.dayOrder,
+            activities: day.activities ? {
+              create: day.activities.map(activity => ({
+                title: activity.title,
+                startTime: activity.startTime,
+                durationMin: activity.durationMin,
+                location: activity.location,
+                notes: activity.notes,
+                important: activity.important || false,
+                activityOrder: activity.activityOrder,
+              }))
+            } : undefined
+          }))
+        } : undefined
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        },
+        province: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            divisionType: true,
+            codename: true,
+            phoneCode: true
+          }
+        },
+        days: {
+          include: {
+            activities: {
+              orderBy: { activityOrder: 'asc' }
+            }
+          },
+          orderBy: { dayOrder: 'asc' }
+        }
+      }
+    });
+  }
+
+  async findAll(options?: { 
+    userId?: string; 
+    isPublic?: boolean; 
+    search?: string; 
+    provinceId?: string;
+    page?: number; 
+    limit?: number 
+  }) {
+    const { userId, isPublic, search, provinceId, page = 1, limit = 10 } = options || {};
+    const skip = (page - 1) * limit;
+
+    // Build where conditions
+    const where: any = {};
+    
+    if (userId) {
+      where.userId = userId;
+    }
+    
+    if (isPublic !== undefined) {
+      where.isPublic = isPublic;
+    }
+    
+    if (provinceId) {
+      where.provinceId = provinceId;
+    }
+    
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' as const } },
+        { description: { contains: search, mode: 'insensitive' as const } },
+        { province: { name: { contains: search, mode: 'insensitive' as const } } }
+      ];
+    }
+
+    const [templates, total] = await Promise.all([
+      this.prisma.tripTemplate.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              fullName: true,
+              profilePicture: true
+            }
+          },
+          province: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              divisionType: true,
+              codename: true,
+              phoneCode: true
+            }
+          },
+          days: {
+            include: {
+              activities: {
+                orderBy: { activityOrder: 'asc' }
+              }
+            },
+            orderBy: { dayOrder: 'asc' }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit
+      }),
+      this.prisma.tripTemplate.count({ where })
+    ]);
+
+    return {
+      templates,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  }
+
+  async findOne(id: string) {
+    return this.prisma.tripTemplate.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        },
+        province: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            divisionType: true,
+            codename: true,
+            phoneCode: true
+          }
+        },
+        days: {
+          include: {
+            activities: {
+              orderBy: { activityOrder: 'asc' }
+            }
+          },
+          orderBy: { dayOrder: 'asc' }
+        }
+      }
+    });
+  }
+
+  async update(id: string, data: UpdateTripTemplateDto) {
+    return this.prisma.tripTemplate.update({
+      where: { id },
+      data: {
+        title: data.title,
+        description: data.description,
+        provinceId: data.provinceId,
+        isPublic: data.isPublic,
+        // Note: Updating days and activities would require more complex logic
+        // For now, we'll handle this separately
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        },
+        province: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            divisionType: true,
+            codename: true,
+            phoneCode: true
+          }
+        },
+        days: {
+          include: {
+            activities: {
+              orderBy: { activityOrder: 'asc' }
+            }
+          },
+          orderBy: { dayOrder: 'asc' }
+        }
+      }
+    });
+  }
+
+  async remove(id: string) {
+    return this.prisma.tripTemplate.delete({
+      where: { id }
+    });
+  }
+
+  async findPublicTemplates(query: GetTripTemplatesQueryDto) {
+    return this.findAll({
+      isPublic: true,
+      search: query.search,
+      provinceId: query.provinceId,
+      page: query.page,
+      limit: query.limit
+    });
+  }
+
+  async findUserTemplates(userId: string, options?: { search?: string; page?: number; limit?: number }) {
+    return this.findAll({
+      userId,
+      ...options
+    });
+  }
+}

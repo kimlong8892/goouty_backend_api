@@ -1,0 +1,88 @@
+name: Deploy Backend Dev
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    environment: DEV
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install cloudflared, sshpass and jq
+        run: |
+          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared.deb
+          sudo apt-get update && sudo apt-get install -y sshpass jq
+
+      - name: Generate .env.dev
+        id: gen_env
+        env:
+          ALL_SECRETS: ${{ toJson(secrets) }}
+          ALL_VARS: ${{ toJson(vars) }}
+        run: |
+          # Load public variables from repository JSON
+          jq -r 'to_entries | .[] | "\(.key)=\(.value)"' .github/env-config/dev/env.json > .env.dev
+          
+          # Load secrets and env vars from GitHub Environments using mapping JSON
+          jq -n --argjson secrets "$ALL_SECRETS" --argjson vars "$ALL_VARS" --argjson mapping "$(cat .github/env-config/dev/secrets.json)" '
+            $mapping | to_entries | .[] | 
+            .key as $k | .value as $v |
+            ($secrets[$v] // $vars[$v]) as $val |
+            if $val != null then "\($k)=\($val)" else empty end
+          ' -r >> .env.dev
+          
+          # Handle optional bulk secret
+          if [ ! -z "${{ secrets.BE_ENV_SECRET }}" ]; then
+            echo "${{ secrets.BE_ENV_SECRET }}" >> .env.dev
+          fi
+
+      - name: Run Deploy Script
+        run: |
+          # Use Environment-level secrets
+          SSH_PASS="${{ secrets.SSH_PASSWORD }}"
+          SSH_USER="${{ secrets.SSH_USER }}"
+          SSH_HOST="${{ secrets.SSH_HOST }}"
+          DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}"
+          
+          # Fallback to legacy names
+          [ -z "$SSH_PASS" ] && SSH_PASS="${{ secrets.SSH_PASSWORD_DEV }}"
+          [ -z "$SSH_USER" ] && SSH_USER="${{ secrets.SSH_USER_DEV }}"
+          [ -z "$SSH_HOST" ] && SSH_HOST="${{ secrets.SSH_HOST_DEV }}"
+          [ -z "$DEPLOY_PATH" ] && DEPLOY_PATH="${{ secrets.DEPLOY_PATH_DEV }}"
+
+          sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o "ProxyCommand=cloudflared access ssh --hostname %h" $SSH_USER@$SSH_HOST "
+            cd $DEPLOY_PATH
+            # Fix permissions (Docker containers might have created files as root)
+            echo '$SSH_PASS' | sudo -S chown -R $SSH_USER:$SSH_USER .
+            git fetch origin dev
+            git reset --hard origin/dev
+          "
+          
+          # Upload .env.dev
+          sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no -o "ProxyCommand=cloudflared access ssh --hostname %h" .env.dev $SSH_USER@$SSH_HOST:$DEPLOY_PATH/.env.dev
+          
+          # Run the deploy script
+          sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o "ProxyCommand=cloudflared access ssh --hostname %h" $SSH_USER@$SSH_HOST "
+            cd $DEPLOY_PATH
+            echo 'Deploying Backend Dev...'
+            chmod +x deploy_cicd_dev.sh
+            ./deploy_cicd_dev.sh
+            
+            echo 'Waiting for containers to start...'
+            sleep 10
+            
+            echo 'Running database migrations...'
+            docker compose -p goouty-api-dev exec -T app npx prisma migrate deploy
+            
+            # Run seed only if database is empty
+            echo 'Checking if database needs seeding...'
+            docker compose -p goouty-api-dev exec -T app npm run seed:conditional
+            
+            echo '--- Container Logs ---'
+            docker compose -p goouty-api-dev logs --tail=50
+          "
