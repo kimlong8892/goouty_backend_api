@@ -101,11 +101,7 @@ export class TripsService {
 
     // Build search conditions
     const searchConditions = search ? {
-      OR: [
-        { title: { contains: search, mode: 'insensitive' as const } },
-        { description: { contains: search, mode: 'insensitive' as const } },
-        { province: { name: { contains: search, mode: 'insensitive' as const } } }
-      ]
+      title: { contains: search, mode: 'insensitive' as const }
     } : {};
 
     // Lấy tất cả chuyến đi mà người dùng là chủ sở hữu (không áp dụng pagination ở đây)
