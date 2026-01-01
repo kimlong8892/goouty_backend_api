@@ -14,7 +14,6 @@ describe('Activities API (e2e)', () => {
       title: 'Trip for Activities Test',
       destination: 'Test Destination',
       startDate: '2025-10-01T00:00:00.000Z',
-      endDate: '2025-10-10T00:00:00.000Z',
       userId: testApp.userId,
     };
 

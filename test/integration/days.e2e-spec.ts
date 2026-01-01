@@ -13,7 +13,6 @@ describe('Days API (e2e)', () => {
       title: 'Trip for Days Test',
       destination: 'Test Destination',
       startDate: '2025-10-01T00:00:00.000Z',
-      endDate: '2025-10-10T00:00:00.000Z',
       userId: testApp.userId,
     };
 

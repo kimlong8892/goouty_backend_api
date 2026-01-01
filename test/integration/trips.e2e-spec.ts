@@ -23,7 +23,6 @@ describe('Trips API (e2e)', () => {
       title: 'Test Trip',
       destination: 'Test Destination',
       startDate: '2025-10-01T00:00:00.000Z',
-      endDate: '2025-10-10T00:00:00.000Z',
       description: 'Test trip description',
     };
 
@@ -95,7 +94,6 @@ describe('Trips API (e2e)', () => {
         title: 'Member Test Trip',
         destination: 'Test Destination',
         startDate: '2025-10-01T00:00:00.000Z',
-        endDate: '2025-10-10T00:00:00.000Z',
         description: 'Test trip for members',
       };
 
@@ -232,7 +230,6 @@ describe('Trips API (e2e)', () => {
         title: 'Share Test Trip',
         destination: 'Test Destination',
         startDate: '2025-10-01T00:00:00.000Z',
-        endDate: '2025-10-10T00:00:00.000Z',
         description: 'Test trip for sharing',
       };
 
@@ -368,7 +365,6 @@ describe('Trips API (e2e)', () => {
         title: 'Auth Test Trip',
         destination: 'Test Destination',
         startDate: '2025-10-01T00:00:00.000Z',
-        endDate: '2025-10-10T00:00:00.000Z',
         description: 'Test trip for authorization',
       };
 
@@ -435,7 +431,6 @@ describe('Trips API (e2e)', () => {
         title: '', // Empty title
         destination: 'Test Destination',
         startDate: 'invalid-date', // Invalid date
-        endDate: '2025-10-10T00:00:00.000Z',
       };
 
       await testApp.getRequest()
@@ -444,19 +439,6 @@ describe('Trips API (e2e)', () => {
         .expect(400);
     });
 
-    it('should reject creating trip with end date before start date', async () => {
-      const invalidTripData = {
-        title: 'Test Trip',
-        destination: 'Test Destination',
-        startDate: '2025-10-10T00:00:00.000Z',
-        endDate: '2025-10-01T00:00:00.000Z', // End before start
-      };
-
-      await testApp.getRequest()
-        .post('/trips')
-        .send(invalidTripData)
-        .expect(400);
-    });
 
     it('should reject accessing non-existent trip', async () => {
       await testApp.getRequest()

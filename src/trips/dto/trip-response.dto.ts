@@ -37,9 +37,6 @@ export class TripResponseDto {
   startDate?: Date;
 
   @ApiPropertyOptional()
-  endDate?: Date;
-
-  @ApiPropertyOptional()
   description?: string;
 
   @ApiProperty()

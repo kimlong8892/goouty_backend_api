@@ -41,7 +41,6 @@ model Trip {
   title              String
   provinceId         String?             @db.Uuid
   startDate          DateTime?
-  endDate            DateTime?
   description        String?
   avatar             String?             // S3 URL for trip avatar
   shareToken         String?             @unique

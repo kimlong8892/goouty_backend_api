@@ -67,19 +67,25 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(
+        this.i18n.t('auth.login.invalidCredentials')
+      );
     }
 
     // Check if user has password (not a social login only user)
     if (!user.password) {
-      throw new UnauthorizedException('Please use social login for this account');
+      throw new UnauthorizedException(
+        this.i18n.t('auth.login.useSocialLogin')
+      );
     }
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(
+        this.i18n.t('auth.login.invalidCredentials')
+      );
     }
 
     // Generate JWT token

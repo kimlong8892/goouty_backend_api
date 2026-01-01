@@ -24,27 +24,14 @@ export class TripsService {
   ) { }
 
   async create(createTripDto: CreateTripDto, userId: string) {
-    // Validate dates if provided
+    // Validate date if provided
     let startDate: Date | undefined;
-    let endDate: Date | undefined;
 
     if (createTripDto.startDate) {
       startDate = new Date(createTripDto.startDate);
       if (isNaN(startDate.getTime())) {
         throw new BadRequestException('Invalid start date format');
       }
-    }
-
-    if (createTripDto.endDate) {
-      endDate = new Date(createTripDto.endDate);
-      if (isNaN(endDate.getTime())) {
-        throw new BadRequestException('Invalid end date format');
-      }
-    }
-
-    // Check if end date is before start date (only if both are provided)
-    if (startDate && endDate && endDate < startDate) {
-      throw new BadRequestException('End date cannot be before start date');
     }
 
     // Create trip and add creator as admin member in a transaction
@@ -54,7 +41,6 @@ export class TripsService {
         title: createTripDto.title,
         description: createTripDto.description,
         startDate: startDate,
-        endDate: endDate,
         user: { connect: { id: userId } }
       };
 
@@ -241,35 +227,15 @@ export class TripsService {
 
     const data: any = { ...updateTripDto };
 
-    // Validate dates if provided
-    let startDate = existingTrip.startDate;
-    let endDate = existingTrip.endDate;
-
+    // Validate date if provided
     if (updateTripDto.startDate) {
-      startDate = new Date(updateTripDto.startDate);
+      const startDate = new Date(updateTripDto.startDate);
       if (isNaN(startDate.getTime())) {
         throw new BadRequestException('Invalid start date format');
       }
       data.startDate = startDate;
     } else if (updateTripDto.startDate === null) { // Explicitly handle null to clear date
       data.startDate = null;
-      startDate = null;
-    }
-
-    if (updateTripDto.endDate) {
-      endDate = new Date(updateTripDto.endDate);
-      if (isNaN(endDate.getTime())) {
-        throw new BadRequestException('Invalid end date format');
-      }
-      data.endDate = endDate;
-    } else if (updateTripDto.endDate === null) { // Explicitly handle null to clear date
-      data.endDate = null;
-      endDate = null;
-    }
-
-    // Check if end date is before start date (only if both dates exist)
-    if (startDate && endDate && endDate < startDate) {
-      throw new BadRequestException('End date cannot be before start date');
     }
 
     const updatedTrip = await this.tripsRepository.update(id, data);
@@ -522,7 +488,6 @@ export class TripsService {
               }
             },
             startDate: true,
-            endDate: true,
           },
         },
         user: {
@@ -722,8 +687,7 @@ export class TripsService {
       title: tripTitle || template.title,
       description: template.description,
       provinceId: template.provinceId,
-      startDate: undefined, // Let user set dates later
-      endDate: undefined
+      startDate: undefined // Let user set date later
     };
 
     // Create the trip
