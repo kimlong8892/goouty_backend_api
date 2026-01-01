@@ -43,17 +43,18 @@ jobs:
 
       - name: Run Deploy Script
         run: |
-          # Use Environment-level secrets
-          SSH_PASS="${{ secrets.SSH_PASSWORD }}"
-          SSH_USER="${{ secrets.SSH_USER }}"
-          SSH_HOST="${{ secrets.SSH_HOST }}"
-          DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}"
+          # Use Environment-level secrets (prioritize specific first, then generic)
+          SSH_PASS="${{ secrets.SSH_PASSWORD_PROD }}"
+          [ -z "$SSH_PASS" ] && SSH_PASS="${{ secrets.SSH_PASSWORD }}"
           
-          # Fallback to legacy names
-          [ -z "$SSH_PASS" ] && SSH_PASS="${{ secrets.SSH_PASSWORD_PROD }}"
-          [ -z "$SSH_USER" ] && SSH_USER="${{ secrets.SSH_USER_PROD }}"
-          [ -z "$SSH_HOST" ] && SSH_HOST="${{ secrets.SSH_HOST_PROD }}"
-          [ -z "$DEPLOY_PATH" ] && DEPLOY_PATH="${{ secrets.DEPLOY_PATH_PROD }}"
+          SSH_USER="${{ secrets.SSH_USER_PROD }}"
+          [ -z "$SSH_USER" ] && SSH_USER="${{ secrets.SSH_USER }}"
+          
+          SSH_HOST="${{ secrets.SSH_HOST_PROD }}"
+          [ -z "$SSH_HOST" ] && SSH_HOST="${{ secrets.SSH_HOST }}"
+          
+          DEPLOY_PATH="${{ secrets.DEPLOY_PATH_PROD }}"
+          [ -z "$DEPLOY_PATH" ] && DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}"
 
           sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o "ProxyCommand=cloudflared access ssh --hostname %h" $SSH_USER@$SSH_HOST "
             # Auto-install Docker if missing
