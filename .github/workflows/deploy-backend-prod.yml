@@ -13,17 +13,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install cloudflared, sshpass and jq
+      - name: Install dependencies (Cloudflared, sshpass, jq)
         run: |
-          sudo apt-get update && sudo apt-get install -y sshpass jq
-          
-          # Check if Cloudflare is needed (reading from appropriate env.json)
+          # Detect Cloudflare flag using grep (pre-installed)
           USE_CLOUDFLARE_SSH=$(grep USE_CLOUDFLARE_SSH .github/env-config/prod/env.json | awk -F'"' '{print $4}')
+          
+          echo "Updating and installing core tools (sshpass, jq)..."
+          sudo apt-get update -y && sudo apt-get install -y sshpass jq
+          
           if [ "$USE_CLOUDFLARE_SSH" = "true" ]; then
-            echo "Installing cloudflared..."
+            echo "Cloudflare SSH enabled. Installing cloudflared..."
             curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
             sudo dpkg -i cloudflared.deb
             rm cloudflared.deb
+          else
+            echo "Cloudflare SSH disabled. Skipping cloudflared install."
           fi
 
       - name: Generate .env.prod
