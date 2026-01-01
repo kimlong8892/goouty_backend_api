@@ -78,22 +78,33 @@ jobs:
               echo '$SSH_PASS' | sudo -S apt-get update -y
               echo '$SSH_PASS' | sudo -S apt-get install -y apt-transport-https ca-certificates curl software-properties-common
               curl -fsSL https://download.docker.com/linux/ubuntu/gpg | echo '$SSH_PASS' | sudo -S apt-key add -
-              echo '$SSH_PASS' | sudo -S add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable\" -y
+              # Use dynamic codename instead of hardcoded 'bionic' to support different Ubuntu versions
+              CODENAME=$(lsb_release -cs)
+              echo '$SSH_PASS' | sudo -S add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu $CODENAME stable\" -y
               echo '$SSH_PASS' | sudo -S apt-get update -y
-              echo '$SSH_PASS' | sudo -S apt-get install -y docker-ce
+              echo '$SSH_PASS' | sudo -S apt-get install -y docker-ce docker-ce-cli containerd.io || {
+                echo 'Standard install failed, trying convenience script...'
+                curl -fsSL https://get.docker.com -o get-docker.sh
+                echo '$SSH_PASS' | sudo -S sh get-docker.sh
+              }
               
               echo 'Installing Docker Compose v2.2.3...'
               echo '$SSH_PASS' | sudo -S curl -L \"https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/bin/docker-compose
               echo '$SSH_PASS' | sudo -S chmod +x /usr/bin/docker-compose
               
               echo '$SSH_PASS' | sudo -S usermod -aG docker $SSH_USER
-              echo '$SSH_PASS' | sudo -S systemctl start docker
+              echo '$SSH_PASS' | sudo -S systemctl start docker || echo "Docker service might already be running or handled by snap/other"
             fi
             
-            # Ensure deployment directory exists
-            mkdir -p $DEPLOY_PATH
+            # Ensure deployment directory exists and is a git repository
+            if [ ! -d "$DEPLOY_PATH/.git" ]; then
+              echo "Repository not found at $DEPLOY_PATH. Cloning..."
+              echo '$SSH_PASS' | sudo -S mkdir -p $DEPLOY_PATH
+              echo '$SSH_PASS' | sudo -S chown -R $SSH_USER:$SSH_USER $DEPLOY_PATH
+              git clone -b prod https://github.com/kimlong8892/goouty_backend_api.git $DEPLOY_PATH
+            fi
+
             cd $DEPLOY_PATH
-            # Fix permissions (Docker containers might have created files as root)
             echo '$SSH_PASS' | sudo -S chown -R $SSH_USER:$SSH_USER .
             git fetch origin prod
             git reset --hard origin/prod
