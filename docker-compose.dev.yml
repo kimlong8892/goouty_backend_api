@@ -76,6 +76,14 @@ services:
   #     DOZZLE_FILTER: "name=_dev"
   #   restart: unless-stopped
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared_dev
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    env_file:
+      - .env.dev
+
 volumes:
   postgres_data:
   pgadmin_data:
