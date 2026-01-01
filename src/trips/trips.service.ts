@@ -621,6 +621,7 @@ export class TripsService {
         folder: `trip-avatars/${tripId}`,
         maxSize: maxSize,
         allowedTypes: allowedTypes,
+        acl: 'public-read', // Set public read access for trip avatars
       });
 
       // Update trip with new avatar URL

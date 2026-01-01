@@ -106,15 +106,21 @@ export class UploadService {
       // Upload to S3
       console.log(`[UploadService] Uploading to Bucket: ${this.bucketName}, Key: ${key}`);
 
+      const uploadParams: any = {
+        Bucket: this.bucketName,
+        Key: key,
+        Body: file.buffer,
+        ContentType: options.contentType || file.mimetype,
+      };
+
+      // Only add ACL if specified (some S3-compatible services don't support ACL)
+      if (options.acl) {
+        uploadParams.ACL = options.acl;
+      }
+
       const upload = new Upload({
         client: this.s3Control,
-        params: {
-          Bucket: this.bucketName,
-          Key: key,
-          Body: file.buffer,
-          ContentType: options.contentType || file.mimetype,
-          ACL: options.acl as any, // Cast to any because ACL types in v3 are strictly typed
-        },
+        params: uploadParams,
       });
 
       await upload.done();
