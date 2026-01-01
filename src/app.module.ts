@@ -55,6 +55,7 @@ import { I18nHelperModule } from './common/i18n/i18n-helper.module';
         S3_FORCE_PATH_STYLE: Joi.string().valid('true', 'false').default('true'),
         TELEGRAM_BOT_TOKEN: Joi.string().optional(),
         TELEGRAM_CHAT_ID: Joi.string().optional(),
+        VITE_APP_URL: Joi.string().uri().optional(),
       }),
     }),
     LoggerModule.forRootAsync({
