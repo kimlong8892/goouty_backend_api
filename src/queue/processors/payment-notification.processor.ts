@@ -74,8 +74,8 @@ export class PaymentNotificationProcessor extends WorkerHost {
 
       this.logger.log(`Created notification record ${notification.id}`);
 
-      // Send push notification if not skipped
-      if (!options?.skipPush) {
+      // Send push notification if not skipped and user has notifications enabled
+      if (!options?.skipPush && user.notificationsEnabled) {
         try {
           const devices = await this.devicesService.getUserDevices(userId);
           for (const device of devices) {
@@ -93,6 +93,8 @@ export class PaymentNotificationProcessor extends WorkerHost {
         } catch (error) {
           this.logger.error('Error sending push notification:', error);
         }
+      } else if (!user.notificationsEnabled) {
+        this.logger.log(`Skipping push notification for user ${userId} - notifications disabled`);
       }
 
       // Send email if not skipped

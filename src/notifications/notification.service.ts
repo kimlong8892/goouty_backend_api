@@ -566,6 +566,12 @@ export class NotificationService {
     pushSubscription?: any
   ): Promise<{ notificationId: string; pushSent: boolean }> {
     try {
+      // Check if user has notifications enabled
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { notificationsEnabled: true },
+      });
+
       // Tạo notification trong database
       const notification = await this.createNotification(userId, {
         title,
@@ -576,8 +582,8 @@ export class NotificationService {
 
       let pushSent = false;
 
-      // Nếu có pushSubscription, gửi push notification
-      if (pushSubscription) {
+      // Nếu có pushSubscription và user đã bật thông báo, gửi push notification
+      if (pushSubscription && user?.notificationsEnabled) {
         try {
           const pushPayload = {
             title,
@@ -599,6 +605,8 @@ export class NotificationService {
           console.error(`Failed to send push notification for ${notification.id}:`, pushError);
           // Không throw error vì notification đã được lưu vào database
         }
+      } else if (!user?.notificationsEnabled) {
+        console.log(`Skipping push notification for user ${userId} - notifications disabled`);
       }
 
       return {
@@ -622,6 +630,12 @@ export class NotificationService {
     data?: any
   ): Promise<{ notificationId: string; devicesSent: number; totalDevices: number }> {
     try {
+      // Check if user has notifications enabled
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { notificationsEnabled: true },
+      });
+
       // Lấy tất cả devices của user có pushSubscription
       const userDevices = await this.prisma.$queryRaw`
         SELECT d.*, u.email as user_email
@@ -656,30 +670,34 @@ export class NotificationService {
 
       let devicesSent = 0;
 
-      // Gửi push notification tới tất cả devices
-      for (const device of userDevices as any[]) {
-        try {
-          const pushSubscription = JSON.parse(device.pushSubscription);
-          
-          const pushPayload = {
-            title,
-            body,
-            icon: '/icon-192x192.png',
-            badge: '/icon-192x192.png',
-            tag: `notification-${notification.id}`,
-            data: {
-              ...data,
-              notificationId: notification.id,
-              url: data?.url || '/notifications',
-            },
-          };
+      // Gửi push notification tới tất cả devices chỉ khi user đã bật thông báo
+      if (user?.notificationsEnabled) {
+        for (const device of userDevices as any[]) {
+          try {
+            const pushSubscription = JSON.parse(device.pushSubscription);
+            
+            const pushPayload = {
+              title,
+              body,
+              icon: '/icon-192x192.png',
+              badge: '/icon-192x192.png',
+              tag: `notification-${notification.id}`,
+              data: {
+                ...data,
+                notificationId: notification.id,
+                url: data?.url || '/notifications',
+              },
+            };
 
-          await this.sendPushNotification(pushSubscription, pushPayload);
-          devicesSent++;
-          console.log(`Push notification sent to device ${device.deviceId} for notification ${notification.id}`);
-        } catch (error) {
-          console.error(`Failed to send push notification to device ${device.deviceId}:`, error);
+            await this.sendPushNotification(pushSubscription, pushPayload);
+            devicesSent++;
+            console.log(`Push notification sent to device ${device.deviceId} for notification ${notification.id}`);
+          } catch (error) {
+            console.error(`Failed to send push notification to device ${device.deviceId}:`, error);
+          }
         }
+      } else {
+        console.log(`Skipping push notification for user ${userId} - notifications disabled`);
       }
 
       return {
