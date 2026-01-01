@@ -72,33 +72,41 @@ jobs:
           fi
 
           sshpass -p "$SSH_PASS" ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
+            set -e
+            export PATH=\$PATH:/usr/bin:/usr/local/bin:/snap/bin
+            
             # Auto-install Docker and Docker Compose if missing
-            if ! command -v docker &> /dev/null || ! command -v docker-compose &> /dev/null; then
-              echo 'Docker or Docker Compose not found. Installing...'
+            if ! command -v docker &> /dev/null || ! docker compose version &> /dev/null; then
+              echo 'Docker or Docker Compose plugin not found. Installing...'
               echo '$SSH_PASS' | sudo -S apt-get update -y
-              echo '$SSH_PASS' | sudo -S apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+              echo '$SSH_PASS' | sudo -S apt-get install -y apt-transport-https ca-certificates curl software-properties-common lsb-release
+              
               curl -fsSL https://download.docker.com/linux/ubuntu/gpg | echo '$SSH_PASS' | sudo -S apt-key add -
-              # Use dynamic codename instead of hardcoded 'bionic' to support different Ubuntu versions
-              CODENAME=$(lsb_release -cs)
-              echo '$SSH_PASS' | sudo -S add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu $CODENAME stable\" -y
+              CODENAME=\$(lsb_release -cs)
+              echo '$SSH_PASS' | sudo -S add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu \$CODENAME stable\" -y
               echo '$SSH_PASS' | sudo -S apt-get update -y
-              echo '$SSH_PASS' | sudo -S apt-get install -y docker-ce docker-ce-cli containerd.io || {
+              
+              echo 'Installing Docker components...'
+              echo '$SSH_PASS' | sudo -S apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin || {
                 echo 'Standard install failed, trying convenience script...'
                 curl -fsSL https://get.docker.com -o get-docker.sh
                 echo '$SSH_PASS' | sudo -S sh get-docker.sh
               }
               
-              echo 'Installing Docker Compose v2.2.3...'
-              echo '$SSH_PASS' | sudo -S curl -L \"https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/bin/docker-compose
-              echo '$SSH_PASS' | sudo -S chmod +x /usr/bin/docker-compose
+              # Legacy standalone docker-compose for compatibility
+              if ! command -v docker-compose &> /dev/null; then
+                echo 'Installing standalone Docker Compose v2.2.3...'
+                echo '$SSH_PASS' | sudo -S curl -L \"https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
+                echo '$SSH_PASS' | sudo -S chmod +x /usr/local/bin/docker-compose
+              fi
               
               echo '$SSH_PASS' | sudo -S usermod -aG docker $SSH_USER
-              echo '$SSH_PASS' | sudo -S systemctl start docker || echo "Docker service might already be running or handled by snap/other"
+              echo '$SSH_PASS' | sudo -S systemctl start docker || true
             fi
             
             # Ensure deployment directory exists and is a git repository
-            if [ ! -d "$DEPLOY_PATH/.git" ]; then
-              echo "Repository not found at $DEPLOY_PATH. Cloning..."
+            if [ ! -d \"$DEPLOY_PATH/.git\" ]; then
+              echo \"Repository not found at $DEPLOY_PATH. Cloning...\"
               echo '$SSH_PASS' | sudo -S mkdir -p $DEPLOY_PATH
               echo '$SSH_PASS' | sudo -S chown -R $SSH_USER:$SSH_USER $DEPLOY_PATH
               git clone -b dev https://github.com/kimlong8892/goouty_backend_api.git $DEPLOY_PATH
@@ -115,6 +123,8 @@ jobs:
           
           # Run the deploy script
           sshpass -p "$SSH_PASS" ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
+            set -e
+            export PATH=\$PATH:/usr/bin:/usr/local/bin:/snap/bin
             cd $DEPLOY_PATH
             echo 'Deploying Backend Dev...'
             chmod +x deploy_cicd_dev.sh
