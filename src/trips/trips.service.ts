@@ -741,14 +741,12 @@ export class TripsService {
       throw new NotFoundException('User not found');
     }
 
+    // First, find the member by token and status only
+    // The token itself is the proof of invitation
     const member = await this.prisma.tripMember.findFirst({
       where: {
         inviteToken: token,
         status: 'pending',
-        OR: [
-          { userId: userId },
-          { invitedEmail: user.email, userId: null },
-        ],
       },
       include: { trip: true },
     });
@@ -757,14 +755,24 @@ export class TripsService {
       throw new NotFoundException('Invalid or expired invite');
     }
 
-    // If member doesn't have userId yet, link it now
-    if (!member.userId) {
+    // Validate user access:
+    // 1. If member already has userId, it must match current userId
+    // 2. If member doesn't have userId, check if email matches (case-insensitive)
+    // 3. If email doesn't match but token is valid, still allow (token is proof)
+    if (member.userId) {
+      if (member.userId !== userId) {
+        throw new ForbiddenException('Bạn không có quyền chấp nhận lời mời này');
+      }
+    } else {
+      // Member doesn't have userId yet, link it now
+      // If invitedEmail exists and doesn't match, log warning but still allow (token is proof)
+      if (member.invitedEmail && member.invitedEmail.toLowerCase() !== user.email.toLowerCase()) {
+        console.warn(`Email mismatch for invite: invitedEmail=${member.invitedEmail}, userEmail=${user.email}, but token is valid`);
+      }
       await this.prisma.tripMember.update({
         where: { id: member.id },
         data: { userId: userId },
       });
-    } else if (member.userId !== userId) {
-      throw new ForbiddenException('Bạn không có quyền chấp nhận lời mời này');
     }
 
     const updated = await this.prisma.tripMember.update({
