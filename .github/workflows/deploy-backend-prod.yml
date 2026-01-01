@@ -93,9 +93,9 @@ jobs:
               echo '$SSH_PASS' | sudo -S chmod a+r /etc/apt/keyrings/docker.gpg
               rm /tmp/docker.gpg
               
-              # Set up the repository
-              echo \"deb [arch=\\\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \\\$(lsb_release -cs) stable\" | \
-              echo '$SSH_PASS' | sudo -S tee /etc/apt/sources.list.d/docker.list > /dev/null
+              # Set up the repository correctly
+              echo "deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \$(lsb_release -cs) stable" > /tmp/docker.list
+              echo '$SSH_PASS' | sudo -S mv /tmp/docker.list /etc/apt/sources.list.d/docker.list
               
               echo '$SSH_PASS' | sudo -S apt-get update -y
               
