@@ -390,9 +390,9 @@ export class TripsService {
     });
 
     // Gửi email mời tham gia chuyến đi (best-effort)
-    const frontendUrl = process.env.VITE_APP_URL;
+    const frontendUrl = process.env.APP_URL;
     if (!frontendUrl) {
-      console.error('VITE_APP_URL is not set in environment variables');
+      console.error('APP_URL is not set in environment variables');
     }
     void this.emailService.sendTripInviteEmail({
       toEmail: addMemberDto.email,
@@ -550,9 +550,9 @@ export class TripsService {
     }
 
     // Send invitation email
-    const frontendUrl = process.env.VITE_APP_URL;
+    const frontendUrl = process.env.APP_URL;
     if (!frontendUrl) {
-      console.error('VITE_APP_URL is not set in environment variables');
+      console.error('APP_URL is not set in environment variables');
     }
     void this.emailService.sendTripInviteEmail({
       toEmail: emailToSend,
@@ -600,7 +600,7 @@ export class TripsService {
 
     return {
       shareToken,
-      shareLink: `${process.env.VITE_APP_URL}/trip/${tripId}/${shareToken}`,
+      shareLink: `${process.env.APP_URL}/trip/${tripId}/${shareToken}`,
       tripId,
     };
   }

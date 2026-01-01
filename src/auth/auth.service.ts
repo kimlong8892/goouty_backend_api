@@ -156,7 +156,7 @@ export class AuthService {
         // Assuming frontend URL needs to be constructed. 
         // We can pass process.env.FRONTEND_URL later but for now we'll handle it in processor or here.
         // Processor logic I added uses `frontendUrl` from context or default.
-        frontendUrl: process.env.VITE_APP_URL,
+        frontendUrl: process.env.APP_URL,
       },
       userId: user.id,
       options: {
