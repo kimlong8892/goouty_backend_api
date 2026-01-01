@@ -12,6 +12,63 @@ export class UsersService {
     private uploadService: UploadService,
   ) { }
 
+  /**
+   * Đếm số chuyến đi của user (chuyến đi sở hữu + chuyến đi là thành viên với status accepted)
+   */
+  async getTripsCount(userId: string): Promise<number> {
+    // Đếm chuyến đi sở hữu
+    const ownedTripsCount = await this.prisma.trip.count({
+      where: { userId },
+    });
+
+    // Đếm chuyến đi là thành viên (status accepted)
+    const memberTripsCount = await this.prisma.tripMember.count({
+      where: {
+        userId,
+        status: 'accepted',
+        trip: {
+          userId: { not: userId }, // Exclude owned trips
+        },
+      },
+    });
+
+    return ownedTripsCount + memberTripsCount;
+  }
+
+  /**
+   * Đếm số địa điểm (provinces) duy nhất mà user đã đến
+   */
+  async getPlacesCount(userId: string): Promise<number> {
+    // Lấy tất cả trips của user (owned + member với status accepted)
+    const ownedTrips = await this.prisma.trip.findMany({
+      where: { userId },
+      select: { provinceId: true },
+    });
+
+    const memberTrips = await this.prisma.trip.findMany({
+      where: {
+        members: {
+          some: {
+            userId,
+            status: 'accepted',
+          },
+        },
+        userId: { not: userId },
+      },
+      select: { provinceId: true },
+    });
+
+    // Kết hợp và lấy danh sách provinceId duy nhất (loại bỏ null)
+    const allProvinceIds = [
+      ...ownedTrips.map((t) => t.provinceId),
+      ...memberTrips.map((t) => t.provinceId),
+    ].filter((id): id is string => id !== null);
+
+    // Đếm số province duy nhất
+    const uniqueProvinceIds = new Set(allProvinceIds);
+    return uniqueProvinceIds.size;
+  }
+
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -33,11 +90,19 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
+    // Lấy số lượng trips và places
+    const [tripsCount, placesCount] = await Promise.all([
+      this.getTripsCount(userId),
+      this.getPlacesCount(userId),
+    ]);
+
     // Return profile with hasPassword flag, but don't expose the actual password
     const { password, ...profileData } = user;
     return {
       ...profileData,
       hasPassword: !!password, // Convert to boolean
+      tripsCount,
+      placesCount,
     };
   }
 
