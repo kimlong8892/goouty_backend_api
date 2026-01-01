@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, UnauthorizedException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { QueueService } from '../queue/queue.service';
 import { TranslationService } from '../common/i18n/translation.service';
+import { TripsService } from '../trips/trips.service';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +18,8 @@ export class AuthService {
     private jwtService: JwtService,
     private queueService: QueueService,
     private i18n: TranslationService,
+    @Inject(forwardRef(() => TripsService))
+    private tripsService: any, // Use any to avoid circular dependency type issues
   ) { }
 
   async register(registerDto: RegisterDto) {
@@ -46,6 +49,14 @@ export class AuthService {
         fullName,
       },
     });
+
+    // Link pending trip invitations for this email
+    try {
+      await (this.tripsService as any).linkPendingInvitationsByEmail(user.id, email);
+    } catch (error) {
+      // Log but don't fail registration if linking invitations fails
+      console.error('Failed to link pending invitations:', error);
+    }
 
     // Generate JWT token
     const token = this.generateToken(user.id, user.email);
@@ -145,7 +156,7 @@ export class AuthService {
         // Assuming frontend URL needs to be constructed. 
         // We can pass process.env.FRONTEND_URL later but for now we'll handle it in processor or here.
         // Processor logic I added uses `frontendUrl` from context or default.
-        frontendUrl: process.env.APP_URL,
+        frontendUrl: process.env.VITE_APP_URL,
       },
       userId: user.id,
       options: {

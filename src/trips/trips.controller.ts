@@ -14,6 +14,7 @@ import { UploadTripAvatarDto, UploadTripAvatarResponseDto } from './dto/upload-t
 import {DaysService} from "../days/days.service";
 import {DayResponseDto} from "../days/dto/day-response.dto";
 import {JwtAuthGuard} from "../auth/guards/jwt-auth.guard";
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('trips')
 @Controller('trips')
@@ -24,6 +25,17 @@ export class TripsController {
     private readonly tripsService: TripsService,
     private readonly daysService: DaysService
   ) {}
+
+  // Public endpoint - no auth required
+  @Public()
+  @Get('invites/:token')
+  @ApiOperation({ summary: 'Get invitation details by token (public)' })
+  @ApiResponse({ status: 200, description: 'Invitation details' })
+  @ApiResponse({ status: 404, description: 'Invalid or expired invite' })
+  @ApiParam({ name: 'token', description: 'Invitation token' })
+  getInvitationByToken(@Param('token') token: string) {
+    return this.tripsService.getInvitationByToken(token);
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create a new trip' })
@@ -166,6 +178,19 @@ export class TripsController {
   @ApiResponse({ status: 404, description: 'Invalid or expired invite' })
   acceptInvite(@Body() dto: AcceptInviteDto, @Request() req: any) {
     return this.tripsService.acceptInvite(dto, req.user.userId);
+  }
+
+  @Post(':id/members/:memberId/accept')
+  @ApiOperation({ summary: 'Accept trip invitation by member ID' })
+  @ApiResponse({ status: 201, description: 'Invitation accepted', type: TripMemberResponseDto })
+  @ApiResponse({ status: 404, description: 'Member not found' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  acceptInviteByMemberId(
+    @Param('id') tripId: string,
+    @Param('memberId') memberId: string,
+    @Request() req: any,
+  ) {
+    return this.tripsService.acceptInviteByMemberId(tripId, memberId, req.user.userId);
   }
 
   @Delete(':id/share')

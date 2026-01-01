@@ -51,7 +51,7 @@ export class SystemNotificationProcessor extends WorkerHost {
         await this.emailService.sendForgotPasswordEmail({
           toEmail: user.email,
           name: user.fullName || user.email,
-          resetUrl: `${frontendUrl || 'http://localhost:8080'}/reset-password?token=${resetToken}`,
+          resetUrl: `${frontendUrl || process.env.VITE_APP_URL}/reset-password?token=${resetToken}`,
         });
 
         this.logger.log(`Forgot password email sent to ${user.email}`);
@@ -121,7 +121,7 @@ export class SystemNotificationProcessor extends WorkerHost {
           const htmlContent = `
             <h2>${template.title}</h2>
             <p>${template.message}</p>
-            <p><a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/trip/${context.tripId}">Xem chi tiết</a></p>
+            <p><a href="${process.env.VITE_APP_URL}/trip/${context.tripId}">Xem chi tiết</a></p>
           `;
           await this.emailService.sendEmail({
             to: user.email,

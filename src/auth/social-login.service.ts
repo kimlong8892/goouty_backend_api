@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, Inject, forwardRef } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { GoogleAuthDto, GoogleAuthResponseDto } from './dto/google-auth.dto';
+import { TripsService } from '../trips/trips.service';
 import * as jwt from 'jsonwebtoken';
 
 @Injectable()
@@ -11,6 +12,8 @@ export class SocialLoginService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    @Inject(forwardRef(() => TripsService))
+    private tripsService: any, // Use any to avoid circular dependency type issues
   ) {}
 
   /**
@@ -139,6 +142,16 @@ export class SocialLoginService {
         userId: user.id,
       },
     });
+
+    // Link pending trip invitations for this email (if new user)
+    if (isNewUser) {
+      try {
+        await (this.tripsService as any).linkPendingInvitationsByEmail(user.id, email);
+      } catch (error) {
+        // Log but don't fail registration if linking invitations fails
+        console.error('Failed to link pending invitations:', error);
+      }
+    }
 
     // Generate JWT token
     const token = this.generateToken(user.id, user.email);

@@ -286,7 +286,7 @@ export class TripsService {
   async getTripMembers(tripId: string) {
     const trip = await this.findOne(tripId);
 
-    return this.prisma.tripMember.findMany({
+    const members = await this.prisma.tripMember.findMany({
       where: {
         tripId,
       },
@@ -302,6 +302,17 @@ export class TripsService {
       },
       orderBy: { joinedAt: 'asc' },
     });
+
+    // Map members để handle case user chưa tồn tại
+    return members.map(member => ({
+      ...member,
+      user: member.user || {
+        id: null,
+        email: member.invitedEmail || '',
+        fullName: null,
+        profilePicture: null,
+      },
+    }));
   }
 
   async addMemberToTrip(tripId: string, addMemberDto: AddMemberDto, requestUserId: string) {
@@ -317,57 +328,119 @@ export class TripsService {
       where: { email: addMemberDto.email },
     });
 
-    if (!userToAdd) {
-      throw new NotFoundException(`Người dùng với email ${addMemberDto.email} không tồn tại`);
-    }
-
-    // Check if user is already a member
-    const existingMember = await this.prisma.tripMember.findUnique({
-      where: {
-        userId_tripId: {
-          userId: userToAdd.id,
-          tripId: tripId,
+    // Check if user is already a member (if user exists)
+    if (userToAdd) {
+      const existingMember = await this.prisma.tripMember.findUnique({
+        where: {
+          userId_tripId: {
+            userId: userToAdd.id,
+            tripId: tripId,
+          },
         },
-      },
-    });
+      });
 
-    if (existingMember) {
-      throw new ConflictException('User is already a member of this trip');
+      if (existingMember) {
+        throw new ConflictException('User is already a member of this trip');
+      }
+    } else {
+      // Check if there's already a pending invitation for this email
+      const existingInvitation = await this.prisma.tripMember.findFirst({
+        where: {
+          tripId: tripId,
+          invitedEmail: addMemberDto.email,
+          status: 'pending',
+        },
+      });
+
+      if (existingInvitation) {
+        throw new ConflictException('An invitation has already been sent to this email');
+      }
     }
 
     // Tạo lời mời: trạng thái pending + token
     const inviteToken = randomBytes(32).toString('hex');
-    const newMember = await this.prisma.tripMember.create({
-      data: {
-        userId: userToAdd.id,
-        tripId: tripId,
-        status: 'pending',
-        inviteToken,
-        invitedAt: new Date(),
-        invitedById: requestUserId,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
-            profilePicture: true,
-          },
+    
+    try {
+      const newMember = await this.prisma.tripMember.create({
+        data: {
+          userId: userToAdd?.id || null,
+          tripId: tripId,
+          status: 'pending',
+          inviteToken,
+          invitedAt: new Date(),
+          invitedById: requestUserId,
+          invitedEmail: addMemberDto.email, // Lưu email để link sau khi user đăng ký
         },
-      },
+        include: {
+          user: userToAdd ? {
+            select: {
+              id: true,
+              email: true,
+              fullName: true,
+              profilePicture: true,
+            },
+          } : undefined,
+        },
+      });
+
+    // Lấy thông tin người mời
+    const inviter = await this.prisma.user.findUnique({
+      where: { id: requestUserId },
+      select: { fullName: true, email: true },
     });
 
     // Gửi email mời tham gia chuyến đi (best-effort)
+    const frontendUrl = process.env.VITE_APP_URL;
+    if (!frontendUrl) {
+      console.error('VITE_APP_URL is not set in environment variables');
+    }
     void this.emailService.sendTripInviteEmail({
-      toEmail: newMember.user.email,
-      inviteeName: newMember.user.fullName,
+      toEmail: addMemberDto.email,
+      inviteeName: userToAdd?.fullName || addMemberDto.email.split('@')[0],
       tripTitle: trip.title,
-      inviterName: undefined,
-      acceptUrl: `${process.env.APP_URL}/invite?token=${inviteToken}`,
+      inviterName: inviter?.fullName || inviter?.email,
+      acceptUrl: `${frontendUrl}/invite?token=${inviteToken}`,
     });
 
-    return newMember;
+    // Gửi notification trong app (chỉ nếu user đã tồn tại)
+    if (userToAdd) {
+      void this.notificationService.sendTripInvitationNotification(
+        tripId,
+        trip.title,
+        userToAdd.id,
+        inviter?.fullName || inviter?.email,
+        { skipEmail: true } // Email đã được gửi riêng
+      );
+    }
+
+      // Return với user info hoặc email
+      return {
+        ...newMember,
+        user: userToAdd ? {
+          id: userToAdd.id,
+          email: userToAdd.email,
+          fullName: userToAdd.fullName,
+          profilePicture: userToAdd.profilePicture,
+        } : {
+          id: null,
+          email: addMemberDto.email,
+          fullName: null,
+          profilePicture: null,
+        },
+      };
+    } catch (error: any) {
+      // Log error để debug
+      console.error('Error creating trip member invitation:', error);
+      
+      // Nếu lỗi do constraint (userId NOT NULL), có nghĩa là migration chưa được apply
+      if (error.code === 'P2002' || error.message?.includes('null value') || error.message?.includes('NOT NULL')) {
+        throw new BadRequestException(
+          'Database schema chưa được cập nhật. Vui lòng chạy migration: npx prisma migrate dev'
+        );
+      }
+      
+      throw error;
+    }
   }
 
   async removeMemberFromTrip(tripId: string, memberId: string, requestUserId: string) {
@@ -430,7 +503,7 @@ export class TripsService {
 
     return {
       shareToken,
-      shareLink: `${process.env.APP_URL}/trip/${tripId}/${shareToken}`,
+      shareLink: `${process.env.VITE_APP_URL}/trip/${tripId}/${shareToken}`,
       tripId,
     };
   }
@@ -503,11 +576,83 @@ export class TripsService {
     return newMember;
   }
 
+  /**
+   * Get invitation details by token (public endpoint, no auth required)
+   */
+  async getInvitationByToken(token: string) {
+    const member = await this.prisma.tripMember.findFirst({
+      where: {
+        inviteToken: token,
+        status: 'pending',
+      },
+      include: {
+        trip: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            startDate: true,
+            province: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+              },
+            },
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+          },
+        },
+      },
+    });
+
+    if (!member) {
+      throw new NotFoundException('Invalid or expired invite');
+    }
+
+    return {
+      id: member.id,
+      tripId: member.tripId,
+      invitedEmail: member.invitedEmail || member.user?.email,
+      trip: member.trip,
+      inviter: member.trip.user,
+      status: member.status,
+    };
+  }
+
   async acceptInvite(dto: AcceptInviteDto, userId: string) {
     const { token } = dto;
 
+    // Get user email to match with invitedEmail if userId is null
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
     const member = await this.prisma.tripMember.findFirst({
-      where: { inviteToken: token, status: 'pending' },
+      where: {
+        inviteToken: token,
+        status: 'pending',
+        OR: [
+          { userId: userId },
+          { invitedEmail: user.email, userId: null },
+        ],
+      },
       include: { trip: true },
     });
 
@@ -515,8 +660,101 @@ export class TripsService {
       throw new NotFoundException('Invalid or expired invite');
     }
 
+    // If member doesn't have userId yet, link it now
+    if (!member.userId) {
+      await this.prisma.tripMember.update({
+        where: { id: member.id },
+        data: { userId: userId },
+      });
+    } else if (member.userId !== userId) {
+      throw new ForbiddenException('Bạn không có quyền chấp nhận lời mời này');
+    }
+
+    const updated = await this.prisma.tripMember.update({
+      where: { id: member.id },
+      data: {
+        status: 'accepted',
+        inviteToken: null,
+        joinedAt: new Date(),
+      },
+      include: {
+        user: { select: { id: true, email: true, fullName: true, profilePicture: true } },
+        trip: { select: { id: true, title: true, provinceId: true, province: { select: { id: true, name: true, code: true, divisionType: true, codename: true, phoneCode: true } } } },
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Link pending invitations by email when user registers/logs in
+   */
+  async linkPendingInvitationsByEmail(userId: string, email: string) {
+    // Find all pending invitations for this email
+    const pendingInvitations = await this.prisma.tripMember.findMany({
+      where: {
+        invitedEmail: email,
+        status: 'pending',
+        userId: null, // Only link invitations that don't have userId yet
+      },
+      include: {
+        trip: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    // Update each invitation to link with the user
+    for (const invitation of pendingInvitations) {
+      await this.prisma.tripMember.update({
+        where: { id: invitation.id },
+        data: {
+          userId: userId,
+        },
+      });
+
+      // Send notification to the newly registered user
+      const trip = (invitation as any).trip as { id: string; title: string } | undefined;
+      if (trip) {
+        void this.notificationService.sendTripInvitationNotification(
+          invitation.tripId,
+          trip.title,
+          userId,
+          undefined,
+          { skipEmail: true } // Email đã được gửi trước đó
+        );
+      }
+    }
+
+    return {
+      linkedCount: pendingInvitations.length,
+      invitations: pendingInvitations,
+    };
+  }
+
+  async acceptInviteByMemberId(tripId: string, memberId: string, userId: string) {
+    const member = await this.prisma.tripMember.findUnique({
+      where: { id: memberId },
+      include: { trip: true },
+    });
+
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    if (member.tripId !== tripId) {
+      throw new ForbiddenException('Member does not belong to this trip');
+    }
+
     if (member.userId !== userId) {
       throw new ForbiddenException('Bạn không có quyền chấp nhận lời mời này');
+    }
+
+    if (member.status !== 'pending') {
+      throw new BadRequestException('Invitation is not pending');
     }
 
     const updated = await this.prisma.tripMember.update({

@@ -103,7 +103,7 @@ export class TripNotificationProcessor extends WorkerHost {
           const htmlContent = `
             <h2>${template.title}</h2>
             <p>${template.message}</p>
-            <p><a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/trip/${context.tripId}">Xem chi tiết</a></p>
+            <p><a href="${process.env.VITE_APP_URL}/trip/${context.tripId}">Xem chi tiết</a></p>
           `;
           await this.emailService.sendEmail({
             to: user.email,

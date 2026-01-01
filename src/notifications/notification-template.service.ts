@@ -92,6 +92,16 @@ export class NotificationTemplateService {
           color: '#06B6D4'
         };
 
+      case 'trip_invitation':
+        return {
+          title: 'Lời mời tham gia chuyến đi',
+          message: `Bạn đã được mời tham gia chuyến đi "${context.tripTitle}"${context.inviterName ? ` bởi ${context.inviterName}` : ''}`,
+          emailSubject: `[Goouty] Lời mời tham gia chuyến đi: ${context.tripTitle}`,
+          emailTemplate: 'trip-invitation',
+          icon: '✉️',
+          color: '#6c5dd3'
+        };
+
       case 'system_announcement':
         return {
           title: 'Thông báo hệ thống',
@@ -229,6 +239,19 @@ export class NotificationTemplateService {
             <p><strong>Người nhận:</strong> {{creditorName}}</p>
             <p><strong>Số tiền:</strong> {{paymentAmount}}</p>
             <p><strong>Chuyến đi:</strong> {{tripTitle}}</p>
+          </div>
+        </div>
+      `,
+      'trip-invitation': `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #6c5dd3;">Lời mời tham gia chuyến đi</h2>
+          <p>Xin chào <strong>{{userName}}</strong>,</p>
+          <p>Bạn đã được mời tham gia chuyến đi "<strong>{{tripTitle}}</strong>"{{#inviterName}} bởi <strong>{{inviterName}}</strong>{{/inviterName}}.</p>
+          <p>Hãy truy cập ứng dụng để chấp nhận lời mời và bắt đầu lên kế hoạch cùng mọi người!</p>
+          <div style="margin-top: 20px; padding: 15px; background-color: #F3F4F6; border-radius: 8px;">
+            <p><strong>Tên chuyến đi:</strong> {{tripTitle}}</p>
+            {{#inviterName}}<p><strong>Người mời:</strong> {{inviterName}}</p>{{/inviterName}}
+            <p><strong>Thời gian:</strong> {{createdAt}}</p>
           </div>
         </div>
       `,

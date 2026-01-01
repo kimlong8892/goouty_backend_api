@@ -205,6 +205,35 @@ export class EnhancedNotificationService {
   }
 
   /**
+   * Send trip invitation notification
+   */
+  async sendTripInvitationNotification(
+    tripId: string,
+    tripTitle: string,
+    invitedUserId: string,
+    inviterName?: string,
+    options: SendNotificationOptions = {}
+  ) {
+    const context: NotificationContext = {
+      tripId,
+      tripTitle,
+      inviterName,
+      actionBy: invitedUserId,
+      createdAt: new Date().toLocaleString('vi-VN')
+    };
+
+    return this.sendNotificationToUsersViaQueue(
+      'trip_invitation',
+      context,
+      [invitedUserId],
+      {
+        ...options,
+        skipEmail: true, // Email đã được gửi riêng qua emailService
+      }
+    );
+  }
+
+  /**
    * Send system announcement
    */
   async sendSystemAnnouncement(

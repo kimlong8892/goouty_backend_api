@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -10,6 +10,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { QueueModule } from '../queue/queue.module';
 import { I18nHelperModule } from '../common/i18n/i18n-helper.module';
+import { TripsModule } from '../trips/trips.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { I18nHelperModule } from '../common/i18n/i18n-helper.module';
     }),
     QueueModule,
     I18nHelperModule,
+    forwardRef(() => TripsModule),
   ],
   controllers: [AuthController],
   providers: [AuthService, SocialLoginService, JwtStrategy, LocalStrategy],

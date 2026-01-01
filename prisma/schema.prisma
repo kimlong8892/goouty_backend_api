@@ -74,18 +74,20 @@ model TripMember {
   joinedAt  DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  userId    String  @db.Uuid
+  userId    String?  @db.Uuid  // Nullable để hỗ trợ invitation cho email chưa tồn tại
   tripId    String  @db.Uuid
   trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Invitation flow
   status       String   @default("accepted") // 'pending' | 'accepted'
   inviteToken  String?  @unique
   invitedAt    DateTime?
   invitedById  String?  @db.Uuid
+  invitedEmail String?  // Email của người được mời (khi user chưa tồn tại)
 
   @@unique([userId, tripId])
+  @@index([invitedEmail, tripId])
 }
 
 model Activity {
