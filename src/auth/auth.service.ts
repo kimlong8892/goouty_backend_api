@@ -8,6 +8,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { QueueService } from '../queue/queue.service';
+import { TranslationService } from '../common/i18n/translation.service';
 
 @Injectable()
 export class AuthService {
@@ -15,6 +16,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private queueService: QueueService,
+    private i18n: TranslationService,
   ) { }
 
   async register(registerDto: RegisterDto) {
@@ -26,7 +28,9 @@ export class AuthService {
     });
 
     if (existingUser) {
-      throw new ConflictException('Email already registered');
+      throw new ConflictException(
+        this.i18n.t('auth.register.emailExists')
+      );
     }
 
     // Hash password

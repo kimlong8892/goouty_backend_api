@@ -30,14 +30,39 @@ export class AllExceptionsFilter implements ExceptionFilter {
         const url = httpAdapter.getRequestUrl(request);
         const method = httpAdapter.getRequestMethod(request);
 
-        const responseBody = {
+        // Extract error message and validation errors
+        let errorMessage = 'Unknown error';
+        let validationErrors = null;
+
+        if (exception instanceof HttpException) {
+            const response = exception.getResponse();
+            if (typeof response === 'object' && response !== null) {
+                errorMessage = (response as any).message || exception.message;
+                // Handle validation errors from class-validator
+                if (Array.isArray((response as any).message)) {
+                    validationErrors = (response as any).message;
+                    errorMessage = 'Validation failed';
+                }
+            } else {
+                errorMessage = exception.message;
+            }
+        } else if (exception instanceof Error) {
+            errorMessage = exception.message;
+        }
+
+        const responseBody: any = {
             statusCode: httpStatus,
             timestamp: new Date().toISOString(),
             path: url,
+            message: errorMessage,
         };
 
+        // Add validation errors if present
+        if (validationErrors) {
+            responseBody.errors = validationErrors;
+        }
+
         // Chuẩn bị dữ liệu lỗi
-        const errorMessage = exception instanceof Error ? exception.message : 'Unknown error';
         const stack = exception instanceof Error ? exception.stack : '';
 
         // Luôn ghi log ra Console (Dozzle) cho mọi lỗi

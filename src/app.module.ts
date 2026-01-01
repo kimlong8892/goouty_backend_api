@@ -88,8 +88,7 @@ import { I18nHelperModule } from './common/i18n/i18n-helper.module';
         watch: true,
       },
       resolvers: [
-        { use: QueryResolver, options: ['lang'] },
-        AcceptLanguageResolver,
+        new QueryResolver(['lang', 'l']),
         new HeaderResolver(['x-custom-lang']),
       ],
     }),

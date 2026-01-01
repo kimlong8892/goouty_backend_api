@@ -9,6 +9,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { QueueModule } from '../queue/queue.module';
+import { I18nHelperModule } from '../common/i18n/i18n-helper.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { QueueModule } from '../queue/queue.module';
       inject: [ConfigService],
     }),
     QueueModule,
+    I18nHelperModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, SocialLoginService, JwtStrategy, LocalStrategy],
