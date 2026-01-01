@@ -88,8 +88,10 @@ jobs:
               
               # Add Docker's official GPG key the modern way
               echo '$SSH_PASS' | sudo -S install -m 0755 -d /etc/apt/keyrings
-              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | echo '$SSH_PASS' | sudo -S gpg --dearmor -o /etc/apt/keyrings/docker.gpg --yes
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /tmp/docker.gpg
+              echo '$SSH_PASS' | sudo -S gpg --dearmor -o /etc/apt/keyrings/docker.gpg --yes /tmp/docker.gpg
               echo '$SSH_PASS' | sudo -S chmod a+r /etc/apt/keyrings/docker.gpg
+              rm /tmp/docker.gpg
               
               # Set up the repository
               echo \"deb [arch=\\\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \\\$(lsb_release -cs) stable\" | \
