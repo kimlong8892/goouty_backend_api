@@ -78,12 +78,12 @@ jobs:
               echo '$SSH_PASS' | sudo -S apt-get update -y
               echo '$SSH_PASS' | sudo -S apt-get install -y apt-transport-https ca-certificates curl software-properties-common
               curl -fsSL https://download.docker.com/linux/ubuntu/gpg | echo '$SSH_PASS' | sudo -S apt-key add -
-              echo '$SSH_PASS' | sudo -S add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable" -y
+              echo '$SSH_PASS' | sudo -S add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable\" -y
               echo '$SSH_PASS' | sudo -S apt-get update -y
               echo '$SSH_PASS' | sudo -S apt-get install -y docker-ce
               
               echo 'Installing Docker Compose v2.2.3...'
-              echo '$SSH_PASS' | sudo -S curl -L "https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-\$(uname -s)-\$(uname -m)" -o /usr/bin/docker-compose
+              echo '$SSH_PASS' | sudo -S curl -L \"https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/bin/docker-compose
               echo '$SSH_PASS' | sudo -S chmod +x /usr/bin/docker-compose
               
               echo '$SSH_PASS' | sudo -S usermod -aG docker $SSH_USER
