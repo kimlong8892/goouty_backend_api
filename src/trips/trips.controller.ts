@@ -151,6 +151,22 @@ export class TripsController {
     return this.tripsService.removeMemberFromTrip(id, memberId, req.user.userId);
   }
 
+  @Post(':id/members/:memberId/resend')
+  @ApiOperation({ summary: 'Resend invitation to a pending member' })
+  @ApiResponse({ status: 200, description: 'Invitation resent successfully', type: TripMemberResponseDto })
+  @ApiResponse({ status: 404, description: 'Trip or member not found' })
+  @ApiResponse({ status: 403, description: 'Only trip owner can resend invitations' })
+  @ApiResponse({ status: 400, description: 'Can only resend invitations for pending members' })
+  @ApiParam({ name: 'id', description: 'Trip ID' })
+  @ApiParam({ name: 'memberId', description: 'Member ID' })
+  resendInvitation(
+    @Param('id') id: string,
+    @Param('memberId') memberId: string,
+    @Request() req: any,
+  ) {
+    return this.tripsService.resendInvitation(id, memberId, req.user.userId);
+  }
+
   // ===== SHARE LINK ENDPOINTS =====
 
   @Post(':id/share')

@@ -479,6 +479,103 @@ export class TripsService {
     });
   }
 
+  async resendInvitation(tripId: string, memberId: string, requestUserId: string) {
+    const trip = await this.findOne(tripId);
+
+    // Check if user is trip owner
+    if (trip.userId !== requestUserId) {
+      throw new ForbiddenException('Only trip owner can resend invitations');
+    }
+
+    const member = await this.prisma.tripMember.findUnique({
+      where: { id: memberId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+          },
+        },
+        trip: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    if (!member || member.tripId !== tripId) {
+      throw new NotFoundException('Member not found in this trip');
+    }
+
+    // Only resend for pending invitations
+    if (member.status !== 'pending') {
+      throw new BadRequestException('Can only resend invitations for pending members');
+    }
+
+    // Generate new invite token
+    const newInviteToken = randomBytes(32).toString('hex');
+
+    // Update member with new token and reset invitedAt
+    const updatedMember = await this.prisma.tripMember.update({
+      where: { id: memberId },
+      data: {
+        inviteToken: newInviteToken,
+        invitedAt: new Date(),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true,
+          },
+        },
+      },
+    });
+
+    // Get inviter info
+    const inviter = await this.prisma.user.findUnique({
+      where: { id: requestUserId },
+      select: { fullName: true, email: true },
+    });
+
+    // Get email to send to
+    const emailToSend = member.invitedEmail || member.user?.email;
+    if (!emailToSend) {
+      throw new BadRequestException('No email found for this invitation');
+    }
+
+    // Send invitation email
+    const frontendUrl = process.env.VITE_APP_URL;
+    if (!frontendUrl) {
+      console.error('VITE_APP_URL is not set in environment variables');
+    }
+    void this.emailService.sendTripInviteEmail({
+      toEmail: emailToSend,
+      inviteeName: member.user?.fullName || emailToSend.split('@')[0],
+      tripTitle: trip.title,
+      inviterName: inviter?.fullName || inviter?.email,
+      acceptUrl: `${frontendUrl}/invite?token=${newInviteToken}`,
+    });
+
+    // Send in-app notification if user exists
+    if (member.userId) {
+      void this.notificationService.sendTripInvitationNotification(
+        tripId,
+        trip.title,
+        member.userId,
+        inviter?.fullName || inviter?.email,
+        { skipEmail: true } // Email đã được gửi riêng
+      );
+    }
+
+    return updatedMember;
+  }
+
   // ===== SHARE LINK FUNCTIONALITY =====
 
   async generateShareLink(tripId: string, requestUserId: string) {
