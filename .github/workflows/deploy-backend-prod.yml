@@ -56,7 +56,15 @@ jobs:
           DEPLOY_PATH="${{ secrets.DEPLOY_PATH_PROD }}"
           [ -z "$DEPLOY_PATH" ] && DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}"
 
-          sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o "ProxyCommand=cloudflared access ssh --hostname %h" $SSH_USER@$SSH_HOST "
+          USE_CLOUDFLARE_SSH=$(grep USE_CLOUDFLARE_SSH .github/env-config/prod/env.json | awk -F'"' '{print $4}')
+          
+          if [ "$USE_CLOUDFLARE_SSH" = "true" ]; then
+             SSH_OPTS="-o StrictHostKeyChecking=no -o 'ProxyCommand=cloudflared access ssh --hostname %h'"
+          else
+             SSH_OPTS="-o StrictHostKeyChecking=no"
+          fi
+
+          sshpass -p "$SSH_PASS" ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
             # Auto-install Docker if missing
             if ! command -v docker &> /dev/null; then
               echo 'Docker not found. Installing...'
@@ -79,10 +87,10 @@ jobs:
           "
           
           # Upload .env.prod
-          sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no -o "ProxyCommand=cloudflared access ssh --hostname %h" .env.prod $SSH_USER@$SSH_HOST:$DEPLOY_PATH/.env.prod
+          sshpass -p "$SSH_PASS" scp $SSH_OPTS .env.prod $SSH_USER@$SSH_HOST:$DEPLOY_PATH/.env.prod
           
           # Run the deploy script
-          sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o "ProxyCommand=cloudflared access ssh --hostname %h" $SSH_USER@$SSH_HOST "
+          sshpass -p "$SSH_PASS" ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
             cd $DEPLOY_PATH
             echo 'Deploying Backend Prod...'
             chmod +x deploy_cicd_prod.sh
