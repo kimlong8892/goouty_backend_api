@@ -16,6 +16,7 @@ import { ProvincesModule } from './provinces/provinces.module';
 import { TripTemplatesModule } from './trip-templates/trip-templates.module';
 import { UploadModule } from './upload/upload.module';
 import { TelegramModule } from './common/telegram/telegram.module';
+import { SeedModule } from './seed/seed.module';
 import * as Joi from 'joi';
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -109,6 +110,7 @@ import { I18nHelperModule } from './common/i18n/i18n-helper.module';
     UploadModule,
     TelegramModule,
     I18nHelperModule,
+    SeedModule,
   ],
   controllers: [AppController],
   providers: [
