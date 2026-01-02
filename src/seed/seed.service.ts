@@ -557,4 +557,304 @@ export class SeedService {
         this.logger.log('🎉 Demo data seeding completed!');
         return stats;
     }
+
+    async seedTripTemplates() {
+        this.logger.log('Starting to seed trip templates...');
+
+        // Get all provinces
+        const provinces = await this.prisma.province.findMany();
+        this.logger.log(`Found ${provinces.length} provinces`);
+
+        // Create a demo user for templates
+        let demoUser = await this.prisma.user.findFirst({
+            where: { email: 'demo@templates.com' }
+        });
+
+        if (!demoUser) {
+            const hashedPassword = await bcrypt.hash('hashedpassword', 10);
+            demoUser = await this.prisma.user.create({
+                data: {
+                    email: 'demo@templates.com',
+                    fullName: 'Demo User',
+                    password: hashedPassword
+                }
+            });
+            this.logger.log('Created demo user for templates');
+        } else {
+            // Check if templates already exist for this user?
+            // Since we want "seed 1 time", if user exists we can assume it might be seeded.
+            // But let's check if there are any templates created by this user to be sure.
+            const templatesCount = await this.prisma.tripTemplate.count({
+                where: { userId: demoUser.id }
+            });
+
+            if (templatesCount > 0) {
+                throw new ConflictException('Trip templates have already been seeded.');
+            }
+        }
+
+        // Create templates for each province
+        let totalTemplates = 0;
+        for (const province of provinces) {
+            // Create 10 templates per province
+            for (let i = 1; i <= 10; i++) {
+                const templateTitle = this.generateTemplateTitle(province.name, i);
+                const templateDescription = this.generateTemplateDescription(province.name, i);
+                const templateAvatar = this.generateTemplateAvatar(i);
+
+                await this.prisma.tripTemplate.create({
+                    data: {
+                        title: templateTitle,
+                        description: templateDescription,
+                        avatar: templateAvatar,
+                        provinceId: province.id,
+                        isPublic: true,
+                        userId: demoUser.id,
+                        days: {
+                            create: this.generateDaysForTemplate(i, province.name)
+                        }
+                    }
+                });
+                totalTemplates++;
+            }
+        }
+
+        this.logger.log(`Seeded ${totalTemplates} trip templates successfully!`);
+        return { count: totalTemplates, message: 'Trip templates seeded successfully' };
+    }
+
+    private generateTemplateTitle(provinceName: string, templateNumber: number) {
+        const templates = [
+            `Khám phá ${provinceName} ${templateNumber} ngày`,
+            `${provinceName} cuối tuần`,
+            `Du lịch ${provinceName} gia đình`,
+            `${provinceName} ẩm thực`,
+            `${provinceName} văn hóa`,
+            `${provinceName} thiên nhiên`,
+            `${provinceName} nghỉ dưỡng`,
+            `${provinceName} phiêu lưu`,
+            `${provinceName} mua sắm`,
+            `${provinceName} nhiếp ảnh`
+        ];
+        return templates[(templateNumber - 1) % templates.length];
+    }
+
+    private generateTemplateDescription(provinceName: string, templateNumber: number) {
+        const descriptions = [
+            `Hành trình khám phá ${provinceName} với các điểm đến nổi tiếng`,
+            `Hành trình ngắn gọn cho cuối tuần tại ${provinceName}`,
+            `Hành trình phù hợp cho gia đình tại ${provinceName}`,
+            `Khám phá ẩm thực đặc sắc của ${provinceName}`,
+            `Tìm hiểu văn hóa và lịch sử ${provinceName}`,
+            `Khám phá thiên nhiên hoang dã tại ${provinceName}`,
+            `Hành trình nghỉ dưỡng thư giãn tại ${provinceName}`,
+            `Hành trình phiêu lưu mạo hiểm tại ${provinceName}`,
+            `Hành trình mua sắm và thương mại tại ${provinceName}`,
+            `Hành trình chụp ảnh và khám phá cảnh đẹp ${provinceName}`
+        ];
+        return descriptions[(templateNumber - 1) % descriptions.length];
+    }
+
+    private generateTemplateAvatar(templateNumber: number) {
+        const avatarUrls = [
+            'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&h=300&fit=crop&crop=center', // Nature
+            'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center', // Weekend
+            'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&h=300&fit=crop&crop=center', // Family
+            'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=300&fit=crop&crop=center', // Food
+            'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&h=300&fit=crop&crop=center', // Culture
+            'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop&crop=center', // Nature
+            'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center', // Relaxation
+            'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop&crop=center', // Shopping
+            'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&h=300&fit=crop&crop=center'  // Photography
+        ];
+        return avatarUrls[(templateNumber - 1) % avatarUrls.length];
+    }
+
+    private generateDaysForTemplate(dayCount: number, provinceName: string) {
+        const days: any[] = [];
+        for (let i = 1; i <= dayCount; i++) {
+            days.push({
+                title: `Ngày ${i}: Khám phá ${provinceName}`,
+                description: `Hành trình ngày ${i} tại ${provinceName}`,
+                dayOrder: i,
+                activities: {
+                    create: this.generateActivitiesForDay(i, provinceName)
+                }
+            });
+        }
+        return days;
+    }
+
+    private generateActivitiesForDay(dayNumber: number, provinceName: string) {
+        const activities = [
+            {
+                title: `Tham quan điểm nổi tiếng ${provinceName}`,
+                startTime: "08:00",
+                durationMin: 120,
+                location: `${provinceName}`,
+                notes: null,
+                important: true,
+                activityOrder: 1
+            },
+            {
+                title: `Ăn trưa đặc sản`,
+                startTime: "12:00",
+                durationMin: 90,
+                location: `Nhà hàng ${provinceName}`,
+                notes: null,
+                important: true,
+                activityOrder: 2
+            },
+            {
+                title: `Dạo quanh trung tâm`,
+                startTime: "14:00",
+                durationMin: 180,
+                location: `Trung tâm ${provinceName}`,
+                notes: null,
+                important: false,
+                activityOrder: 3
+            },
+            {
+                title: `Thưởng thức ẩm thực tối`,
+                startTime: "19:00",
+                durationMin: 120,
+                location: `Nhà hàng tối`,
+                notes: null,
+                important: true,
+                activityOrder: 4
+            }
+        ];
+
+        // Return only the first 3 activities for shorter templates
+        if (dayNumber <= 2) {
+            return activities.slice(0, 3);
+        }
+
+        return activities;
+    }
+
+    async seedProvinces() {
+        this.logger.log('Starting to seed Vietnamese provinces...');
+
+        const vietnameseProvinces = [
+            { name: "Thành phố Hà Nội", code: 1, divisionType: "tỉnh", codename: "thanh_pho_ha_noi", phoneCode: 24 },
+            { name: "Tỉnh Hà Giang", code: 2, divisionType: "tỉnh", codename: "tinh_ha_giang", phoneCode: 219 },
+            { name: "Tỉnh Cao Bằng", code: 4, divisionType: "tỉnh", codename: "tinh_cao_bang", phoneCode: 206 },
+            { name: "Tỉnh Bắc Kạn", code: 6, divisionType: "tỉnh", codename: "tinh_bac_kan", phoneCode: 209 },
+            { name: "Tỉnh Tuyên Quang", code: 8, divisionType: "tỉnh", codename: "tinh_tuyen_quang", phoneCode: 207 },
+            { name: "Tỉnh Lào Cai", code: 10, divisionType: "tỉnh", codename: "tinh_lao_cai", phoneCode: 214 },
+            { name: "Tỉnh Điện Biên", code: 11, divisionType: "tỉnh", codename: "tinh_dien_bien", phoneCode: 215 },
+            { name: "Tỉnh Lai Châu", code: 12, divisionType: "tỉnh", codename: "tinh_lai_chau", phoneCode: 213 },
+            { name: "Tỉnh Sơn La", code: 14, divisionType: "tỉnh", codename: "tinh_son_la", phoneCode: 212 },
+            { name: "Tỉnh Yên Bái", code: 15, divisionType: "tỉnh", codename: "tinh_yen_bai", phoneCode: 216 },
+            { name: "Tỉnh Hoà Bình", code: 17, divisionType: "tỉnh", codename: "tinh_hoa_binh", phoneCode: 218 },
+            { name: "Tỉnh Thái Nguyên", code: 19, divisionType: "tỉnh", codename: "tinh_thai_nguyen", phoneCode: 208 },
+            { name: "Tỉnh Lạng Sơn", code: 20, divisionType: "tỉnh", codename: "tinh_lang_son", phoneCode: 205 },
+            { name: "Tỉnh Quảng Ninh", code: 22, divisionType: "tỉnh", codename: "tinh_quang_ninh", phoneCode: 203 },
+            { name: "Tỉnh Bắc Giang", code: 24, divisionType: "tỉnh", codename: "tinh_bac_giang", phoneCode: 204 },
+            { name: "Tỉnh Phú Thọ", code: 25, divisionType: "tỉnh", codename: "tinh_phu_tho", phoneCode: 210 },
+            { name: "Tỉnh Vĩnh Phúc", code: 26, divisionType: "tỉnh", codename: "tinh_vinh_phuc", phoneCode: 211 },
+            { name: "Tỉnh Bắc Ninh", code: 27, divisionType: "tỉnh", codename: "tinh_bac_ninh", phoneCode: 222 },
+            { name: "Tỉnh Hải Dương", code: 30, divisionType: "tỉnh", codename: "tinh_hai_duong", phoneCode: 220 },
+            { name: "Thành phố Hải Phòng", code: 31, divisionType: "tỉnh", codename: "thanh_pho_hai_phong", phoneCode: 225 },
+            { name: "Tỉnh Hưng Yên", code: 33, divisionType: "tỉnh", codename: "tinh_hung_yen", phoneCode: 221 },
+            { name: "Tỉnh Thái Bình", code: 34, divisionType: "tỉnh", codename: "tinh_thai_binh", phoneCode: 227 },
+            { name: "Tỉnh Hà Nam", code: 35, divisionType: "tỉnh", codename: "tinh_ha_nam", phoneCode: 226 },
+            { name: "Tỉnh Nam Định", code: 36, divisionType: "tỉnh", codename: "tinh_nam_dinh", phoneCode: 228 },
+            { name: "Tỉnh Ninh Bình", code: 37, divisionType: "tỉnh", codename: "tinh_ninh_binh", phoneCode: 229 },
+            { name: "Tỉnh Thanh Hóa", code: 38, divisionType: "tỉnh", codename: "tinh_thanh_hoa", phoneCode: 237 },
+            { name: "Tỉnh Nghệ An", code: 40, divisionType: "tỉnh", codename: "tinh_nghe_an", phoneCode: 238 },
+            { name: "Tỉnh Hà Tĩnh", code: 42, divisionType: "tỉnh", codename: "tinh_ha_tinh", phoneCode: 239 },
+            { name: "Tỉnh Quảng Bình", code: 44, divisionType: "tỉnh", codename: "tinh_quang_binh", phoneCode: 232 },
+            { name: "Tỉnh Quảng Trị", code: 45, divisionType: "tỉnh", codename: "tinh_quang_tri", phoneCode: 233 },
+            { name: "Thành phố Huế", code: 46, divisionType: "tỉnh", codename: "thanh_pho_hue", phoneCode: 234 },
+            { name: "Thành phố Đà Nẵng", code: 48, divisionType: "tỉnh", codename: "thanh_pho_da_nang", phoneCode: 236 },
+            { name: "Tỉnh Quảng Nam", code: 49, divisionType: "tỉnh", codename: "tinh_quang_nam", phoneCode: 235 },
+            { name: "Tỉnh Quảng Ngãi", code: 51, divisionType: "tỉnh", codename: "tinh_quang_ngai", phoneCode: 255 },
+            { name: "Tỉnh Bình Định", code: 52, divisionType: "tỉnh", codename: "tinh_binh_dinh", phoneCode: 256 },
+            { name: "Tỉnh Phú Yên", code: 54, divisionType: "tỉnh", codename: "tinh_phu_yen", phoneCode: 257 },
+            { name: "Tỉnh Khánh Hòa", code: 56, divisionType: "tỉnh", codename: "tinh_khanh_hoa", phoneCode: 258 },
+            { name: "Tỉnh Ninh Thuận", code: 58, divisionType: "tỉnh", codename: "tinh_ninh_thuan", phoneCode: 259 },
+            { name: "Tỉnh Bình Thuận", code: 60, divisionType: "tỉnh", codename: "tinh_binh_thuan", phoneCode: 252 },
+            { name: "Tỉnh Kon Tum", code: 62, divisionType: "tỉnh", codename: "tinh_kon_tum", phoneCode: 260 },
+            { name: "Tỉnh Gia Lai", code: 64, divisionType: "tỉnh", codename: "tinh_gia_lai", phoneCode: 269 },
+            { name: "Tỉnh Đắk Lắk", code: 66, divisionType: "tỉnh", codename: "tinh_dak_lak", phoneCode: 262 },
+            { name: "Tỉnh Đắk Nông", code: 67, divisionType: "tỉnh", codename: "tinh_dak_nong", phoneCode: 261 },
+            { name: "Tỉnh Lâm Đồng", code: 68, divisionType: "tỉnh", codename: "tinh_lam_dong", phoneCode: 263 },
+            { name: "Tỉnh Bình Phước", code: 70, divisionType: "tỉnh", codename: "tinh_binh_phuoc", phoneCode: 271 },
+            { name: "Tỉnh Tây Ninh", code: 72, divisionType: "tỉnh", codename: "tinh_tay_ninh", phoneCode: 276 },
+            { name: "Tỉnh Bình Dương", code: 74, divisionType: "tỉnh", codename: "tinh_binh_duong", phoneCode: 274 },
+            { name: "Tỉnh Đồng Nai", code: 75, divisionType: "tỉnh", codename: "tinh_dong_nai", phoneCode: 251 },
+            { name: "Tỉnh Bà Rịa - Vũng Tàu", code: 77, divisionType: "tỉnh", codename: "tinh_ba_ria_vung_tau", phoneCode: 254 },
+            { name: "Thành phố Hồ Chí Minh", code: 79, divisionType: "tỉnh", codename: "thanh_pho_ho_chi_minh", phoneCode: 28 },
+            { name: "Tỉnh Long An", code: 80, divisionType: "tỉnh", codename: "tinh_long_an", phoneCode: 272 },
+            { name: "Tỉnh Tiền Giang", code: 82, divisionType: "tỉnh", codename: "tinh_tien_giang", phoneCode: 273 },
+            { name: "Tỉnh Bến Tre", code: 83, divisionType: "tỉnh", codename: "tinh_ben_tre", phoneCode: 275 },
+            { name: "Tỉnh Trà Vinh", code: 84, divisionType: "tỉnh", codename: "tinh_tra_vinh", phoneCode: 294 },
+            { name: "Tỉnh Vĩnh Long", code: 86, divisionType: "tỉnh", codename: "tinh_vinh_long", phoneCode: 270 },
+            { name: "Tỉnh Đồng Tháp", code: 87, divisionType: "tỉnh", codename: "tinh_dong_thap", phoneCode: 277 },
+            { name: "Tỉnh An Giang", code: 89, divisionType: "tỉnh", codename: "tinh_an_giang", phoneCode: 296 },
+            { name: "Tỉnh Kiên Giang", code: 91, divisionType: "tỉnh", codename: "tinh_kien_giang", phoneCode: 297 },
+            { name: "Thành phố Cần Thơ", code: 92, divisionType: "tỉnh", codename: "thanh_pho_can_tho", phoneCode: 292 },
+            { name: "Tỉnh Hậu Giang", code: 93, divisionType: "tỉnh", codename: "tinh_hau_giang", phoneCode: 293 },
+            { name: "Tỉnh Sóc Trăng", code: 94, divisionType: "tỉnh", codename: "tinh_soc_trang", phoneCode: 299 },
+            { name: "Tỉnh Bạc Liêu", code: 95, divisionType: "tỉnh", codename: "tinh_bac_lieu", phoneCode: 291 },
+            { name: "Tỉnh Cà Mau", code: 96, divisionType: "tỉnh", codename: "tinh_ca_mau", phoneCode: 290 },
+        ];
+
+        // Insert provinces
+        let count = 0;
+        for (const provinceData of vietnameseProvinces) {
+            await this.prisma.province.upsert({
+                where: { code: provinceData.code },
+                update: {},
+                create: provinceData,
+            });
+            count++;
+        }
+
+        this.logger.log(`Seeded ${count} provinces successfully!`);
+        return { count, message: 'Provinces seeded successfully' };
+    }
+
+    async resetDatabase() {
+        this.logger.log('⚠ Resetting database...');
+
+        await this.prisma.paymentTransaction.deleteMany();
+        await this.prisma.paymentSettlement.deleteMany();
+        await this.prisma.expenseParticipant.deleteMany();
+        await this.prisma.expense.deleteMany();
+        await this.prisma.activity.deleteMany(); // Activity depends on Day
+        await this.prisma.day.deleteMany(); // Day depends on Trip
+        await this.prisma.tripMember.deleteMany();
+        await this.prisma.tripTemplateActivity.deleteMany();
+        await this.prisma.tripTemplateDay.deleteMany();
+        await this.prisma.tripTemplate.deleteMany();
+        await this.prisma.trip.deleteMany();
+        await this.prisma.province.deleteMany();
+        await this.prisma.notification.deleteMany();
+        await this.prisma.device.deleteMany();
+        await this.prisma.socialAccount.deleteMany();
+        await this.prisma.user.deleteMany();
+
+        this.logger.log('✅ Database reset complete.');
+        return { message: 'Database reset successfully' };
+    }
+
+    async seedAll() {
+        this.logger.log('🚀 Starting full seed process...');
+
+        await this.resetDatabase();
+        await this.seedProvinces();
+        const demoStats = await this.seedDemoData();
+        const templateStats = await this.seedTripTemplates();
+
+        this.logger.log('🎉 Full seed completed successfully!');
+
+        return {
+            message: 'Full seed completed successfully',
+            demoStats,
+            templateStats
+        };
+    }
 }
