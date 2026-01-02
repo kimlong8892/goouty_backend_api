@@ -55,7 +55,7 @@ jobs:
           
           # 1. Load public variables from env.json
           if [ -f .github/env-config/dev/env.json ]; then
-            jq -r 'to_entries | .[] | "\(.key)=\(.value)"' .github/env-config/dev/env.json > .env.temp
+            jq -r 'to_entries | .[] | select(.key != "PORT") | "\(.key)=\(.value)"' .github/env-config/dev/env.json > .env.temp
           fi
           
           # 2. Load secrets based on secrets.json mapping
@@ -69,7 +69,7 @@ jobs:
           fi
 
           # 3. Overrides for Cloud Run
-          echo "PORT=8080" >> .env.temp
+
           echo "NODE_ENV=production" >> .env.temp
 
           # 4. Save to GITHUB_OUTPUT for next step
