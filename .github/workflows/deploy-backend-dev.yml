@@ -18,8 +18,8 @@ jobs:
           # Detect Cloudflare flag using grep (pre-installed)
           USE_CLOUDFLARE_SSH=$(grep USE_CLOUDFLARE_SSH .github/env-config/dev/env.json | awk -F'"' '{print $4}')
           
-          echo "Updating and installing core tools (sshpass, jq)..."
-          sudo apt-get update -y && sudo apt-get install -y sshpass jq
+          echo "Updating and installing core tools (jq)..."
+          sudo apt-get update -y && sudo apt-get install -y jq
           
           if [ "$USE_CLOUDFLARE_SSH" = "true" ]; then
             echo "Cloudflare SSH enabled. Installing cloudflared..."
@@ -55,8 +55,8 @@ jobs:
       - name: Run Deploy Script
         run: |
           # Use Environment-level secrets (prioritize specific first, then generic)
-          SSH_PASS="${{ secrets.SSH_PASSWORD_DEV }}"
-          [ -z "$SSH_PASS" ] && SSH_PASS="${{ secrets.SSH_PASSWORD }}"
+          SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY_DEV }}"
+          [ -z "$SSH_PRIVATE_KEY" ] && SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY }}"
           
           SSH_USER="${{ secrets.SSH_USER_DEV }}"
           [ -z "$SSH_USER" ] && SSH_USER="${{ secrets.SSH_USER }}"
@@ -69,33 +69,38 @@ jobs:
 
           USE_CLOUDFLARE_SSH=$(grep USE_CLOUDFLARE_SSH .github/env-config/dev/env.json | awk -F'"' '{print $4}')
           
+          # Setup SSH Key
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          
           if [ "$USE_CLOUDFLARE_SSH" = "true" ]; then
              SSH_OPTS="-o StrictHostKeyChecking=no -o 'ProxyCommand=cloudflared access ssh --hostname %h'"
           else
              SSH_OPTS="-o StrictHostKeyChecking=no"
           fi
 
-          sshpass -p "$SSH_PASS" ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
+          ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
             # Ensure deployment directory exists
             if [ ! -d \"$DEPLOY_PATH/.git\" ]; then
               echo \"Repository not found at $DEPLOY_PATH. Cloning...\"
-              echo '$SSH_PASS' | sudo -S mkdir -p $DEPLOY_PATH
-              echo '$SSH_PASS' | sudo -S chown -R $SSH_USER:$SSH_USER $DEPLOY_PATH
+              sudo mkdir -p $DEPLOY_PATH
+              sudo chown -R $SSH_USER:$SSH_USER $DEPLOY_PATH
               git clone -b dev https://github.com/kimlong8892/goouty_backend_api.git $DEPLOY_PATH
             fi
 
             cd $DEPLOY_PATH
             # Fix permissions (Docker containers might have created files as root)
-            echo '$SSH_PASS' | sudo -S chown -R $SSH_USER:$SSH_USER .
+            sudo chown -R $SSH_USER:$SSH_USER .
             git fetch origin dev
             git reset --hard origin/dev
           "
           
           # Upload .env.dev
-          sshpass -p "$SSH_PASS" scp $SSH_OPTS .env.dev $SSH_USER@$SSH_HOST:$DEPLOY_PATH/.env.dev
+          scp $SSH_OPTS .env.dev $SSH_USER@$SSH_HOST:$DEPLOY_PATH/.env.dev
           
           # Run the deploy script
-          sshpass -p "$SSH_PASS" ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
+          ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
             cd $DEPLOY_PATH
             echo 'Deploying Backend Dev...'
             chmod +x deploy_cicd_dev.sh
