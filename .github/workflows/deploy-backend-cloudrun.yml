@@ -3,8 +3,6 @@ name: Deploy Backend to Cloud Run
 on:
   push:
     branches: [ "dev" ]
-    paths:
-      - 'backend/**'
   workflow_dispatch:
 
 env:
@@ -12,7 +10,7 @@ env:
   REGION: asia-southeast1
   REPO_NAME: goouty-repo
   SERVICE_NAME: goouty-backend-dev
-  WORKDIR: backend
+  WORKDIR: .
 
 jobs:
   deploy:
