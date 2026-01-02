@@ -40,8 +40,8 @@ jobs:
       - name: Build and Push Docker Image
         working-directory: ${{ env.WORKDIR }}
         run: |
-          # Build Docker image cho production
-          docker build -f Dockerfile.prod -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} .
+          # Build Docker image cho dev
+          docker build -f Dockerfile.dev -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} .
           # Push image lên Artifact Registry
           docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
 
