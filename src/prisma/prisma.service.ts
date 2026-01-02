@@ -8,7 +8,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     const url = config.get<string>('DATABASE_URL');
     if (!url) {
       throw new Error(
-          'DATABASE_URL is not set. Define it in your environment (e.g., .env, docker-compose, or deployment config).',
+        'DATABASE_URL is not set. Define it in your environment (e.g., .env, docker-compose, or deployment config).',
       );
     }
     super({
@@ -22,6 +22,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   private async connectWithRetry(retries = 10, delayMs = 2000): Promise<void> {
+    const url = this.config.get<string>('DATABASE_URL');
+    if (url) {
+      const maskedUrl = url.replace(/:([^:@]+)@/, ':***@');
+      console.log(`🔌 Connecting to Database: ${maskedUrl}`);
+    }
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         await this.$connect();
