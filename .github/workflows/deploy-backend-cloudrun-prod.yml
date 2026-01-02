@@ -1,15 +1,15 @@
-name: Deploy Backend to Cloud Run
+name: Deploy Backend Prod Cloud Run
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: [ "prod" ]
   workflow_dispatch:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: asia-southeast1
   REPO_NAME: goouty-repo
-  SERVICE_NAME: goouty-backend-dev
+  SERVICE_NAME: goouty-backend-prod
   WORKDIR: .
 
 jobs:
@@ -54,13 +54,13 @@ jobs:
           echo "Generating environment variables..."
           
           # 1. Load public variables from env.json
-          if [ -f .github/env-config/dev/env.json ]; then
-            jq -r 'to_entries | .[] | "\(.key)=\(.value)"' .github/env-config/dev/env.json > .env.temp
+          if [ -f .github/env-config/prod/env.json ]; then
+            jq -r 'to_entries | .[] | "\(.key)=\(.value)"' .github/env-config/prod/env.json > .env.temp
           fi
           
           # 2. Load secrets based on secrets.json mapping
-          if [ -f .github/env-config/dev/secrets.json ]; then
-            jq -n --argjson secrets "$ALL_SECRETS" --argjson vars "$ALL_VARS" --argjson mapping "$(cat .github/env-config/dev/secrets.json)" '
+          if [ -f .github/env-config/prod/secrets.json ]; then
+            jq -n --argjson secrets "$ALL_SECRETS" --argjson vars "$ALL_VARS" --argjson mapping "$(cat .github/env-config/prod/secrets.json)" '
               $mapping | to_entries | .[] | 
               .key as $k | .value as $v |
               ($secrets[$v] // $vars[$v]) as $val |

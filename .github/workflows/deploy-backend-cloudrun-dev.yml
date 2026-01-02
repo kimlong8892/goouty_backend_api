@@ -1,0 +1,88 @@
+name: Deploy Backend Dev Cloud Run
+
+on:
+  push:
+    branches: [ "dev" ]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: asia-southeast1
+  REPO_NAME: goouty-repo
+  SERVICE_NAME: goouty-backend-dev
+  WORKDIR: .
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Setup cho Docker Build
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker to use gcloud as a credential helper
+        run: |
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Build and Push Docker Image
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          # Build Docker image cho production
+          docker build -f Dockerfile.prod -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} .
+          # Push image lên Artifact Registry
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+
+      - name: Prepare Environment Variables
+        id: env-vars
+        env:
+          ALL_SECRETS: ${{ toJson(secrets) }}
+          ALL_VARS: ${{ toJson(vars) }}
+        run: |
+          echo "Generating environment variables..."
+          
+          # 1. Load public variables from env.json
+          if [ -f .github/env-config/dev/env.json ]; then
+            jq -r 'to_entries | .[] | "\(.key)=\(.value)"' .github/env-config/dev/env.json > .env.temp
+          fi
+          
+          # 2. Load secrets based on secrets.json mapping
+          if [ -f .github/env-config/dev/secrets.json ]; then
+            jq -n --argjson secrets "$ALL_SECRETS" --argjson vars "$ALL_VARS" --argjson mapping "$(cat .github/env-config/dev/secrets.json)" '
+              $mapping | to_entries | .[] | 
+              .key as $k | .value as $v |
+              ($secrets[$v] // $vars[$v]) as $val |
+              if $val != null then "\($k)=\($val)" else empty end
+            ' -r >> .env.temp
+          fi
+
+          # 3. Overrides for Cloud Run
+          echo "PORT=8080" >> .env.temp
+          echo "NODE_ENV=production" >> .env.temp
+
+          # 4. Save to GITHUB_OUTPUT for next step
+          {
+            echo "ENV_VARS<<EOF"
+            cat .env.temp
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.REGION }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          env_vars: ${{ steps.env-vars.outputs.ENV_VARS }}
