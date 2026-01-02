@@ -53,6 +53,15 @@ jobs:
         run: |
           echo "Generating environment variables..."
           
+          echo "--- DEBUG INFO ---"
+          echo "Available Secret Keys (Values masked):"
+          echo "$ALL_SECRETS" | jq keys
+          echo "Available Variable Keys:"
+          echo "$ALL_VARS" | jq keys
+          echo "Secrets Mapping Config:"
+          cat .github/env-config/dev/secrets.json
+          echo "--- END DEBUG INFO ---"
+          
           # 1. Load public variables from env.json
           if [ -f .github/env-config/dev/env.json ]; then
             # Extract PORT for Cloud Run flag (avoiding env var conflict)
