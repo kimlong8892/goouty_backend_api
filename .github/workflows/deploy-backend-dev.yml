@@ -75,10 +75,17 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           
           if [ "$USE_CLOUDFLARE_SSH" = "true" ]; then
-             SSH_OPTS="-o StrictHostKeyChecking=no -o 'ProxyCommand=cloudflared access ssh --hostname %h'"
+             SSH_OPTS="-v -o StrictHostKeyChecking=no -o 'ProxyCommand=cloudflared access ssh --hostname %h'"
           else
-             SSH_OPTS="-o StrictHostKeyChecking=no"
+             SSH_OPTS="-v -o StrictHostKeyChecking=no"
           fi
+
+          # Debug: Check if key was written correctly (Do not print content)
+          if [ ! -s ~/.ssh/id_rsa ]; then
+            echo "Error: Private Key file is empty!"
+            exit 1
+          fi
+          echo "Private key file created. Size: $(wc -c < ~/.ssh/id_rsa) bytes."
 
           ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
             # Ensure deployment directory exists
