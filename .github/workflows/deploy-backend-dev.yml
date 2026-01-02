@@ -86,6 +86,13 @@ jobs:
             exit 1
           fi
           echo "Private key file created. Size: $(wc -c < ~/.ssh/id_rsa) bytes."
+          
+          echo "=================================================================="
+          echo "DEBUG: PUBLIC KEY DERIVED FROM SECRET (Copy this to GCP if unsure)"
+          echo "=================================================================="
+          ssh-keygen -y -f ~/.ssh/id_rsa
+          echo "=================================================================="
+          echo "CHECK USERNAME: The comment at the end of the key above (if any) or the username field in GCP MUST match secret SSH_USER_DEV"
 
           ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
             # Ensure deployment directory exists
