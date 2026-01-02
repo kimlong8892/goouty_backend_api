@@ -55,7 +55,14 @@ jobs:
           
           # 1. Load public variables from env.json
           if [ -f .github/env-config/prod/env.json ]; then
+            # Extract PORT for Cloud Run flag (avoiding env var conflict)
+            PORT_VAL=$(jq -r '.PORT // "8080"' .github/env-config/prod/env.json)
+            echo "PORT=$PORT_VAL" >> $GITHUB_OUTPUT
+            
+            # Extract other vars, excluding PORT
             jq -r 'to_entries | .[] | select(.key != "PORT") | "\(.key)=\(.value)"' .github/env-config/prod/env.json > .env.temp
+          else
+            echo "PORT=8080" >> $GITHUB_OUTPUT
           fi
           
           # 2. Load secrets based on secrets.json mapping
@@ -86,3 +93,4 @@ jobs:
           region: ${{ env.REGION }}
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
           env_vars: ${{ steps.env-vars.outputs.ENV_VARS }}
+          flags: '--port ${{ steps.env-vars.outputs.PORT }}'
