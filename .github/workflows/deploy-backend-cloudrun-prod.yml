@@ -77,6 +77,13 @@ jobs:
 
           # 3. Overrides for Cloud Run
 
+          echo "Debug: Keys successfully resolved and written to .env.temp:"
+          if [ -f .env.temp ]; then
+            cut -d= -f1 .env.temp
+          else
+            echo "No .env.temp file found!"
+          fi
+
           echo "NODE_ENV=production" >> .env.temp
 
           # 4. Save to GITHUB_OUTPUT for next step
