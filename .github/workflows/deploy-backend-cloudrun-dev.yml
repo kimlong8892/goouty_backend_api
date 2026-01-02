@@ -89,8 +89,19 @@ jobs:
           echo "Debug: Keys successfully resolved and written to .env.temp:"
           if [ -f .env.temp ]; then
             cut -d= -f1 .env.temp
+            
+            # Validation: Ensure critical secrets were resolved
+            if ! grep -q "JWT_SECRET=" .env.temp; then
+              echo "::error::JWT_SECRET was NOT found in resolved variables! You MUST add 'JWT_SECRET' to your GitHub Repository Secrets."
+              exit 1
+            fi
+            if ! grep -q "S3_ACCESS_KEY_ID=" .env.temp; then
+              echo "::error::S3_ACCESS_KEY_ID was NOT found! Check GitHub Secrets."
+              exit 1
+            fi
           else
             echo "No .env.temp file found!"
+            exit 1
           fi
 
           echo "NODE_ENV=production" >> .env.temp

@@ -29,7 +29,7 @@ import { I18nHelperModule } from './common/i18n/i18n-helper.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '.env.local'],
+      ignoreEnvFile: true,
       validationSchema: Joi.object({
         JWT_SECRET: Joi.string().min(10).required(),
         JWT_EXPIRES_IN: Joi.string().default('1h'),
