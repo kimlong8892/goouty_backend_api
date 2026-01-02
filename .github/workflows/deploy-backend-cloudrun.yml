@@ -1,0 +1,63 @@
+name: Deploy Backend to Cloud Run
+
+on:
+  push:
+    branches: [ "dev" ]
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: asia-southeast1
+  REPO_NAME: goouty-repo
+  SERVICE_NAME: goouty-backend-dev
+  WORKDIR: backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Setup cho Docker Build
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker to use gcloud as a credential helper
+        run: |
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Build and Push Docker Image
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          # Build Docker image cho production
+          docker build -f Dockerfile.prod -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} .
+          # Push image lên Artifact Registry
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.REGION }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          env_vars: |
+            NODE_ENV=production
+            # Các biến môi trường khác cần thiết cho app của bạn
+            # Bạn có thể lưu các biến nhạy cảm (DB password) trong Secret Manager và mapping vào đây
+            # Hoặc dùng GitHub Secrets để inject vào đây:
+            # DATABASE_URL=${{ secrets.DATABASE_URL }}
+            # REDIS_HOST=${{ secrets.REDIS_HOST }}
+            # REDIS_PORT=${{ secrets.REDIS_PORT }}
