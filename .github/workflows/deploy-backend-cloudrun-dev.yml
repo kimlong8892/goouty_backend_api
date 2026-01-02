@@ -38,6 +38,13 @@ jobs:
         run: |
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
+      - name: Get Cloud Run URL
+        id: get-url
+        run: |
+          # Try to get existing URL, fail silently if service doesn't exist yet
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format 'value(status.url)' 2>/dev/null || echo "")
+          echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_OUTPUT
+
       - name: Build and Push Docker Image
         working-directory: ${{ env.WORKDIR }}
         run: |
@@ -86,6 +93,17 @@ jobs:
           fi
 
           # 3. Overrides for Cloud Run
+          
+          # Override APP_URL with detected Cloud Run URL (if service already exists)
+          DETECTED_URL="${{ steps.get-url.outputs.SERVICE_URL }}"
+          if [ -n "$DETECTED_URL" ]; then
+             echo "Overriding APP_URL with detected Cloud Run URL: $DETECTED_URL"
+             # Remove any existing APP_URL from env.temp to avoid duplicates
+             if [ -f .env.temp ]; then
+               grep -v "^APP_URL=" .env.temp > .env.temp.tmp && mv .env.temp.tmp .env.temp
+             fi
+             echo "APP_URL=$DETECTED_URL" >> .env.temp
+          fi
 
           echo "Debug: Keys successfully resolved and written to .env.temp:"
           if [ -f .env.temp ]; then
