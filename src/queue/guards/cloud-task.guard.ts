@@ -14,40 +14,47 @@ export class CloudTaskGuard implements CanActivate {
         const authHeader = request.headers.authorization;
 
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            this.logger.error('Missing or invalid Authorization header');
-            throw new UnauthorizedException('Missing or invalid Authorization header');
+            this.logger.error('Missing or invalid Authorization header in Cloud Task request');
+            return false;
         }
 
         const token = authHeader.split(' ')[1];
 
         try {
-            // The audience is usually the URL of the request
-            // Note: If you have a custom domain/proxy, make sure this matches the target URL configured in Cloud Tasks
-            const baseUrl = this.configService.get<string>('APP_URL');
-            const audience = `${baseUrl}/api/queue/process`.replace(/\/+$/, '');
+            // Get base URL and normalize it (remove trailing slash)
+            let baseUrl = this.configService.get<string>('APP_URL');
+            if (baseUrl && baseUrl.endsWith('/')) {
+                baseUrl = baseUrl.slice(0, -1);
+            }
 
-            this.logger.debug(`Verifying OIDC token for audience: ${audience}`);
+            // Audience must match the exact URL used when creating the task
+            const expectedAudience = `${baseUrl}/api/queue/process`;
+
+            this.logger.debug(`Verifying Cloud Task token. Expected audience: ${expectedAudience}`);
 
             const ticket = await this.client.verifyIdToken({
                 idToken: token,
-                audience: audience,
+                audience: expectedAudience,
             });
 
             const payload = ticket.getPayload();
+            if (!payload) {
+                throw new Error('Empty payload in OIDC token');
+            }
 
-            // Additional checks if necessary
-            // e.g., check the service account email
+            // Check service account email if configured
             const expectedEmail = this.configService.get<string>('GCP_SERVICE_ACCOUNT_EMAIL');
             if (expectedEmail && payload.email !== expectedEmail) {
                 this.logger.error(`OIDC token email mismatch. Expected: ${expectedEmail}, Found: ${payload.email}`);
-                throw new UnauthorizedException('Service account email mismatch');
+                return false;
             }
 
-            this.logger.debug(`OIDC token verified for ${payload.email}`);
+            this.logger.log(`Cloud Task verified successfully for: ${payload.email}`);
             return true;
         } catch (error) {
-            this.logger.error(`OIDC token verification failed: ${error.message}`);
-            throw new UnauthorizedException('Invalid OIDC token');
+            this.logger.error(`Cloud Task verification failed: ${error.message}`);
+            // If verification fails, we return 401
+            return false;
         }
     }
 }
