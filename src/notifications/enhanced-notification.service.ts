@@ -1,4 +1,4 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Inject, forwardRef, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DevicesService } from '../devices/devices.service';
 import { WebPushService } from './web-push.service';
@@ -26,6 +26,8 @@ export interface SendNotificationOptions {
 
 @Injectable()
 export class EnhancedNotificationService {
+  private readonly logger = new Logger(EnhancedNotificationService.name);
+
   constructor(
     private prisma: PrismaService,
     private devicesService: DevicesService,
@@ -397,17 +399,21 @@ export class EnhancedNotificationService {
     const { type, context, userId, options } = jobData;
 
     // Get user info
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        notificationsEnabled: true
-      }
-    });
+    let user = null;
+    if (userId) {
+      user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          notificationsEnabled: true
+        }
+      });
+    }
 
-    if (!user) {
+    if (!user && userId) {
+      this.logger.warn(`User with ID ${userId} not found, but userId was provided.`);
       return { success: false, message: 'User not found' };
     }
 
