@@ -47,9 +47,6 @@ export class TripsRepository {
           }
         },
         members: {
-          where: {
-            status: 'accepted' // Chỉ include những members đã accepted
-          },
           select: {
             id: true,
             userId: true,
@@ -98,9 +95,6 @@ export class TripsRepository {
           }
         },
         members: {
-          where: {
-            status: 'accepted'
-          },
           include: {
             user: {
               select: {

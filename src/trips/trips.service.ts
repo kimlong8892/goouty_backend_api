@@ -140,9 +140,6 @@ export class TripsService {
           }
         },
         members: {
-          where: {
-            status: 'accepted' // Chỉ include những members đã accepted
-          },
           include: {
             user: {
               select: {
@@ -293,7 +290,6 @@ export class TripsService {
     const members = await this.prisma.tripMember.findMany({
       where: {
         tripId,
-        status: 'accepted',
       },
       include: {
         user: {
