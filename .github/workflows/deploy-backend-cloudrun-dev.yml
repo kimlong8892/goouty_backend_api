@@ -161,34 +161,6 @@ jobs:
             fi
           done
 
-      - name: Configure Cloud Tasks IAM Permissions
-        run: |
-          SA_EMAIL="${{ steps.env-vars.outputs.GCP_SERVICE_ACCOUNT_EMAIL }}"
-          if [ -z "$SA_EMAIL" ]; then
-            # Fallback to secret if not in env-vars output
-            SA_EMAIL="${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}"
-          fi
-          
-          if [ ! -z "$SA_EMAIL" ]; then
-            echo "Configuring permissions for $SA_EMAIL"
-            
-            # 1. Allow Cloud Tasks service agent to create tokens using your service account
-            PROJECT_NUMBER=$(gcloud projects describe ${{ env.PROJECT_ID }} --format='value(projectNumber)')
-            gcloud iam service-accounts add-iam-policy-binding $SA_EMAIL \
-              --member="serviceAccount:service-$PROJECT_NUMBER@gcp-sa-cloudtasks.iam.gserviceaccount.com" \
-              --role="roles/iam.serviceAccountTokenCreator" \
-              --condition=None || true
-
-            # 2. Allow your service account to invoke Cloud Run
-            gcloud run services add-iam-policy-binding ${{ env.SERVICE_NAME }} \
-              --member="serviceAccount:$SA_EMAIL" \
-              --role="roles/run.invoker" \
-              --region=${{ env.REGION }} \
-              --condition=None || true
-          else
-            echo "GCP_SERVICE_ACCOUNT_EMAIL not found, skipping IAM configuration"
-          fi
-
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v2
         with:
