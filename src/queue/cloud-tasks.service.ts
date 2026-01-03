@@ -124,19 +124,22 @@ export class CloudTasksService {
         };
 
         if (this.serviceAccountEmail) {
+            this.logger.log(`Adding OIDC token for service account: ${this.serviceAccountEmail}`);
             task.httpRequest.oidcToken = {
                 serviceAccountEmail: this.serviceAccountEmail,
             };
+        } else {
+            this.logger.warn('GCP_SERVICE_ACCOUNT_EMAIL is empty. Task will be created without OIDC token!');
         }
+
+        this.logger.log(`Creating task for URL: ${url}`);
 
         try {
             const [response] = await this.client.createTask({ parent, task });
-            this.logger.debug(`Created task ${response.name} for queue ${queue}`);
+            this.logger.log(`Task created successfully: ${response.name}`);
             return { id: response.name };
         } catch (error) {
-            this.logger.error(`Error creating task for queue ${queue}:`, error);
-            // Don't throw if we want the app to keep working even if queue fails 
-            // but in this case, throwing might be better for visibility
+            this.logger.error(`Error creating Cloud Task in queue ${queue}: ${error.message}`, error.stack);
             throw error;
         }
     }
