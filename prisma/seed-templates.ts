@@ -283,20 +283,27 @@ const templates = [
 ];
 
 async function main() {
-    console.log('🌱 Seeding templates...');
+    console.log('🚀 Starting to seed notification templates...');
+
+    let count = 0;
     for (const template of templates) {
-        await prisma.template.upsert({
-            where: { code: template.code },
-            update: template,
-            create: template,
-        });
+        try {
+            await (prisma as any).template.upsert({
+                where: { code: template.code },
+                update: template,
+                create: template,
+            });
+            count++;
+        } catch (error: any) {
+            console.error(`❌ Error seeding template ${template.code}:`, error.message);
+        }
     }
-    console.log('✅ Templates seeded successfully');
+    console.log(`✅ ${count} templates seeded successfully`);
 }
 
 main()
     .catch((e) => {
-        console.error(e);
+        console.error('❌ Critical error during template seeding:', e);
         process.exit(1);
     })
     .finally(async () => {

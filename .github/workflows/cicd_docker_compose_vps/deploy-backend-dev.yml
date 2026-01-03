@@ -3,7 +3,7 @@
  on:
    push:
      branches:
-       - abc
+       - dev
 
  jobs:
    deploy:

@@ -124,15 +124,15 @@ jobs:
              gcloud run jobs update $JOB_NAME \
               --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
               --set-env-vars "$ENV_FLAGS" \
-              --command npx \
-              --args prisma,migrate,deploy \
+              --command "/bin/sh" \
+              --args "-c","npx prisma migrate deploy && npm run seed:conditional" \
               --region ${{ env.REGION }}
           else
              gcloud run jobs create $JOB_NAME \
               --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
               --set-env-vars "$ENV_FLAGS" \
-              --command npx \
-              --args prisma,migrate,deploy \
+              --command "/bin/sh" \
+              --args "-c","npx prisma migrate deploy && npm run seed:conditional" \
               --region ${{ env.REGION }}
           fi
 
