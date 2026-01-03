@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { TripsRepository } from './trips.repository';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
@@ -11,9 +11,12 @@ import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { EnhancedNotificationService } from '../notifications/enhanced-notification.service';
 import { UploadService } from '../upload/upload.service';
 import { I18nService } from 'nestjs-i18n';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class TripsService {
+  private readonly logger = new Logger(TripsService.name);
+
   constructor(
     private readonly tripsRepository: TripsRepository,
     private readonly prisma: PrismaService,
@@ -21,6 +24,7 @@ export class TripsService {
     private readonly notificationService: EnhancedNotificationService,
     private readonly uploadService: UploadService,
     private readonly i18n: I18nService,
+    private readonly configService: ConfigService,
   ) { }
 
   async create(createTripDto: CreateTripDto, userId: string) {
@@ -393,29 +397,26 @@ export class TripsService {
         select: { fullName: true, email: true },
       });
 
-      // Gửi email mời tham gia chuyến đi (best-effort)
-      const frontendUrl = process.env.APP_URL;
+      // Gửi notification và email qua queue
+      const frontendUrl = this.configService.get<string>('APP_URL');
       if (!frontendUrl) {
-        console.error('APP_URL is not set in environment variables');
+        this.logger.error('APP_URL is not set in environment variables');
       }
-      void this.emailService.sendTripInviteEmail({
-        toEmail: normalizedEmail,
-        inviteeName: userToAdd?.fullName || addMemberDto.email.split('@')[0],
-        tripTitle: trip.title,
-        inviterName: inviter?.fullName || inviter?.email,
-        acceptUrl: `${frontendUrl}/invite?token=${inviteToken}`,
-      });
 
-      // Gửi notification trong app (chỉ nếu user đã tồn tại)
-      if (userToAdd) {
-        void this.notificationService.sendTripInvitationNotification(
-          tripId,
-          trip.title,
-          userToAdd.id,
-          inviter?.fullName || inviter?.email,
-          { skipEmail: true } // Email đã được gửi riêng
-        );
-      }
+      await this.notificationService.sendTripInvitationNotification(
+        tripId,
+        trip.title,
+        userToAdd?.id || '',
+        inviter?.fullName || inviter?.email || 'Một người bạn',
+        {
+          skipEmail: false, // Giờ đã cho phép gửi mail qua queue
+          data: {
+            userEmail: normalizedEmail,
+            userName: userToAdd?.fullName || addMemberDto.email.split('@')[0],
+            acceptUrl: `${frontendUrl}/invite?token=${inviteToken}`
+          }
+        }
+      );
 
       // Return với user info hoặc email
       return {
@@ -553,29 +554,26 @@ export class TripsService {
       throw new BadRequestException('No email found for this invitation');
     }
 
-    // Send invitation email
-    const frontendUrl = process.env.APP_URL;
+    // Gửi notification và email qua queue
+    const frontendUrl = this.configService.get<string>('APP_URL');
     if (!frontendUrl) {
-      console.error('APP_URL is not set in environment variables');
+      this.logger.error('APP_URL is not set in environment variables');
     }
-    void this.emailService.sendTripInviteEmail({
-      toEmail: emailToSend,
-      inviteeName: member.user?.fullName || emailToSend.split('@')[0],
-      tripTitle: trip.title,
-      inviterName: inviter?.fullName || inviter?.email,
-      acceptUrl: `${frontendUrl}/invite?token=${newInviteToken}`,
-    });
 
-    // Send in-app notification if user exists
-    if (member.userId) {
-      void this.notificationService.sendTripInvitationNotification(
-        tripId,
-        trip.title,
-        member.userId,
-        inviter?.fullName || inviter?.email,
-        { skipEmail: true } // Email đã được gửi riêng
-      );
-    }
+    await this.notificationService.sendTripInvitationNotification(
+      tripId,
+      trip.title,
+      member.userId || '',
+      inviter?.fullName || inviter?.email || 'Một người bạn',
+      {
+        skipEmail: false,
+        data: {
+          userEmail: emailToSend,
+          userName: member.user?.fullName || emailToSend.split('@')[0],
+          acceptUrl: `${frontendUrl}/invite?token=${newInviteToken}`
+        }
+      }
+    );
 
     return updatedMember;
   }

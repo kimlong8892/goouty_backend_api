@@ -26,7 +26,7 @@ export interface NotificationContext {
 
 @Injectable()
 export class NotificationTemplateService {
-  
+
   /**
    * Get notification template for different action types
    */
@@ -243,16 +243,23 @@ export class NotificationTemplateService {
         </div>
       `,
       'trip-invitation': `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #6c5dd3;">Lời mời tham gia chuyến đi</h2>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6; color: #333;">
+          <h2 style="color: #6c5dd3; text-align: center;">Lời mời tham gia chuyến đi</h2>
           <p>Xin chào <strong>{{userName}}</strong>,</p>
-          <p>Bạn đã được mời tham gia chuyến đi "<strong>{{tripTitle}}</strong>"{{#inviterName}} bởi <strong>{{inviterName}}</strong>{{/inviterName}}.</p>
-          <p>Hãy truy cập ứng dụng để chấp nhận lời mời và bắt đầu lên kế hoạch cùng mọi người!</p>
-          <div style="margin-top: 20px; padding: 15px; background-color: #F3F4F6; border-radius: 8px;">
-            <p><strong>Tên chuyến đi:</strong> {{tripTitle}}</p>
-            {{#inviterName}}<p><strong>Người mời:</strong> {{inviterName}}</p>{{/inviterName}}
-            <p><strong>Thời gian:</strong> {{createdAt}}</p>
+          <p>Bạn đã được mời tham gia chuyến đi "<strong>{{tripTitle}}</strong>" bởi <strong>{{inviterName}}</strong>.</p>
+          <p>Hãy click vào nút bên dưới để chấp nhận lời mời và bắt đầu lên kế hoạch cùng mọi người!</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{acceptUrl}}" style="background-color: #6c5dd3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Chấp nhận lời mời</a>
           </div>
+
+          <div style="margin-top: 20px; padding: 15px; background-color: #F3F4F6; border-radius: 8px;">
+            <p style="margin: 5px 0;"><strong>Tên chuyến đi:</strong> {{tripTitle}}</p>
+            <p style="margin: 5px 0;"><strong>Người mời:</strong> {{inviterName}}</p>
+            <p style="margin: 5px 0;"><strong>Thời gian:</strong> {{createdAt}}</p>
+          </div>
+          
+          <p style="font-size: 12px; color: #777; margin-top: 20px;">Nếu nút trên không hoạt động, bạn có thể copy link sau dán vào trình duyệt: <br> {{acceptUrl}}</p>
         </div>
       `,
       'system-announcement': `
@@ -272,7 +279,7 @@ export class NotificationTemplateService {
     };
 
     let template = templates[templateName] || templates['default'];
-    
+
     // Replace placeholders with context values
     Object.keys(context).forEach(key => {
       const placeholder = `{{${key}}}`;

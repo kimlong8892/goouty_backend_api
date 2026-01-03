@@ -228,10 +228,7 @@ export class EnhancedNotificationService {
       'trip_invitation',
       context,
       [invitedUserId],
-      {
-        ...options,
-        skipEmail: true, // Email đã được gửi riêng qua emailService
-      }
+      options
     );
   }
 
