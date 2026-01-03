@@ -151,13 +151,16 @@ jobs:
       - name: Create Cloud Tasks Queues
         run: |
           echo "Checking and creating Cloud Task queues..."
-          QUEUES=("trip-notifications-dev" "expense-notifications-dev" "payment-notifications-dev" "system-notifications-dev")
-          for q in "${QUEUES[@]}"; do
-            if ! gcloud tasks queues describe $q --location ${{ env.REGION }} > /dev/null 2>&1; then
-              echo "Creating queue: $q"
-              gcloud tasks queues create $q --location ${{ env.REGION }}
-            else
-              echo "Queue already exists: $q"
+          # Extract queue names starting with QUEUE_ from env.json
+          QUEUES=$(jq -r 'to_entries | .[] | select(.key | startswith("QUEUE_")) | .value' .github/env-config/dev/env.json)
+          for q in $QUEUES; do
+            if [ ! -z "$q" ] && [ "$q" != "null" ]; then
+              if ! gcloud tasks queues describe $q --location ${{ env.REGION }} > /dev/null 2>&1; then
+                echo "Creating queue: $q"
+                gcloud tasks queues create $q --location ${{ env.REGION }}
+              else
+                echo "Queue already exists: $q"
+              fi
             fi
           done
 
