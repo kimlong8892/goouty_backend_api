@@ -4,7 +4,7 @@ import { Trip, Prisma } from '@prisma/client';
 
 @Injectable()
 export class TripsRepository {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(data: Prisma.TripCreateInput): Promise<Trip> {
     return this.prisma.trip.create({ data });
@@ -17,10 +17,10 @@ export class TripsRepository {
     orderBy?: Prisma.TripOrderByWithRelationInput;
   }): Promise<Trip[]> {
     const { skip, take, where, orderBy } = params;
-    return this.prisma.trip.findMany({ 
-      skip, 
-      take, 
-      where, 
+    return this.prisma.trip.findMany({
+      skip,
+      take,
+      where,
       orderBy,
       include: {
         user: {
@@ -71,7 +71,7 @@ export class TripsRepository {
   }
 
   async findOne(id: string): Promise<Trip | null> {
-    return this.prisma.trip.findUnique({ 
+    return this.prisma.trip.findUnique({
       where: { id },
       include: {
         user: {
@@ -95,6 +95,21 @@ export class TripsRepository {
         days: {
           include: {
             activities: true
+          }
+        },
+        members: {
+          where: {
+            status: 'accepted'
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                fullName: true,
+                profilePicture: true
+              }
+            }
           }
         }
       }

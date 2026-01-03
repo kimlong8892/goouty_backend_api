@@ -5,10 +5,10 @@ import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ExpenseResponseDto, ExpenseListResponseDto } from './dto/expense-response.dto';
 import { ExpenseCalculationService } from './expense-calculation.service';
-import { 
+import {
   ExpenseCalculationResponseDto
 } from './dto/expense-calculation.dto';
-import { 
+import {
   UpdatePaymentSettlementDto,
   PaymentSettlementResponseDto as SettlementResponseDto
 } from './dto/payment-settlement.dto';
@@ -24,7 +24,7 @@ export class ExpensesService {
     private prisma: PrismaService,
     private expenseCalculationService: ExpenseCalculationService,
     private notificationService: EnhancedNotificationService
-  ) {}
+  ) { }
 
   async create(createExpenseDto: CreateExpenseDto, userId: string): Promise<ExpenseResponseDto> {
     // Verify trip exists and user has access
@@ -42,23 +42,25 @@ export class ExpensesService {
       throw new NotFoundException('Trip not found or access denied');
     }
 
-    // Verify payer is a member of the trip
+    // Verify payer is a member of the trip (must be accepted)
     const payerMembership = await this.prisma.tripMember.findFirst({
       where: {
         tripId: createExpenseDto.tripId,
-        userId: createExpenseDto.payerId
+        userId: createExpenseDto.payerId,
+        status: 'accepted'
       }
     });
 
     if (!payerMembership && createExpenseDto.payerId !== trip.userId) {
-      throw new BadRequestException('Payer must be a member of the trip');
+      throw new BadRequestException('Payer must be an accepted member of the trip');
     }
 
-    // Verify all participants are members of the trip (including owner)
+    // Verify all participants are accepted members of the trip (including owner)
     const participantMemberships = await this.prisma.tripMember.findMany({
       where: {
         tripId: createExpenseDto.tripId,
-        userId: { in: createExpenseDto.participantIds }
+        userId: { in: createExpenseDto.participantIds },
+        status: 'accepted'
       }
     });
 
@@ -241,7 +243,7 @@ export class ExpensesService {
     }
 
     // Verify user has access to the trip
-    const hasAccess = expense.trip.userId === userId || 
+    const hasAccess = expense.trip.userId === userId ||
       await this.prisma.tripMember.findFirst({
         where: {
           tripId: expense.tripId,
@@ -279,7 +281,11 @@ export class ExpensesService {
     if (updateExpenseDto.participantIds) {
       const trip = await this.prisma.trip.findUnique({
         where: { id: expense.tripId },
-        include: { members: true }
+        include: {
+          members: {
+            where: { status: 'accepted' }
+          }
+        }
       });
 
       const validParticipantIds = [
@@ -378,7 +384,7 @@ export class ExpensesService {
         where: { id: expense.tripId },
         select: { title: true }
       });
-      
+
       if (trip) {
         await this.notificationService.sendExpenseUpdatedNotification(
           expense.tripId,
@@ -512,8 +518,8 @@ export class ExpensesService {
   }
 
   async updatePaymentSettlement(
-    settlementId: string, 
-    updateDto: UpdatePaymentSettlementDto, 
+    settlementId: string,
+    updateDto: UpdatePaymentSettlementDto,
     userId: string
   ): Promise<SettlementResponseDto> {
     const settlement = await this.prisma.paymentSettlement.findUnique({
@@ -526,7 +532,7 @@ export class ExpensesService {
     }
 
     // Verify user has access to the trip
-    const hasAccess = settlement.trip.userId === userId || 
+    const hasAccess = settlement.trip.userId === userId ||
       await this.prisma.tripMember.findFirst({
         where: {
           tripId: settlement.tripId,
@@ -541,7 +547,7 @@ export class ExpensesService {
     const updatedSettlement = await this.prisma.paymentSettlement.update({
       where: { id: settlementId },
       data: {
-        ...(updateDto.status && { 
+        ...(updateDto.status && {
           status: updateDto.status,
           ...(updateDto.status === 'completed' && { settledAt: new Date() })
         }),

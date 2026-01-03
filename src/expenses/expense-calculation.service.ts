@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { 
-  ExpenseCalculationResponseDto, 
-  UserBalanceDto, 
-  PaymentSettlementDto 
+import {
+  ExpenseCalculationResponseDto,
+  UserBalanceDto,
+  PaymentSettlementDto
 } from './dto/expense-calculation.dto';
 
 @Injectable()
 export class ExpenseCalculationService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async calculateTripExpenses(tripId: string): Promise<ExpenseCalculationResponseDto> {
     // Get all trip members (including owner)
@@ -24,6 +24,9 @@ export class ExpenseCalculationService {
           }
         },
         members: {
+          where: {
+            status: 'accepted'
+          },
           include: {
             user: {
               select: {
@@ -71,7 +74,7 @@ export class ExpenseCalculationService {
 
     // Create list of all trip members (owner + members) - avoid duplicates
     const memberMap = new Map();
-    
+
     // Add trip owner
     memberMap.set(trip.user.id, {
       id: trip.user.id,
@@ -79,7 +82,7 @@ export class ExpenseCalculationService {
       fullName: trip.user.fullName,
       profilePicture: (trip.user as any).profilePicture
     });
-    
+
     // Add trip members (this will not duplicate the owner if they're also a member)
     trip.members.forEach(member => {
       memberMap.set(member.user.id, {
@@ -89,7 +92,7 @@ export class ExpenseCalculationService {
         profilePicture: (member.user as any).profilePicture
       });
     });
-    
+
     const allMembers = Array.from(memberMap.values());
 
     // Get all transactions for this trip using Prisma
@@ -171,13 +174,13 @@ export class ExpenseCalculationService {
 
   private calculateOptimalSettlements(userBalances: UserBalanceDto[]): PaymentSettlementDto[] {
     const settlements: PaymentSettlementDto[] = [];
-    
+
     // Separate creditors (positive balance) and debtors (negative balance)
     const creditors = userBalances
       .filter(u => (u as any).remaining !== undefined ? (u as any).remaining > 0 : u.netBalance > 0)
       .map(u => ({ ...u, _remain: (u as any).remaining !== undefined ? (u as any).remaining : u.netBalance }))
       .sort((a, b) => b._remain - a._remain);
-    
+
     const debtors = userBalances
       .filter(u => (u as any).remaining !== undefined ? (u as any).remaining < 0 : u.netBalance < 0)
       .map(u => ({ ...u, _remain: (u as any).remaining !== undefined ? (u as any).remaining : u.netBalance }))

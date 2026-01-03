@@ -830,9 +830,12 @@ export class EnhancedNotificationService {
       console.log('🔄 sendNotificationToTripMembersViaQueue called');
       console.log('Type:', type, 'TripId:', tripId, 'Options:', options);
 
-      // Get trip members
+      // Get trip members (only those who have accepted)
       const tripMembers = await this.prisma.tripMember.findMany({
-        where: { tripId },
+        where: {
+          tripId,
+          status: 'accepted'
+        },
         include: { user: true }
       });
 
