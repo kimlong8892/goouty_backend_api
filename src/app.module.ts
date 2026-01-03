@@ -33,41 +33,62 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
       isGlobal: true,
       ignoreEnvFile: true,
       validationSchema: Joi.object({
+        NODE_ENV: Joi.string().valid('development', 'test', 'production').required(),
+        PORT: Joi.number().optional(),
+
+        // Database
+        DATABASE_URL: Joi.string().required(),
+        DB_USER: Joi.string().optional(),
+        DB_HOST: Joi.string().optional(),
+        DB_PORT: Joi.number().optional(),
+        DB_NAME: Joi.string().optional(),
+        DB_SCHEMA: Joi.string().optional(),
+
+        // JWT
         JWT_SECRET: Joi.string().min(10).required(),
-        JWT_EXPIRES_IN: Joi.string().default('1h'),
-        NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
-        REDIS_HOST: Joi.string().default('localhost'),
-        REDIS_PORT: Joi.number().default(6379),
-        BULLMQ_REMOVE_ON_COMPLETE: Joi.alternatives().try(
-          Joi.string().valid('false'),
-          Joi.number().min(0)
-        ).default('false'),
-        BULLMQ_REMOVE_ON_FAIL: Joi.alternatives().try(
-          Joi.string().valid('false'),
-          Joi.number().min(0)
-        ).default('false'),
-        BULLMQ_UI_USERNAME: Joi.string().default('admin'),
-        BULLMQ_UI_PASSWORD: Joi.string().min(6).default('admin123'),
+        JWT_EXPIRES_IN: Joi.string().required(),
+
         // S3 Configuration (CloudFly)
         S3_ACCESS_KEY_ID: Joi.string().required(),
         S3_SECRET_ACCESS_KEY: Joi.string().required(),
-        S3_REGION: Joi.string().default('us-east-1'),
-        S3_ENDPOINT: Joi.string().default('https://s3.cloudfly.vn'),
-        S3_BUCKET: Joi.string().default('goouty'),
-        S3_FORCE_PATH_STYLE: Joi.string().valid('true', 'false').default('true'),
+        S3_REGION: Joi.string().optional(),
+        S3_ENDPOINT: Joi.string().optional(),
+        S3_BUCKET: Joi.string().required(),
+        S3_PUBLIC_URL: Joi.string().optional(),
+        S3_FORCE_PATH_STYLE: Joi.string().valid('true', 'false').optional(),
+
+        // Mail / SMTP
+        SMTP_HOST: Joi.string().optional(),
+        SMTP_PORT: Joi.number().optional(),
+        SMTP_USER: Joi.string().email().optional(),
+        SMTP_PASS: Joi.string().optional(),
+        SMTP_SENDER: Joi.string().email().optional(),
+        SMTP_SSL: Joi.string().valid('true', 'false').optional(),
+
+        // Telegram
         TELEGRAM_BOT_TOKEN: Joi.string().optional(),
         TELEGRAM_CHAT_ID: Joi.string().optional(),
-        VITE_APP_URL: Joi.string().uri().optional(),
+
+        // Google Auth
+        GOOGLE_CLIENT_ID: Joi.string().optional(),
+        GOOGLE_CLIENT_SECRET: Joi.string().optional(),
+
+        // App URLs
         APP_URL: Joi.string().uri().optional(),
         APP_URL_API: Joi.string().uri().optional(),
-        USE_CLOUD_TASKS: Joi.string().valid('true', 'false').default('false'),
+
+        // GCP / Cloud Tasks
+        USE_CLOUD_TASKS: Joi.string().valid('true', 'false').optional(),
         GCP_PROJECT_ID: Joi.string().optional(),
-        GCP_LOCATION: Joi.string().default('asia-southeast1'),
+        GCP_LOCATION: Joi.string().optional(),
         GCP_SERVICE_ACCOUNT_EMAIL: Joi.string().email().optional(),
-        QUEUE_TRIP: Joi.string().default('trip-notifications'),
-        QUEUE_EXPENSE: Joi.string().default('expense-notifications'),
-        QUEUE_PAYMENT: Joi.string().default('payment-notifications'),
-        QUEUE_SYSTEM: Joi.string().default('system-notifications'),
+
+        // Queues
+        MAIL_QUEUE_CONCURRENCY: Joi.number().optional(),
+        QUEUE_TRIP: Joi.string().required(),
+        QUEUE_EXPENSE: Joi.string().required(),
+        QUEUE_PAYMENT: Joi.string().required(),
+        QUEUE_SYSTEM: Joi.string().required(),
       }),
     }),
     LoggerModule.forRootAsync({
