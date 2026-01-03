@@ -16,7 +16,13 @@ export class CloudTasksService {
         this.client = new CloudTasksClient();
         this.projectId = this.configService.get<string>('GCP_PROJECT_ID');
         this.location = this.configService.get<string>('GCP_LOCATION', 'asia-southeast1');
-        this.baseUrl = this.configService.get<string>('APP_URL');
+
+        let baseUrl = this.configService.get<string>('APP_URL');
+        if (baseUrl && baseUrl.endsWith('/')) {
+            baseUrl = baseUrl.slice(0, -1);
+        }
+        this.baseUrl = baseUrl;
+
         this.serviceAccountEmail = this.configService.get<string>('GCP_SERVICE_ACCOUNT_EMAIL');
 
         if (!this.projectId) {
@@ -24,7 +30,7 @@ export class CloudTasksService {
         }
 
         this.logger.log(`CloudTasksService initialized with Project: ${this.projectId}, Location: ${this.location}`);
-        this.logger.log(`CloudTasks target URL: ${this.baseUrl}/queue/process`);
+        this.logger.log(`CloudTasks target URL: ${this.baseUrl}/api/queue/process`);
     }
 
     async addTripNotificationJob(data: NotificationJobData) {
@@ -102,7 +108,8 @@ export class CloudTasksService {
         const parent = this.client.queuePath(this.projectId, this.location, queue);
 
         // Webhook endpoint to process the task
-        const url = `${this.baseUrl}/queue/process`;
+        // Note: Global prefix 'api' is set in main.ts
+        const url = `${this.baseUrl}/api/queue/process`;
 
         const task: any = {
             httpRequest: {
