@@ -59,6 +59,7 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
         TELEGRAM_CHAT_ID: Joi.string().optional(),
         VITE_APP_URL: Joi.string().uri().optional(),
         APP_URL: Joi.string().uri().optional(),
+        APP_URL_API: Joi.string().uri().optional(),
         USE_CLOUD_TASKS: Joi.string().valid('true', 'false').default('false'),
         GCP_PROJECT_ID: Joi.string().optional(),
         GCP_LOCATION: Joi.string().default('asia-southeast1'),

@@ -10,6 +10,7 @@ export class CloudTasksService {
     private readonly projectId: string;
     private readonly location: string;
     private readonly baseUrl: string;
+    private readonly apiUrl: string;
     private readonly serviceAccountEmail: string;
 
     constructor(private configService: ConfigService) {
@@ -23,6 +24,12 @@ export class CloudTasksService {
         }
         this.baseUrl = baseUrl;
 
+        let apiUrl = this.configService.get<string>('APP_URL_API');
+        if (apiUrl && apiUrl.endsWith('/')) {
+            apiUrl = apiUrl.slice(0, -1);
+        }
+        this.apiUrl = apiUrl;
+
         this.serviceAccountEmail = this.configService.get<string>('GCP_SERVICE_ACCOUNT_EMAIL');
 
         if (!this.projectId) {
@@ -31,7 +38,7 @@ export class CloudTasksService {
 
         this.logger.log(`CloudTasksService initialized with Project: ${this.projectId}, Location: ${this.location}`);
         this.logger.log(`CloudTasks Service Account: ${this.serviceAccountEmail}`);
-        this.logger.log(`CloudTasks target URL: ${this.baseUrl}/api/queue/process`);
+        this.logger.log(`CloudTasks target URL: ${this.apiUrl || `${this.baseUrl}/api`}/queue/process`);
     }
 
     async addTripNotificationJob(data: NotificationJobData) {
@@ -109,8 +116,7 @@ export class CloudTasksService {
         const parent = this.client.queuePath(this.projectId, this.location, queue);
 
         // Webhook endpoint to process the task
-        // Note: Global prefix 'api' is set in main.ts
-        const url = `${this.baseUrl}/api/queue/process`;
+        const url = this.apiUrl ? `${this.apiUrl}/queue/process` : `${this.baseUrl}/api/queue/process`;
 
         const task: any = {
             httpRequest: {

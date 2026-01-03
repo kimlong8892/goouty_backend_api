@@ -21,14 +21,23 @@ export class CloudTaskGuard implements CanActivate {
         const token = authHeader.split(' ')[1];
 
         try {
-            // Get base URL and normalize it (remove trailing slash)
-            let baseUrl = this.configService.get<string>('APP_URL');
-            if (baseUrl && baseUrl.endsWith('/')) {
-                baseUrl = baseUrl.slice(0, -1);
+            // Get API URL and normalize it (remove trailing slash)
+            let apiUrl = this.configService.get<string>('APP_URL_API');
+            if (apiUrl && apiUrl.endsWith('/')) {
+                apiUrl = apiUrl.slice(0, -1);
+            }
+
+            // Fallback to legacy construction if APP_URL_API is not set
+            if (!apiUrl) {
+                let baseUrl = this.configService.get<string>('APP_URL');
+                if (baseUrl && baseUrl.endsWith('/')) {
+                    baseUrl = baseUrl.slice(0, -1);
+                }
+                apiUrl = `${baseUrl}/api`;
             }
 
             // Audience must match the exact URL used when creating the task
-            const expectedAudience = `${baseUrl}/api/queue/process`;
+            const expectedAudience = `${apiUrl}/queue/process`;
 
             this.logger.debug(`Verifying Cloud Task token. Expected audience: ${expectedAudience}`);
 
