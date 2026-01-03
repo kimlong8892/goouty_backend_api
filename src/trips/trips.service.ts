@@ -293,6 +293,7 @@ export class TripsService {
     const members = await this.prisma.tripMember.findMany({
       where: {
         tripId,
+        status: 'accepted',
       },
       include: {
         user: {

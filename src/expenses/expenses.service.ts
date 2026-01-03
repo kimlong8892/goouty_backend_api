@@ -33,7 +33,7 @@ export class ExpensesService {
         id: createExpenseDto.tripId,
         OR: [
           { userId: userId }, // User is owner
-          { members: { some: { userId: userId } } } // User is member
+          { members: { some: { userId: userId, status: 'accepted' } } } // User is accepted member
         ]
       }
     });
@@ -171,7 +171,7 @@ export class ExpensesService {
         id: tripId,
         OR: [
           { userId: userId }, // User is owner
-          { members: { some: { userId: userId } } } // User is member
+          { members: { some: { userId: userId, status: 'accepted' } } } // User is accepted member
         ]
       }
     });
@@ -440,7 +440,7 @@ export class ExpensesService {
         id: tripId,
         OR: [
           { userId: userId }, // User is owner
-          { members: { some: { userId: userId } } } // User is member
+          { members: { some: { userId: userId, status: 'accepted' } } } // User is accepted member
         ]
       }
     });
@@ -459,7 +459,7 @@ export class ExpensesService {
         id: tripId,
         OR: [
           { userId: userId }, // User is owner
-          { members: { some: { userId: userId } } } // User is member
+          { members: { some: { userId: userId, status: 'accepted' } } } // User is accepted member
         ]
       }
     });
@@ -478,7 +478,7 @@ export class ExpensesService {
         id: tripId,
         OR: [
           { userId: userId }, // User is owner
-          { members: { some: { userId: userId } } } // User is member
+          { members: { some: { userId: userId, status: 'accepted' } } } // User is accepted member
         ]
       }
     });
