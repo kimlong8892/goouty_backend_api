@@ -336,7 +336,7 @@ export class EnhancedNotificationService {
     options: SendNotificationOptions = {}
   ) {
     try {
-      const template = this.templateService.getTemplate(type, context);
+      const template = await this.templateService.getTemplate(type, context);
       const results = [];
 
       for (const userId of userIds) {
@@ -415,7 +415,7 @@ export class EnhancedNotificationService {
     }
 
     // Get template
-    const template = this.templateService.getTemplate(type, context);
+    const template = await this.templateService.getTemplate(type, context);
     if (!template) {
       return { success: false, message: 'Template not found' };
     }
@@ -520,8 +520,8 @@ export class EnhancedNotificationService {
           }
 
           if (recipientEmail) {
-            const emailTemplate = this.templateService.getEmailTemplate(
-              template.emailTemplate || 'default',
+            const emailTemplate = await this.templateService.getEmailTemplate(
+              template.emailTemplate || type, // Use 'type' as code if emailTemplate is not explicitly set or body is empty
               context
             );
 

@@ -300,3 +300,16 @@ model TripTemplateActivity {
   @@index([dayId])
 }
 
+
+model Template {
+  id           String   @id @default(uuid()) @db.Uuid
+  code         String   @unique // e.g., 'trip_created', 'forgot_password', 'trip_invitation'
+  title        String?           // Push/In-app title
+  message      String?           // Push/In-app message
+  emailSubject String?
+  emailBody    String?           // Email HTML body
+  icon         String?
+  color        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

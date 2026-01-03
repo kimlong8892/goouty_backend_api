@@ -19,9 +19,10 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed:provinces": "ts-node prisma/seed-provinces.ts",
+    "seed:templates": "ts-node prisma/seed-templates.ts",
     "seed:trip-templates": "ts-node prisma/seed-trip-templates.ts",
     "seed:demo": "ts-node prisma/seed-demo-data.ts",
-    "seed:all": "npm run seed:provinces && npm run seed:trip-templates && npm run seed:demo",
+    "seed:all": "npm run seed:provinces && npm run seed:templates && npm run seed:trip-templates && npm run seed:demo",
     "seed:conditional": "ts-node prisma/conditional-seed.ts"
   },
   "dependencies": {

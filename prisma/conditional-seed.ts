@@ -5,9 +5,13 @@ const prisma = new PrismaClient();
 
 async function main() {
     try {
-        const provinceCount = await prisma.province.count();
-        if (provinceCount === 0) {
-            console.log('🌱 Database is empty. Starting seeding...');
+        const [provinceCount, templateCount] = await Promise.all([
+            prisma.province.count(),
+            prisma.template.count()
+        ]);
+
+        if (provinceCount === 0 || templateCount === 0) {
+            console.log('🌱 Database is missing essential data. Starting seeding...');
             execSync('npm run seed:all', { stdio: 'inherit' });
         } else {
             console.log('✅ Database already has data. Skipping seed.');
