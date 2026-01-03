@@ -5,10 +5,10 @@ import { WebPushService } from './web-push.service';
 import { EmailService } from '../email/email.service';
 import { NotificationTemplateService, NotificationContext } from './notification-template.service';
 import { QueueService } from '../queue/queue.service';
-import { 
-  CreateNotificationDto, 
-  UpdateNotificationDto, 
-  NotificationResponseDto, 
+import {
+  CreateNotificationDto,
+  UpdateNotificationDto,
+  NotificationResponseDto,
   NotificationListResponseDto,
   NotificationStatsDto,
   NotificationType,
@@ -34,7 +34,7 @@ export class EnhancedNotificationService {
     private templateService: NotificationTemplateService,
     @Inject(forwardRef(() => QueueService))
     private queueService: QueueService,
-  ) {}
+  ) { }
 
   /**
    * Send notification for trip creation
@@ -47,7 +47,7 @@ export class EnhancedNotificationService {
   ) {
     console.log('📤 EnhancedNotificationService: sendTripCreatedNotification called');
     console.log('Trip ID:', tripId, 'Title:', tripTitle, 'Created by:', createdBy);
-    
+
     const context: NotificationContext = {
       tripId,
       tripTitle,
@@ -56,7 +56,7 @@ export class EnhancedNotificationService {
     };
 
     console.log('Context:', context);
-    
+
     try {
       const result = await this.sendNotificationToTripMembersViaQueue(
         'trip_created',
@@ -283,7 +283,7 @@ export class EnhancedNotificationService {
     try {
       // Get trip members
       const tripMembers = await this.prisma.tripMember.findMany({
-        where: { 
+        where: {
           tripId,
           status: 'accepted'
         },
@@ -391,9 +391,52 @@ export class EnhancedNotificationService {
   }
 
   /**
+   * Process a notification job (used by BullMQ and Cloud Tasks)
+   */
+  async processNotificationJob(jobData: any) {
+    const { type, context, userId, options } = jobData;
+
+    // Get user info
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        notificationsEnabled: true
+      }
+    });
+
+    if (!user) {
+      return { success: false, message: 'User not found' };
+    }
+
+    // Get template
+    const template = this.templateService.getTemplate(type, context);
+    if (!template) {
+      return { success: false, message: 'Template not found' };
+    }
+
+    // Add user info to context
+    const userContext = {
+      ...context,
+      userName: user.fullName || user.email,
+      userEmail: user.email
+    };
+
+    return this.sendNotificationToUser(
+      userId,
+      type,
+      userContext,
+      template,
+      options
+    );
+  }
+
+  /**
    * Send notification to a single user
    */
-  private async sendNotificationToUser(
+  public async sendNotificationToUser(
     userId: string,
     type: string,
     context: NotificationContext,
@@ -425,7 +468,7 @@ export class EnhancedNotificationService {
       if (!options.skipPush) {
         try {
           const userDevices = await this.devicesService.getUserDevicesWithPushSubscription(userId);
-          
+
           for (const device of userDevices) {
             if (device.pushSubscription) {
               const pushPayload = {
@@ -546,7 +589,7 @@ export class EnhancedNotificationService {
   ): Promise<NotificationListResponseDto> {
     try {
       const skip = (page - 1) * limit;
-      
+
       const where: any = { userId };
       if (status) where.status = status;
       if (type) where.type = type;
@@ -559,8 +602,8 @@ export class EnhancedNotificationService {
           take: limit,
         }),
         this.prisma.notification.count({ where }),
-        this.prisma.notification.count({ 
-          where: { userId, status: NotificationStatus.UNREAD } 
+        this.prisma.notification.count({
+          where: { userId, status: NotificationStatus.UNREAD }
         }),
       ]);
 
@@ -613,7 +656,7 @@ export class EnhancedNotificationService {
   ): Promise<NotificationResponseDto> {
     try {
       const updateData: any = { ...updateNotificationDto };
-      
+
       // Nếu mark as read, set readAt
       if (updateNotificationDto.status === NotificationStatus.READ) {
         updateData.readAt = new Date();
@@ -772,7 +815,7 @@ export class EnhancedNotificationService {
     try {
       console.log('🔄 sendNotificationToTripMembersViaQueue called');
       console.log('Type:', type, 'TripId:', tripId, 'Options:', options);
-      
+
       // Get trip members
       const tripMembers = await this.prisma.tripMember.findMany({
         where: { tripId },
@@ -787,7 +830,7 @@ export class EnhancedNotificationService {
       }
 
       // Filter out the creator if needed
-      const membersToNotify = options.userIds 
+      const membersToNotify = options.userIds
         ? tripMembers.filter(member => options.userIds!.includes(member.userId))
         : tripMembers.filter(member => member.userId !== context.actionBy);
 
@@ -816,7 +859,7 @@ export class EnhancedNotificationService {
       // Add jobs to appropriate queue based on type
       let result;
       console.log(`🔍 Routing notification type: "${type}"`);
-      
+
       if (type.includes('trip')) {
         console.log('📤 Using trip-notifications queue');
         result = await this.queueService.addBulkTripNotificationJobs(jobs);
@@ -832,8 +875,8 @@ export class EnhancedNotificationService {
       }
 
       console.log(`📤 Added ${jobs.length} ${type} notification jobs to queue for trip ${tripId}`);
-      return { 
-        success: true, 
+      return {
+        success: true,
         message: `${jobs.length} notifications queued successfully`,
         jobCount: jobs.length
       };
@@ -868,7 +911,7 @@ export class EnhancedNotificationService {
       // Add jobs to appropriate queue based on type
       let result;
       console.log(`🔍 Routing notification type: "${type}"`);
-      
+
       if (type.includes('trip')) {
         console.log('📤 Using trip-notifications queue');
         result = await this.queueService.addBulkTripNotificationJobs(jobs);
@@ -884,8 +927,8 @@ export class EnhancedNotificationService {
       }
 
       console.log(`📤 Added ${jobs.length} notification jobs to queue for users: ${userIds.join(', ')}`);
-      return { 
-        success: true, 
+      return {
+        success: true,
         message: `${jobs.length} notifications queued successfully`,
         jobCount: jobs.length
       };

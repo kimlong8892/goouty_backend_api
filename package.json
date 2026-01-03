@@ -30,6 +30,7 @@
     "@aws-sdk/s3-request-presigner": "^3.958.0",
     "@bull-board/api": "^5.10.0",
     "@bull-board/express": "^5.10.0",
+    "@google-cloud/tasks": "^6.2.1",
     "@nestjs/bullmq": "^10.0.1",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^4.0.2",

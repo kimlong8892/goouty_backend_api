@@ -1,11 +1,17 @@
-import { Controller, Get, Post, Delete, Body } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { QueueService } from './queue.service';
+import { EnhancedNotificationService } from '../notifications/enhanced-notification.service';
 
 @ApiTags('Queue Management')
 @Controller('queue')
 export class QueueController {
-  constructor(private readonly queueService: QueueService) {}
+  private readonly logger = new Logger(QueueController.name);
+
+  constructor(
+    private readonly queueService: QueueService,
+    private readonly enhancedNotificationService: EnhancedNotificationService,
+  ) { }
 
   @Get('health')
   @ApiOperation({ summary: 'Check queue health and connection' })
@@ -78,10 +84,24 @@ export class QueueController {
     };
 
     const result = await this.queueService.addSystemNotificationJob(testJob);
-    return { 
-      message: 'Test job added successfully', 
+    return {
+      message: 'Test job added successfully',
       jobId: result.id,
       jobData: testJob
     };
+  }
+
+  @Post('process')
+  @ApiOperation({ summary: 'Process a job from Cloud Tasks' })
+  @ApiResponse({ status: 200, description: 'Job processed successfully' })
+  async processJob(@Body() data: any) {
+    this.logger.log(`Received job processing request for user ${data.userId}, type ${data.type}`);
+    try {
+      const result = await this.enhancedNotificationService.processNotificationJob(data);
+      return result;
+    } catch (error) {
+      this.logger.error(`Error processing Cloud Task job: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 }

@@ -6,6 +6,7 @@ import { DevicesService } from '../../devices/devices.service';
 import { WebPushService } from '../../notifications/web-push.service';
 import { EmailService } from '../../email/email.service';
 import { NotificationTemplateService } from '../../notifications/notification-template.service';
+import { EnhancedNotificationService } from '../../notifications/enhanced-notification.service';
 
 @Processor('trip-notifications', {
   concurrency: parseInt(process.env.MAIL_QUEUE_CONCURRENCY || '1'),
@@ -20,108 +21,15 @@ export class TripNotificationProcessor extends WorkerHost {
     private readonly webPushService: WebPushService,
     private readonly emailService: EmailService,
     private readonly templateService: NotificationTemplateService,
+    private readonly enhancedNotificationService: EnhancedNotificationService,
   ) {
     super();
   }
 
   async process(job: Job<any>): Promise<any> {
-    const { type, context, userId, options } = job.data;
-
-    this.logger.log(`Processing trip notification job ${job.id} for user ${userId}`);
-
+    this.logger.log(`Processing trip notification job ${job.id} for user ${job.data.userId}`);
     try {
-      // Get user info
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-      });
-
-      if (!user) {
-        this.logger.warn(`User ${userId} not found, skipping notification`);
-        return { success: false, message: 'User not found' };
-      }
-
-      // Get template
-      const template = this.templateService.getTemplate(type, context);
-      if (!template) {
-        this.logger.warn(`Template for type ${type} not found`);
-        return { success: false, message: 'Template not found' };
-      }
-
-      // Map notification type to Prisma enum
-      const mapNotificationType = (type: string) => {
-        const typeMap: { [key: string]: string } = {
-          'expense_added': 'EXPENSE_ADDED',
-          'expense_updated': 'EXPENSE_UPDATED',
-          'trip_created': 'TRIP_CREATED',
-          'trip_updated': 'TRIP_UPDATED',
-          'trip_deleted': 'TRIP_DELETED',
-          'payment_created': 'SETTLEMENT_CREATED',
-          'system_announcement': 'SYSTEM_ANNOUNCEMENT',
-        };
-        return typeMap[type] || 'INFO';
-      };
-
-      // Create notification record
-      const notification = await this.prisma.notification.create({
-        data: {
-          userId,
-          type: mapNotificationType(type) as any,
-          title: template.title,
-          body: template.message,
-          data: context,
-        },
-      });
-
-      this.logger.log(`Created notification record ${notification.id}`);
-
-      // Send push notification if not skipped and user has notifications enabled
-      if (!options?.skipPush && user.notificationsEnabled) {
-        try {
-          const devices = await this.devicesService.getUserDevices(userId);
-          for (const device of devices) {
-            const payload = JSON.stringify({
-              title: template.title,
-              message: template.message,
-              data: {
-                url: `/trip/${context.tripId}`,
-                notificationId: notification.id,
-              }
-            });
-            await this.webPushService.sendNotification(device.pushSubscription, payload);
-          }
-          this.logger.log(`Sent push notification to ${devices.length} devices`);
-        } catch (error) {
-          this.logger.error('Error sending push notification:', error);
-        }
-      } else if (!user.notificationsEnabled) {
-        this.logger.log(`Skipping push notification for user ${userId} - notifications disabled`);
-      }
-
-      // Send email if not skipped
-      if (!options?.skipEmail) {
-        try {
-          const htmlContent = `
-            <h2>${template.title}</h2>
-            <p>${template.message}</p>
-            <p><a href="${process.env.APP_URL}/trip/${context.tripId}">Xem chi tiết</a></p>
-          `;
-          await this.emailService.sendEmail({
-            to: user.email,
-            subject: template.emailSubject || template.title,
-            html: htmlContent,
-          });
-          this.logger.log(`Sent email notification to ${user.email}`);
-        } catch (error) {
-          this.logger.error('Error sending email notification:', error);
-        }
-      }
-
-      this.logger.log(`Trip notification job ${job.id} completed successfully`);
-      return {
-        success: true,
-        notificationId: notification.id,
-        message: 'Notification sent successfully'
-      };
+      return await this.enhancedNotificationService.processNotificationJob(job.data);
     } catch (error) {
       this.logger.error(`Trip notification job ${job.id} failed:`, error);
       throw error;

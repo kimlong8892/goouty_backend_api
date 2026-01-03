@@ -139,6 +139,19 @@ jobs:
           echo "Executing migration..."
           gcloud run jobs execute $JOB_NAME --region ${{ env.REGION }} --wait
 
+      - name: Create Cloud Tasks Queues
+        run: |
+          echo "Checking and creating Cloud Task queues..."
+          QUEUES=("trip-notifications-prod" "expense-notifications-prod" "payment-notifications-prod" "system-notifications-prod")
+          for q in "${QUEUES[@]}"; do
+            if ! gcloud tasks queues describe $q --location ${{ env.REGION }} > /dev/null 2>&1; then
+              echo "Creating queue: $q"
+              gcloud tasks queues create $q --location ${{ env.REGION }}
+            else
+              echo "Queue already exists: $q"
+            fi
+          done
+
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v2
         with:
