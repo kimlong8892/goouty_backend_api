@@ -1,121 +1,121 @@
-# name: Deploy Backend Prod
+ name: Deploy Backend Prod
 
-# on:
-#   push:
-#     branches:
-#       - prod
+ on:
+   push:
+     branches:
+       - abc
 
-# jobs:
-#   deploy:
-#     runs-on: ubuntu-latest
-#     environment: PROD
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
+ jobs:
+   deploy:
+     runs-on: ubuntu-latest
+     environment: PROD
+     steps:
+       - name: Checkout code
+         uses: actions/checkout@v4
 
-#       - name: Install dependencies (Cloudflared, sshpass, jq)
-#         run: |
-#           # Detect Cloudflare flag using grep (pre-installed)
-#           USE_CLOUDFLARE_SSH=$(grep USE_CLOUDFLARE_SSH .github/env-config/prod/env.json | awk -F'"' '{print $4}')
+       - name: Install dependencies (Cloudflared, sshpass, jq)
+         run: |
+           # Detect Cloudflare flag using grep (pre-installed)
+           USE_CLOUDFLARE_SSH=$(grep USE_CLOUDFLARE_SSH .github/env-config/prod/env.json | awk -F'"' '{print $4}')
           
-#           echo "Updating and installing core tools (jq)..."
-#           sudo apt-get update -y && sudo apt-get install -y jq
+           echo "Updating and installing core tools (jq)..."
+           sudo apt-get update -y && sudo apt-get install -y jq
           
-#           if [ "$USE_CLOUDFLARE_SSH" = "true" ]; then
-#             echo "Cloudflare SSH enabled. Installing cloudflared..."
-#             curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-#             sudo dpkg -i cloudflared.deb
-#             rm cloudflared.deb
-#           else
-#             echo "Cloudflare SSH disabled. Skipping cloudflared install."
-#           fi
+           if [ "$USE_CLOUDFLARE_SSH" = "true" ]; then
+             echo "Cloudflare SSH enabled. Installing cloudflared..."
+             curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+             sudo dpkg -i cloudflared.deb
+             rm cloudflared.deb
+           else
+             echo "Cloudflare SSH disabled. Skipping cloudflared install."
+           fi
 
-#       - name: Generate .env.prod
-#         id: gen_env
-#         env:
-#           ALL_SECRETS: ${{ toJson(secrets) }}
-#           ALL_VARS: ${{ toJson(vars) }}
-#         run: |
-#           # Load public variables from repository JSON
-#           jq -r 'to_entries | .[] | "\(.key)=\(.value)"' .github/env-config/prod/env.json > .env.prod
+       - name: Generate .env.prod
+         id: gen_env
+         env:
+           ALL_SECRETS: ${{ toJson(secrets) }}
+           ALL_VARS: ${{ toJson(vars) }}
+         run: |
+           # Load public variables from repository JSON
+           jq -r 'to_entries | .[] | "\(.key)=\(.value)"' .github/env-config/prod/env.json > .env.prod
           
-#           # Load secrets and env vars from GitHub Environments using mapping JSON
-#           jq -n --argjson secrets "$ALL_SECRETS" --argjson vars "$ALL_VARS" --argjson mapping "$(cat .github/env-config/prod/secrets.json)" '
-#             $mapping | to_entries | .[] | 
-#             .key as $k | .value as $v |
-#             ($secrets[$v] // $vars[$v]) as $val |
-#             if $val != null then "\($k)=\($val)" else empty end
-#           ' -r >> .env.prod
+           # Load secrets and env vars from GitHub Environments using mapping JSON
+           jq -n --argjson secrets "$ALL_SECRETS" --argjson vars "$ALL_VARS" --argjson mapping "$(cat .github/env-config/prod/secrets.json)" '
+             $mapping | to_entries | .[] | 
+             .key as $k | .value as $v |
+             ($secrets[$v] // $vars[$v]) as $val |
+             if $val != null then "\($k)=\($val)" else empty end
+           ' -r >> .env.prod
           
-#           # Handle optional bulk secret
-#           if [ ! -z "${{ secrets.BE_ENV_SECRET }}" ]; then
-#             echo "${{ secrets.BE_ENV_SECRET }}" >> .env.prod
-#           fi
+           # Handle optional bulk secret
+           if [ ! -z "${{ secrets.BE_ENV_SECRET }}" ]; then
+             echo "${{ secrets.BE_ENV_SECRET }}" >> .env.prod
+           fi
 
-#       - name: Run Deploy Script
-#         run: |
-#           # Use Environment-level secrets (prioritize specific first, then generic)
-#           SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY_PROD }}"
-#           [ -z "$SSH_PRIVATE_KEY" ] && SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY }}"
+       - name: Run Deploy Script
+         run: |
+           # Use Environment-level secrets (prioritize specific first, then generic)
+           SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY_PROD }}"
+           [ -z "$SSH_PRIVATE_KEY" ] && SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY }}"
           
-#           SSH_USER="${{ secrets.SSH_USER_PROD }}"
-#           [ -z "$SSH_USER" ] && SSH_USER="${{ secrets.SSH_USER }}"
+           SSH_USER="${{ secrets.SSH_USER_PROD }}"
+           [ -z "$SSH_USER" ] && SSH_USER="${{ secrets.SSH_USER }}"
           
-#           SSH_HOST="${{ secrets.SSH_HOST_PROD }}"
-#           [ -z "$SSH_HOST" ] && SSH_HOST="${{ secrets.SSH_HOST }}"
+           SSH_HOST="${{ secrets.SSH_HOST_PROD }}"
+           [ -z "$SSH_HOST" ] && SSH_HOST="${{ secrets.SSH_HOST }}"
           
-#           DEPLOY_PATH="${{ secrets.DEPLOY_PATH_PROD }}"
-#           [ -z "$DEPLOY_PATH" ] && DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}"
+           DEPLOY_PATH="${{ secrets.DEPLOY_PATH_PROD }}"
+           [ -z "$DEPLOY_PATH" ] && DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}"
 
-#           USE_CLOUDFLARE_SSH=$(grep USE_CLOUDFLARE_SSH .github/env-config/prod/env.json | awk -F'"' '{print $4}')
+           USE_CLOUDFLARE_SSH=$(grep USE_CLOUDFLARE_SSH .github/env-config/prod/env.json | awk -F'"' '{print $4}')
           
-#           # Setup SSH Key
-#           mkdir -p ~/.ssh
-#           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-#           chmod 600 ~/.ssh/id_rsa
+           # Setup SSH Key
+           mkdir -p ~/.ssh
+           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+           chmod 600 ~/.ssh/id_rsa
           
-#           if [ "$USE_CLOUDFLARE_SSH" = "true" ]; then
-#              SSH_OPTS="-o StrictHostKeyChecking=no -o 'ProxyCommand=cloudflared access ssh --hostname %h'"
-#           else
-#              SSH_OPTS="-o StrictHostKeyChecking=no"
-#           fi
+           if [ "$USE_CLOUDFLARE_SSH" = "true" ]; then
+              SSH_OPTS="-o StrictHostKeyChecking=no -o 'ProxyCommand=cloudflared access ssh --hostname %h'"
+           else
+              SSH_OPTS="-o StrictHostKeyChecking=no"
+           fi
 
-#           ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
-#             # Ensure deployment directory exists
-#             if [ ! -d \"$DEPLOY_PATH/.git\" ]; then
-#               echo \"Repository not found at $DEPLOY_PATH. Cloning...\"
-#               sudo mkdir -p $DEPLOY_PATH
-#               sudo chown -R $SSH_USER:$SSH_USER $DEPLOY_PATH
-#               git clone -b prod https://github.com/kimlong8892/goouty_backend_api.git $DEPLOY_PATH
-#             fi
+           ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
+             # Ensure deployment directory exists
+             if [ ! -d \"$DEPLOY_PATH/.git\" ]; then
+               echo \"Repository not found at $DEPLOY_PATH. Cloning...\"
+               sudo mkdir -p $DEPLOY_PATH
+               sudo chown -R $SSH_USER:$SSH_USER $DEPLOY_PATH
+               git clone -b prod https://github.com/kimlong8892/goouty_backend_api.git $DEPLOY_PATH
+             fi
 
-#             cd $DEPLOY_PATH
-#             # Fix permissions (Docker containers might have created files as root)
-#             sudo chown -R $SSH_USER:$SSH_USER .
-#             git fetch origin prod
-#             git reset --hard origin/prod
-#           "
+             cd $DEPLOY_PATH
+             # Fix permissions (Docker containers might have created files as root)
+             sudo chown -R $SSH_USER:$SSH_USER .
+             git fetch origin prod
+             git reset --hard origin/prod
+           "
           
-#           # Upload .env.prod
-#           scp $SSH_OPTS .env.prod $SSH_USER@$SSH_HOST:$DEPLOY_PATH/.env.prod
+           # Upload .env.prod
+           scp $SSH_OPTS .env.prod $SSH_USER@$SSH_HOST:$DEPLOY_PATH/.env.prod
           
-#           # Run the deploy script
-#           ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
-#             cd $DEPLOY_PATH
-#             echo 'Deploying Backend Prod...'
-#             chmod +x deploy_cicd_prod.sh
-#             ./deploy_cicd_prod.sh
+           # Run the deploy script
+           ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
+             cd $DEPLOY_PATH
+             echo 'Deploying Backend Prod...'
+             chmod +x deploy_cicd_prod.sh
+             ./deploy_cicd_prod.sh
             
-#             echo 'Waiting for containers to start...'
-#             sleep 10
+             echo 'Waiting for containers to start...'
+             sleep 10
             
-#             echo 'Running database migrations...'
-#             docker compose -p goouty-api-prod exec -T app npx prisma migrate deploy
+             echo 'Running database migrations...'
+             docker compose -p goouty-api-prod exec -T app npx prisma migrate deploy
             
-#             # Run seed only if database is empty
-#             echo 'Checking if database needs seeding...'
-#             docker compose -p goouty-api-prod exec -T app npm run seed:conditional
+             # Run seed only if database is empty
+             echo 'Checking if database needs seeding...'
+             docker compose -p goouty-api-prod exec -T app npm run seed:conditional
             
-#             echo '--- Container Logs ---'
-#             docker compose -p goouty-api-prod logs --tail=50
-#           "
+             echo '--- Container Logs ---'
+             docker compose -p goouty-api-prod logs --tail=50
+           "

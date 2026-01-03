@@ -1,135 +1,135 @@
-# name: Deploy Backend Dev
+ name: Deploy Backend Dev
 
-# on:
-#   push:
-#     branches:
-#       - dev
+ on:
+   push:
+     branches:
+       - abc
 
-# jobs:
-#   deploy:
-#     runs-on: ubuntu-latest
-#     environment: DEV
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
+ jobs:
+   deploy:
+     runs-on: ubuntu-latest
+     environment: DEV
+     steps:
+       - name: Checkout code
+         uses: actions/checkout@v4
 
-#       - name: Install dependencies (Cloudflared, sshpass, jq)
-#         run: |
-#           # Detect Cloudflare flag using grep (pre-installed)
-#           USE_CLOUDFLARE_SSH=$(grep USE_CLOUDFLARE_SSH .github/env-config/dev/env.json | awk -F'"' '{print $4}')
+       - name: Install dependencies (Cloudflared, sshpass, jq)
+         run: |
+           # Detect Cloudflare flag using grep (pre-installed)
+           USE_CLOUDFLARE_SSH=$(grep USE_CLOUDFLARE_SSH .github/env-config/dev/env.json | awk -F'"' '{print $4}')
           
-#           echo "Updating and installing core tools (jq)..."
-#           sudo apt-get update -y && sudo apt-get install -y jq
+           echo "Updating and installing core tools (jq)..."
+           sudo apt-get update -y && sudo apt-get install -y jq
           
-#           if [ "$USE_CLOUDFLARE_SSH" = "true" ]; then
-#             echo "Cloudflare SSH enabled. Installing cloudflared..."
-#             curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-#             sudo dpkg -i cloudflared.deb
-#             rm cloudflared.deb
-#           else
-#             echo "Cloudflare SSH disabled. Skipping cloudflared install."
-#           fi
+           if [ "$USE_CLOUDFLARE_SSH" = "true" ]; then
+             echo "Cloudflare SSH enabled. Installing cloudflared..."
+             curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+             sudo dpkg -i cloudflared.deb
+             rm cloudflared.deb
+           else
+             echo "Cloudflare SSH disabled. Skipping cloudflared install."
+           fi
 
-#       - name: Generate .env.dev
-#         id: gen_env
-#         env:
-#           ALL_SECRETS: ${{ toJson(secrets) }}
-#           ALL_VARS: ${{ toJson(vars) }}
-#         run: |
-#           # Load public variables from repository JSON
-#           jq -r 'to_entries | .[] | "\(.key)=\(.value)"' .github/env-config/dev/env.json > .env.dev
+       - name: Generate .env.dev
+         id: gen_env
+         env:
+           ALL_SECRETS: ${{ toJson(secrets) }}
+           ALL_VARS: ${{ toJson(vars) }}
+         run: |
+           # Load public variables from repository JSON
+           jq -r 'to_entries | .[] | "\(.key)=\(.value)"' .github/env-config/dev/env.json > .env.dev
           
-#           # Load secrets and env vars from GitHub Environments using mapping JSON
-#           jq -n --argjson secrets "$ALL_SECRETS" --argjson vars "$ALL_VARS" --argjson mapping "$(cat .github/env-config/dev/secrets.json)" '
-#             $mapping | to_entries | .[] | 
-#             .key as $k | .value as $v |
-#             ($secrets[$v] // $vars[$v]) as $val |
-#             if $val != null then "\($k)=\($val)" else empty end
-#           ' -r >> .env.dev
+           # Load secrets and env vars from GitHub Environments using mapping JSON
+           jq -n --argjson secrets "$ALL_SECRETS" --argjson vars "$ALL_VARS" --argjson mapping "$(cat .github/env-config/dev/secrets.json)" '
+             $mapping | to_entries | .[] | 
+             .key as $k | .value as $v |
+             ($secrets[$v] // $vars[$v]) as $val |
+             if $val != null then "\($k)=\($val)" else empty end
+           ' -r >> .env.dev
           
-#           # Handle optional bulk secret
-#           if [ ! -z "${{ secrets.BE_ENV_SECRET }}" ]; then
-#             echo "${{ secrets.BE_ENV_SECRET }}" >> .env.dev
-#           fi
+           # Handle optional bulk secret
+           if [ ! -z "${{ secrets.BE_ENV_SECRET }}" ]; then
+             echo "${{ secrets.BE_ENV_SECRET }}" >> .env.dev
+           fi
 
-#       - name: Run Deploy Script
-#         run: |
-#           # Use Environment-level secrets (prioritize specific first, then generic)
-#           SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY_DEV }}"
-#           [ -z "$SSH_PRIVATE_KEY" ] && SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY }}"
+       - name: Run Deploy Script
+         run: |
+           # Use Environment-level secrets (prioritize specific first, then generic)
+           SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY_DEV }}"
+           [ -z "$SSH_PRIVATE_KEY" ] && SSH_PRIVATE_KEY="${{ secrets.SSH_PRIVATE_KEY }}"
           
-#           SSH_USER="${{ secrets.SSH_USER_DEV }}"
-#           [ -z "$SSH_USER" ] && SSH_USER="${{ secrets.SSH_USER }}"
+           SSH_USER="${{ secrets.SSH_USER_DEV }}"
+           [ -z "$SSH_USER" ] && SSH_USER="${{ secrets.SSH_USER }}"
           
-#           SSH_HOST="${{ secrets.SSH_HOST_DEV }}"
-#           [ -z "$SSH_HOST" ] && SSH_HOST="${{ secrets.SSH_HOST }}"
+           SSH_HOST="${{ secrets.SSH_HOST_DEV }}"
+           [ -z "$SSH_HOST" ] && SSH_HOST="${{ secrets.SSH_HOST }}"
           
-#           DEPLOY_PATH="${{ secrets.DEPLOY_PATH_DEV }}"
-#           [ -z "$DEPLOY_PATH" ] && DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}"
+           DEPLOY_PATH="${{ secrets.DEPLOY_PATH_DEV }}"
+           [ -z "$DEPLOY_PATH" ] && DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}"
 
-#           USE_CLOUDFLARE_SSH=$(grep USE_CLOUDFLARE_SSH .github/env-config/dev/env.json | awk -F'"' '{print $4}')
+           USE_CLOUDFLARE_SSH=$(grep USE_CLOUDFLARE_SSH .github/env-config/dev/env.json | awk -F'"' '{print $4}')
           
-#           # Setup SSH Key
-#           mkdir -p ~/.ssh
-#           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-#           chmod 600 ~/.ssh/id_rsa
+           # Setup SSH Key
+           mkdir -p ~/.ssh
+           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+           chmod 600 ~/.ssh/id_rsa
           
-#           if [ "$USE_CLOUDFLARE_SSH" = "true" ]; then
-#              SSH_OPTS="-v -o StrictHostKeyChecking=no -o 'ProxyCommand=cloudflared access ssh --hostname %h'"
-#           else
-#              SSH_OPTS="-v -o StrictHostKeyChecking=no"
-#           fi
+           if [ "$USE_CLOUDFLARE_SSH" = "true" ]; then
+              SSH_OPTS="-v -o StrictHostKeyChecking=no -o 'ProxyCommand=cloudflared access ssh --hostname %h'"
+           else
+              SSH_OPTS="-v -o StrictHostKeyChecking=no"
+           fi
 
-#           # Debug: Check if key was written correctly (Do not print content)
-#           if [ ! -s ~/.ssh/id_rsa ]; then
-#             echo "Error: Private Key file is empty!"
-#             exit 1
-#           fi
-#           echo "Private key file created. Size: $(wc -c < ~/.ssh/id_rsa) bytes."
+           # Debug: Check if key was written correctly (Do not print content)
+           if [ ! -s ~/.ssh/id_rsa ]; then
+             echo "Error: Private Key file is empty!"
+             exit 1
+           fi
+           echo "Private key file created. Size: $(wc -c < ~/.ssh/id_rsa) bytes."
           
-#           echo "=================================================================="
-#           echo "DEBUG: PUBLIC KEY DERIVED FROM SECRET (Copy this to GCP if unsure)"
-#           echo "=================================================================="
-#           ssh-keygen -y -f ~/.ssh/id_rsa
-#           echo "=================================================================="
-#           echo "CHECK USERNAME: The comment at the end of the key above (if any) or the username field in GCP MUST match secret SSH_USER_DEV"
+           echo "=================================================================="
+           echo "DEBUG: PUBLIC KEY DERIVED FROM SECRET (Copy this to GCP if unsure)"
+           echo "=================================================================="
+           ssh-keygen -y -f ~/.ssh/id_rsa
+           echo "=================================================================="
+           echo "CHECK USERNAME: The comment at the end of the key above (if any) or the username field in GCP MUST match secret SSH_USER_DEV"
 
-#           ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
-#             # Ensure deployment directory exists
-#             if [ ! -d \"$DEPLOY_PATH/.git\" ]; then
-#               echo \"Repository not found at $DEPLOY_PATH. Cloning...\"
-#               sudo mkdir -p $DEPLOY_PATH
-#               sudo chown -R $SSH_USER:$SSH_USER $DEPLOY_PATH
-#               git clone -b dev https://github.com/kimlong8892/goouty_backend_api.git $DEPLOY_PATH
-#             fi
+           ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
+             # Ensure deployment directory exists
+             if [ ! -d \"$DEPLOY_PATH/.git\" ]; then
+               echo \"Repository not found at $DEPLOY_PATH. Cloning...\"
+               sudo mkdir -p $DEPLOY_PATH
+               sudo chown -R $SSH_USER:$SSH_USER $DEPLOY_PATH
+               git clone -b dev https://github.com/kimlong8892/goouty_backend_api.git $DEPLOY_PATH
+             fi
 
-#             cd $DEPLOY_PATH
-#             # Fix permissions (Docker containers might have created files as root)
-#             sudo chown -R $SSH_USER:$SSH_USER .
-#             git fetch origin dev
-#             git reset --hard origin/dev
-#           "
+             cd $DEPLOY_PATH
+             # Fix permissions (Docker containers might have created files as root)
+             sudo chown -R $SSH_USER:$SSH_USER .
+             git fetch origin dev
+             git reset --hard origin/dev
+           "
           
-#           # Upload .env.dev
-#           scp $SSH_OPTS .env.dev $SSH_USER@$SSH_HOST:$DEPLOY_PATH/.env.dev
+           # Upload .env.dev
+           scp $SSH_OPTS .env.dev $SSH_USER@$SSH_HOST:$DEPLOY_PATH/.env.dev
           
-#           # Run the deploy script
-#           ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
-#             cd $DEPLOY_PATH
-#             echo 'Deploying Backend Dev...'
-#             chmod +x deploy_cicd_dev.sh
-#             ./deploy_cicd_dev.sh
+           # Run the deploy script
+           ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
+             cd $DEPLOY_PATH
+             echo 'Deploying Backend Dev...'
+             chmod +x deploy_cicd_dev.sh
+             ./deploy_cicd_dev.sh
             
-#             echo 'Waiting for containers to start...'
-#             sleep 10
+             echo 'Waiting for containers to start...'
+             sleep 10
             
-#             echo 'Running database migrations...'
-#             docker compose -p goouty-api-dev exec -T app npx prisma migrate deploy
+             echo 'Running database migrations...'
+             docker compose -p goouty-api-dev exec -T app npx prisma migrate deploy
             
-#             # Run seed only if database is empty
-#             echo 'Checking if database needs seeding...'
-#             docker compose -p goouty-api-dev exec -T app npm run seed:conditional
+             # Run seed only if database is empty
+             echo 'Checking if database needs seeding...'
+             docker compose -p goouty-api-dev exec -T app npm run seed:conditional
             
-#             echo '--- Container Logs ---'
-#             docker compose -p goouty-api-dev logs --tail=50
-#           "
+             echo '--- Container Logs ---'
+             docker compose -p goouty-api-dev logs --tail=50
+           "
