@@ -426,12 +426,12 @@ export class EnhancedNotificationService {
     // Add user info to context
     const userContext = {
       ...context,
-      userName: user.fullName || user.email,
-      userEmail: user.email
+      userName: user ? (user.fullName || user.email) : (context.userName || context.userEmail || 'User'),
+      userEmail: user ? user.email : (context.userEmail || '')
     };
 
     return this.sendNotificationToUser(
-      userId,
+      userId || null,
       type,
       userContext,
       template,
@@ -450,28 +450,32 @@ export class EnhancedNotificationService {
     options: SendNotificationOptions = {}
   ) {
     try {
-      // Create notification in database
-      const notification = await this.createNotification(userId, {
-        title: template.title,
-        body: template.message,
-        type: this.mapTypeToEnum(type),
-        data: {
-          ...options.data,
-          type,
-          context,
-          url: `/trip/${context.tripId}` || '/'
-        }
-      });
+      let notification = null;
+
+      // Create notification in database ONLY if userId exists
+      if (userId) {
+        notification = await this.createNotification(userId, {
+          title: template.title,
+          body: template.message,
+          type: this.mapTypeToEnum(type),
+          data: {
+            ...options.data,
+            type,
+            context,
+            url: `/trip/${context.tripId}` || '/'
+          }
+        });
+      }
 
       const result = {
         userId,
-        notificationId: notification.id,
+        notificationId: notification?.id || null,
         pushSent: false,
         emailSent: false
       };
 
-      // Send push notification
-      if (!options.skipPush) {
+      // Send push notification ONLY if userId exists
+      if (!options.skipPush && userId) {
         try {
           const userDevices = await this.devicesService.getUserDevicesWithPushSubscription(userId);
 
@@ -482,10 +486,10 @@ export class EnhancedNotificationService {
                 body: template.message,
                 icon: '/icon-192x192.png',
                 badge: '/icon-192x192.png',
-                tag: `notification-${notification.id}`,
+                tag: `notification-${notification?.id || 'system'}`,
                 data: {
                   ...options.data,
-                  notificationId: notification.id,
+                  notificationId: notification?.id || null,
                   type,
                   url: `/trip/${context.tripId}` || '/'
                 }
@@ -506,32 +510,39 @@ export class EnhancedNotificationService {
       // Send email notification
       if (!options.skipEmail) {
         try {
-          const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: { email: true, fullName: true }
-          });
+          let recipientEmail = context.userEmail;
 
-          if (user) {
+          if (userId) {
+            const user = await this.prisma.user.findUnique({
+              where: { id: userId },
+              select: { email: true, fullName: true }
+            });
+            if (user) {
+              recipientEmail = user.email;
+            }
+          }
+
+          if (recipientEmail) {
             const emailTemplate = this.templateService.getEmailTemplate(
               template.emailTemplate || 'default',
               context
             );
 
             await this.emailService.sendEmail({
-              to: user.email,
+              to: recipientEmail,
               subject: template.emailSubject || template.title,
               html: emailTemplate
             });
             result.emailSent = true;
           }
         } catch (emailError) {
-          console.error(`Failed to send email notification to user ${userId}:`, emailError);
+          console.error(`Failed to send email notification:`, emailError);
         }
       }
 
       return result;
     } catch (error) {
-      console.error(`Error sending notification to user ${userId}:`, error);
+      console.error(`Error sending notification:`, error);
       throw error;
     }
   }
