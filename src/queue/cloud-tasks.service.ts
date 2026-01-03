@@ -30,6 +30,7 @@ export class CloudTasksService {
         }
 
         this.logger.log(`CloudTasksService initialized with Project: ${this.projectId}, Location: ${this.location}`);
+        this.logger.log(`CloudTasks Service Account: ${this.serviceAccountEmail}`);
         this.logger.log(`CloudTasks target URL: ${this.baseUrl}/api/queue/process`);
     }
 
@@ -122,11 +123,13 @@ export class CloudTasksService {
             },
         };
 
+        /*
         if (this.serviceAccountEmail) {
             task.httpRequest.oidcToken = {
                 serviceAccountEmail: this.serviceAccountEmail,
             };
         }
+        */
 
         try {
             const [response] = await this.client.createTask({ parent, task });

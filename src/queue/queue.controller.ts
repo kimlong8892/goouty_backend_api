@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { QueueService } from './queue.service';
 import { EnhancedNotificationService } from '../notifications/enhanced-notification.service';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Queue Management')
 @Controller('queue')
@@ -14,6 +15,7 @@ export class QueueController {
     private readonly enhancedNotificationService: EnhancedNotificationService,
   ) { }
 
+  @Public()
   @Get('health')
   @ApiOperation({ summary: 'Check queue health and connection' })
   @ApiResponse({ status: 200, description: 'Queue health check' })
@@ -36,6 +38,7 @@ export class QueueController {
     }
   }
 
+  @Public()
   @Get('stats')
   @ApiOperation({ summary: 'Get queue statistics' })
   @ApiResponse({ status: 200, description: 'Queue statistics retrieved successfully' })
@@ -43,6 +46,7 @@ export class QueueController {
     return this.queueService.getQueueStats();
   }
 
+  @Public()
   @Post('pause')
   @ApiOperation({ summary: 'Pause all notification queues' })
   @ApiResponse({ status: 200, description: 'All queues paused successfully' })
@@ -51,6 +55,7 @@ export class QueueController {
     return { message: 'All queues paused successfully' };
   }
 
+  @Public()
   @Post('resume')
   @ApiOperation({ summary: 'Resume all notification queues' })
   @ApiResponse({ status: 200, description: 'All queues resumed successfully' })
@@ -59,6 +64,7 @@ export class QueueController {
     return { message: 'All queues resumed successfully' };
   }
 
+  @Public()
   @Delete('clear')
   @ApiOperation({ summary: 'Clear all jobs from all queues' })
   @ApiResponse({ status: 200, description: 'All queues cleared successfully' })
@@ -67,6 +73,7 @@ export class QueueController {
     return { message: 'All queues cleared successfully' };
   }
 
+  @Public()
   @Post('test')
   @ApiOperation({ summary: 'Test queue functionality' })
   @ApiResponse({ status: 200, description: 'Test job added successfully' })
@@ -92,6 +99,7 @@ export class QueueController {
     };
   }
 
+  @Public()
   @Post('process')
   @ApiOperation({ summary: 'Process a job from Cloud Tasks' })
   @ApiResponse({ status: 200, description: 'Job processed successfully' })
