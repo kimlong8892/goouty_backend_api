@@ -123,13 +123,11 @@ export class CloudTasksService {
             },
         };
 
-        /*
         if (this.serviceAccountEmail) {
             task.httpRequest.oidcToken = {
                 serviceAccountEmail: this.serviceAccountEmail,
             };
         }
-        */
 
         try {
             const [response] = await this.client.createTask({ parent, task });

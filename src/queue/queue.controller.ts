@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Delete, Body, Logger, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Logger, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { QueueService } from './queue.service';
 import { EnhancedNotificationService } from '../notifications/enhanced-notification.service';
 import { Public } from '../common/decorators/public.decorator';
+import { CloudTaskGuard } from './guards/cloud-task.guard';
 
 @ApiTags('Queue Management')
 @Controller('queue')
@@ -100,6 +101,7 @@ export class QueueController {
   }
 
   @Public()
+  @UseGuards(CloudTaskGuard)
   @Post('process')
   @ApiOperation({ summary: 'Process a job from Cloud Tasks' })
   @ApiResponse({ status: 200, description: 'Job processed successfully' })
