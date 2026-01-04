@@ -18,7 +18,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit() {
-    await this.connectWithRetry();
+    // Don't await the connection to prevent blocking app startup.
+    // Cloud Run needs the app to listen on the port quickly.
+    // We'll log the error if connection fails.
+    this.connectWithRetry().catch((err) => {
+      console.error('❌ Failed to connect to database during startup (background retry):', err);
+    });
   }
 
   private async connectWithRetry(retries = 10, delayMs = 2000): Promise<void> {
