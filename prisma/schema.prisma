@@ -9,51 +9,51 @@ datasource db {
 }
 
 model User {
-  id                  String               @id @default(uuid()) @db.Uuid
-  email               String               @unique
-  password            String?
-  fullName            String?
-  phoneNumber         String?
-  profilePicture      String?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  bankId              String?
-  bankNumber          String?
-  notificationsEnabled Boolean             @default(true)
-  paidExpenses        Expense[]            @relation("ExpensePayer")
-  expenseParticipants ExpenseParticipant[]
-  creditorSettlements PaymentSettlement[]  @relation("PaymentCreditor")
-  debtorSettlements   PaymentSettlement[]  @relation("PaymentDebtor")
-  transactionsFrom    PaymentTransaction[] @relation("TransactionsFromUser")
-  transactionsTo      PaymentTransaction[] @relation("TransactionsToUser")
-  socialAccounts      SocialAccount[]
-  trips               Trip[]
-  tripMembers         TripMember[]
-  devices             Device[]
-  notifications       Notification[]
-  tripTemplates       TripTemplate[]
-  resetPasswordToken  String?
+  id                   String               @id @default(uuid()) @db.Uuid
+  email                String               @unique
+  password             String?
+  fullName             String?
+  phoneNumber          String?
+  profilePicture       String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  bankId               String?
+  bankNumber           String?
+  notificationsEnabled Boolean              @default(true)
   resetPasswordExpires DateTime?
+  resetPasswordToken   String?
+  devices              Device[]
+  paidExpenses         Expense[]            @relation("ExpensePayer")
+  expenseParticipants  ExpenseParticipant[]
+  notifications        Notification[]
+  creditorSettlements  PaymentSettlement[]  @relation("PaymentCreditor")
+  debtorSettlements    PaymentSettlement[]  @relation("PaymentDebtor")
+  transactionsFrom     PaymentTransaction[] @relation("TransactionsFromUser")
+  transactionsTo       PaymentTransaction[] @relation("TransactionsToUser")
+  socialAccounts       SocialAccount[]
+  trips                Trip[]
+  tripMembers          TripMember[]
+  tripTemplates        TripTemplate[]
 }
 
 model Trip {
   id                 String              @id @default(uuid()) @db.Uuid
   title              String
-  provinceId         String?             @db.Uuid
   startDate          DateTime?
   description        String?
-  avatar             String?             // S3 URL for trip avatar
   shareToken         String?             @unique
   isPublic           Boolean             @default(false)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime?           @updatedAt
-  userId             String              @db.Uuid   // 👈 thêm @db.Uuid
+  userId             String              @db.Uuid
+  provinceId         String?             @db.Uuid
+  avatar             String?
   days               Day[]
   expenses           Expense[]
   paymentSettlements PaymentSettlement[]
+  province           Province?           @relation(fields: [provinceId], references: [id])
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   members            TripMember[]
-  province           Province?          @relation(fields: [provinceId], references: [id], onDelete: SetNull)
 
   @@index([provinceId])
 }
@@ -64,27 +64,25 @@ model Day {
   description String?
   date        DateTime
   startTime   DateTime?
-  tripId      String  @db.Uuid
+  tripId      String     @db.Uuid
   activities  Activity[]
   trip        Trip       @relation(fields: [tripId], references: [id], onDelete: Cascade)
 }
 
 model TripMember {
-  id        String   @id @default(uuid()) @db.Uuid
-  joinedAt  DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId    String?  @db.Uuid  // Nullable để hỗ trợ invitation cho email chưa tồn tại
-  tripId    String  @db.Uuid
-  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Invitation flow
-  status       String   @default("accepted") // 'pending' | 'accepted'
-  inviteToken  String?  @unique
+  id           String    @id @default(uuid()) @db.Uuid
+  joinedAt     DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  userId       String?   @db.Uuid
+  tripId       String    @db.Uuid
+  inviteToken  String?   @unique
   invitedAt    DateTime?
-  invitedById  String?  @db.Uuid
-  invitedEmail String?  // Email của người được mời (khi user chưa tồn tại)
+  invitedById  String?   @db.Uuid
+  status       String    @default("accepted")
+  invitedEmail String?
+  trip         Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user         User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, tripId])
   @@index([invitedEmail, tripId])
@@ -98,7 +96,7 @@ model Activity {
   location    String?
   notes       String?
   important   Boolean   @default(false)
-  dayId       String  @db.Uuid
+  dayId       String    @db.Uuid
   day         Day       @relation(fields: [dayId], references: [id], onDelete: Cascade)
 }
 
@@ -185,10 +183,10 @@ model PaymentTransaction {
 model Device {
   id               String   @id @default(uuid()) @db.Uuid
   userId           String   @db.Uuid
-  deviceId         String   // Unique identifier for the device (browser fingerprint, etc.)
-  deviceName       String?  // User-friendly name for the device
-  userAgent        String?  // Browser user agent
-  pushSubscription String?  // Push subscription JSON string
+  deviceId         String
+  deviceName       String?
+  userAgent        String?
+  pushSubscription String?
   isActive         Boolean  @default(true)
   lastSeen         DateTime @default(now())
   createdAt        DateTime @default(now())
@@ -200,23 +198,98 @@ model Device {
 }
 
 model Notification {
-  id          String            @id @default(uuid()) @db.Uuid
-  userId      String            @db.Uuid
-  title       String
-  body        String
-  type        NotificationType  @default(INFO)
-  status      NotificationStatus @default(UNREAD)
-  data        Json?             // Additional data (URL, metadata, etc.)
-  sentAt      DateTime?         // When notification was sent
-  readAt      DateTime?         // When user read the notification
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String             @id @default(uuid()) @db.Uuid
+  userId    String             @db.Uuid
+  title     String
+  body      String
+  type      NotificationType   @default(INFO)
+  status    NotificationStatus @default(UNREAD)
+  data      Json?
+  sentAt    DateTime?
+  readAt    DateTime?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, status])
   @@index([userId, createdAt])
   @@index([type])
+}
+
+model Province {
+  id            String         @id @default(uuid()) @db.Uuid
+  name          String
+  code          Int            @unique
+  divisionType  String
+  codename      String         @unique
+  phoneCode     Int
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  trips         Trip[]
+  tripTemplates TripTemplate[]
+
+  @@index([code])
+  @@index([divisionType])
+}
+
+model TripTemplate {
+  id          String            @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+  provinceId  String?           @db.Uuid
+  isPublic    Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  userId      String            @db.Uuid
+  avatar      String?
+  fee         Decimal           @default(0) @db.Decimal(20, 2)
+  province    Province?         @relation(fields: [provinceId], references: [id])
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days        TripTemplateDay[]
+
+  @@index([provinceId])
+  @@index([userId])
+}
+
+model TripTemplateDay {
+  id             String                 @id @default(uuid()) @db.Uuid
+  title          String
+  description    String?
+  dayOrder       Int
+  tripTemplateId String                 @db.Uuid
+  activities     TripTemplateActivity[]
+  tripTemplate   TripTemplate           @relation(fields: [tripTemplateId], references: [id], onDelete: Cascade)
+
+  @@index([tripTemplateId])
+}
+
+model TripTemplateActivity {
+  id            String          @id @default(uuid()) @db.Uuid
+  title         String
+  startTime     String?
+  durationMin   Int?
+  location      String?
+  notes         String?
+  important     Boolean         @default(false)
+  activityOrder Int
+  dayId         String          @db.Uuid
+  day           TripTemplateDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  @@index([dayId])
+}
+
+model Template {
+  id           String   @id @default(uuid()) @db.Uuid
+  code         String   @unique
+  title        String?
+  message      String?
+  emailSubject String?
+  emailBody    String?
+  icon         String?
+  color        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 enum NotificationType {
@@ -237,80 +310,4 @@ enum NotificationStatus {
   UNREAD
   READ
   ARCHIVED
-}
-
-model Province {
-  id           String   @id @default(uuid()) @db.Uuid
-  name         String
-  code         Int      @unique
-  divisionType String   // "tỉnh" or "thành phố"
-  codename     String   @unique
-  phoneCode    Int
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  trips        Trip[]
-  tripTemplates TripTemplate[]
-
-  @@index([code])
-  @@index([divisionType])
-}
-
-model TripTemplate {
-  id          String              @id @default(uuid()) @db.Uuid
-  title       String
-  description String?
-  avatar      String?             // S3 URL for trip template avatar
-  fee         Decimal             @default(0) @db.Decimal(20, 2)
-  provinceId  String?             @db.Uuid
-  isPublic    Boolean             @default(false)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  userId      String              @db.Uuid
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  province    Province?           @relation(fields: [provinceId], references: [id], onDelete: SetNull)
-  days        TripTemplateDay[]
-
-  @@index([provinceId])
-  @@index([userId])
-}
-
-model TripTemplateDay {
-  id          String                    @id @default(uuid()) @db.Uuid
-  title       String
-  description String?
-  dayOrder    Int                       // Order of the day in the template
-  tripTemplateId String                 @db.Uuid
-  tripTemplate   TripTemplate           @relation(fields: [tripTemplateId], references: [id], onDelete: Cascade)
-  activities     TripTemplateActivity[]
-
-  @@index([tripTemplateId])
-}
-
-model TripTemplateActivity {
-  id          String              @id @default(uuid()) @db.Uuid
-  title       String
-  startTime   String?              // Store as string (e.g., "09:00")
-  durationMin Int?
-  location    String?
-  notes       String?
-  important   Boolean              @default(false)
-  activityOrder Int                // Order of the activity in the day
-  dayId       String              @db.Uuid
-  day         TripTemplateDay      @relation(fields: [dayId], references: [id], onDelete: Cascade)
-
-  @@index([dayId])
-}
-
-
-model Template {
-  id           String   @id @default(uuid()) @db.Uuid
-  code         String   @unique // e.g., 'trip_created', 'forgot_password', 'trip_invitation'
-  title        String?           // Push/In-app title
-  message      String?           // Push/In-app message
-  emailSubject String?
-  emailBody    String?           // Email HTML body
-  icon         String?
-  color        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 }
