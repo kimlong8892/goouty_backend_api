@@ -1,4 +1,4 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID, ValidateNested, IsArray, IsInt, Min } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID, ValidateNested, IsArray, IsInt, Min, IsNumber } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -79,6 +79,12 @@ export class CreateTripTemplateDto {
   @IsOptional()
   @IsString()
   avatar?: string;
+
+  @ApiPropertyOptional({ description: 'Fee for the trip template', default: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  fee?: number;
 
   @ApiPropertyOptional({ description: 'Province ID for trip template destination' })
   @IsOptional()

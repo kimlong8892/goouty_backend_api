@@ -103,6 +103,7 @@ export class TripTemplatesService {
       title: newTitle || `${originalTemplate.title} (Copy)`,
       description: originalTemplate.description,
       avatar: originalTemplate.avatar,
+      fee: originalTemplate.fee ? Number(originalTemplate.fee) : 0,
       provinceId: originalTemplate.provinceId,
       isPublic: false, // Duplicated templates are private by default
       days: originalTemplate.days.map(day => ({

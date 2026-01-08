@@ -6,7 +6,7 @@ import { GetTripTemplatesQueryDto } from './dto/get-trip-templates-query.dto';
 
 @Injectable()
 export class TripTemplatesRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(data: CreateTripTemplateDto & { userId: string }) {
     return this.prisma.tripTemplate.create({
@@ -14,6 +14,7 @@ export class TripTemplatesRepository {
         title: data.title,
         description: data.description,
         avatar: data.avatar,
+        fee: data.fee || 0,
         provinceId: data.provinceId,
         isPublic: data.isPublic || false,
         userId: data.userId,
@@ -67,32 +68,32 @@ export class TripTemplatesRepository {
     });
   }
 
-  async findAll(options?: { 
-    userId?: string; 
-    isPublic?: boolean; 
-    search?: string; 
+  async findAll(options?: {
+    userId?: string;
+    isPublic?: boolean;
+    search?: string;
     provinceId?: string;
-    page?: number; 
-    limit?: number 
+    page?: number;
+    limit?: number
   }) {
     const { userId, isPublic, search, provinceId, page = 1, limit = 10 } = options || {};
     const skip = (page - 1) * limit;
 
     // Build where conditions
     const where: any = {};
-    
+
     if (userId) {
       where.userId = userId;
     }
-    
+
     if (isPublic !== undefined) {
       where.isPublic = isPublic;
     }
-    
+
     if (provinceId) {
       where.provinceId = provinceId;
     }
-    
+
     if (search) {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' as const } },
@@ -192,6 +193,7 @@ export class TripTemplatesRepository {
         description: data.description,
         provinceId: data.provinceId,
         isPublic: data.isPublic,
+        fee: data.fee,
         // Note: Updating days and activities would require more complex logic
         // For now, we'll handle this separately
       },

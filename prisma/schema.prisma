@@ -260,6 +260,7 @@ model TripTemplate {
   title       String
   description String?
   avatar      String?             // S3 URL for trip template avatar
+  fee         Decimal             @default(0) @db.Decimal(20, 2)
   provinceId  String?             @db.Uuid
   isPublic    Boolean             @default(false)
   createdAt   DateTime            @default(now())
