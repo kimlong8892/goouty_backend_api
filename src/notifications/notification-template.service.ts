@@ -6,6 +6,7 @@ export interface NotificationTemplate {
   message: string;
   emailSubject?: string;
   emailTemplate?: string;
+  emailBody?: string;
   icon?: string;
   color?: string;
 }
@@ -70,7 +71,8 @@ export class NotificationTemplateService {
         title: this.replacePlaceholders(templateData.title || '', context),
         message: this.replacePlaceholders(templateData.message || '', context),
         emailSubject: this.replacePlaceholders(templateData.emailSubject || '', context),
-        emailTemplate: templateData.emailBody || '', // We now store the full body in the DB
+        emailTemplate: templateData.emailBody || '', // Keep for compatibility
+        emailBody: templateData.emailBody || '', // Added to match user terminology
         icon: templateData.icon || '🔔',
         color: templateData.color || '#6B7280'
       };
@@ -114,7 +116,7 @@ export class NotificationTemplateService {
   /**
    * Replace placeholders with context values
    */
-  private replacePlaceholders(template: string, context: NotificationContext): string {
+  public replacePlaceholders(template: string, context: NotificationContext): string {
     if (!template) return '';
 
     let result = template;

@@ -520,15 +520,15 @@ export class EnhancedNotificationService {
           }
 
           if (recipientEmail) {
-            const emailTemplate = await this.templateService.getEmailTemplate(
-              template.emailTemplate || type, // Use 'type' as code if emailTemplate is not explicitly set or body is empty
-              context
-            );
+            const rawBody = template.emailBody || template.emailTemplate;
+            const emailHtml = rawBody
+              ? this.templateService.replacePlaceholders(rawBody, context)
+              : await this.templateService.getEmailTemplate(type, context);
 
             await this.emailService.sendEmail({
               to: recipientEmail,
               subject: template.emailSubject || template.title,
-              html: emailTemplate
+              html: emailHtml
             });
             result.emailSent = true;
           }
