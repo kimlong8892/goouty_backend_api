@@ -1060,10 +1060,7 @@ export class TripsService {
     const template = await this.prisma.tripTemplate.findFirst({
       where: {
         id: templateId,
-        OR: [
-          { userId }, // User's own template
-          { isPublic: true } // Public template
-        ]
+        isPublic: true
       },
       include: {
         days: {
