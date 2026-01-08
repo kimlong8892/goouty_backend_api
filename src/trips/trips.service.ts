@@ -411,6 +411,7 @@ export class TripsService {
           data: {
             userEmail: normalizedEmail,
             userName: userToAdd?.fullName || addMemberDto.email.split('@')[0],
+            inviteeName: userToAdd?.fullName || addMemberDto.email.split('@')[0],
             acceptUrl: `${frontendUrl}/invite?token=${inviteToken}`
           }
         }
@@ -568,6 +569,7 @@ export class TripsService {
         data: {
           userEmail: emailToSend,
           userName: member.user?.fullName || emailToSend.split('@')[0],
+          inviteeName: member.user?.fullName || emailToSend.split('@')[0],
           acceptUrl: `${frontendUrl}/invite?token=${newInviteToken}`
         }
       }

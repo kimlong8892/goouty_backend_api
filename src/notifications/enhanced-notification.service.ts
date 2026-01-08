@@ -221,7 +221,8 @@ export class EnhancedNotificationService {
       tripTitle,
       inviterName,
       actionBy: invitedUserId,
-      createdAt: new Date().toLocaleString('vi-VN')
+      createdAt: new Date().toLocaleString('vi-VN'),
+      ...(options.data || {})
     };
 
     return this.sendNotificationToUsersViaQueue(
@@ -356,9 +357,10 @@ export class EnhancedNotificationService {
             continue;
           }
 
-          // Add user info to context
+          // Add user info and options data to context
           const userContext = {
             ...context,
+            ...(options.data || {}),
             userName: user.fullName || user.email,
             userEmail: user.email
           };
@@ -420,11 +422,12 @@ export class EnhancedNotificationService {
       return { success: false, message: 'Template not found' };
     }
 
-    // Add user info to context
+    // Add user info and options data to context
     const userContext = {
       ...context,
-      userName: user ? (user.fullName || user.email) : (context.userName || context.userEmail || 'User'),
-      userEmail: user ? user.email : (context.userEmail || '')
+      ...(options?.data || {}),
+      userName: user ? (user.fullName || user.email) : (options?.data?.userName || context.userName || context.userEmail || 'User'),
+      userEmail: user ? user.email : (options?.data?.userEmail || context.userEmail || '')
     };
 
     return this.sendNotificationToUser(
