@@ -12,6 +12,7 @@ import { EnhancedNotificationService } from '../notifications/enhanced-notificat
 import { UploadService } from '../upload/upload.service';
 import { I18nService } from 'nestjs-i18n';
 import { ConfigService } from '@nestjs/config';
+import * as path from 'path';
 
 @Injectable()
 export class TripsService {
@@ -1088,6 +1089,47 @@ export class TripsService {
 
     // Create the trip
     const trip = await this.create(tripData, userId);
+
+    // Copy avatar from template if exists
+    if (template.avatar) {
+      try {
+        const url = new URL(template.avatar);
+        const bucketName = this.uploadService.getBucketName();
+        const endpoint = this.configService.get('S3_ENDPOINT');
+
+        // If the avatar is from our S3 bucket, copy it
+        if (template.avatar.includes(bucketName) || (endpoint && template.avatar.includes(endpoint))) {
+          // Extract S3 key from URL
+          let sourceKey = url.pathname.substring(1);
+          // If pathname starts with bucket name, strip it
+          if (sourceKey.startsWith(`${bucketName}/`)) {
+            sourceKey = sourceKey.substring(bucketName.length + 1);
+          }
+
+          // Generate a unique filename to avoid collisions
+          const extension = path.extname(sourceKey) || '.jpg';
+          const fileName = `avatar-${Date.now()}${extension}`;
+          const targetKey = `trip-avatars/${trip.id}/${fileName}`;
+
+          const copyResult = await this.uploadService.copyFile(sourceKey, targetKey);
+
+          // Update trip with new avatar URL
+          await this.prisma.trip.update({
+            where: { id: trip.id },
+            data: { avatar: copyResult.url }
+          });
+        } else {
+          // If it's an external URL, just copy the URL
+          await this.prisma.trip.update({
+            where: { id: trip.id },
+            data: { avatar: template.avatar }
+          });
+        }
+      } catch (error) {
+        this.logger.error(`Failed to handle template avatar: ${error.message}`);
+        // Don't throw error to avoid breaking trip creation
+      }
+    }
 
     // Create days and activities from template
     if (template.days && template.days.length > 0) {

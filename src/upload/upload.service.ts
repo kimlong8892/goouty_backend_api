@@ -7,7 +7,8 @@ import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
   HeadObjectCommand,
-  GetObjectCommand
+  GetObjectCommand,
+  CopyObjectCommand
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
@@ -367,6 +368,52 @@ export class UploadService {
    */
   getBucketName(): string {
     return this.bucketName;
+  }
+
+  /**
+   * Copy a file within S3
+   * @param sourceKey - The source S3 key
+   * @param targetKey - The target S3 key
+   * @returns Copy result
+   */
+  async copyFile(sourceKey: string, targetKey: string): Promise<UploadResult> {
+    try {
+      console.log(`[UploadService] Copying from ${sourceKey} to ${targetKey}`);
+
+      await this.s3Control.send(new CopyObjectCommand({
+        Bucket: this.bucketName,
+        CopySource: `${this.bucketName}/${sourceKey}`,
+        Key: targetKey,
+        ACL: 'public-read', // Ensure copied file is public as well
+      }));
+
+      // Construct public URL
+      let finalUrl = `${this.configService.get('S3_ENDPOINT')}/${this.bucketName}/${targetKey}`;
+      const publicUrl = this.configService.get('S3_PUBLIC_URL');
+
+      if (publicUrl) {
+        const baseUrl = publicUrl.endsWith('/') ? publicUrl.slice(0, -1) : publicUrl;
+        finalUrl = `${baseUrl}/${this.bucketName}/${targetKey}`;
+      } else {
+        let endpoint = this.configService.get('S3_ENDPOINT', '');
+        if (endpoint.endsWith('/')) endpoint = endpoint.slice(0, -1);
+        finalUrl = `${endpoint}/${this.bucketName}/${targetKey}`;
+      }
+
+      // Get metadata for the copied object to return complete result
+      const metadata = await this.getFileMetadata(targetKey);
+
+      return {
+        url: finalUrl,
+        key: targetKey,
+        bucket: this.bucketName,
+        size: metadata.size,
+        contentType: metadata.contentType,
+      };
+    } catch (error) {
+      console.error('Copy error:', error);
+      throw new BadRequestException(`Failed to copy file: ${error.message}`);
+    }
   }
 
   /**
