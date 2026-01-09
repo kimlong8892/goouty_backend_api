@@ -584,9 +584,7 @@ export class SeedService {
             // Check if templates already exist for this user?
             // Since we want "seed 1 time", if user exists we can assume it might be seeded.
             // But let's check if there are any templates created by this user to be sure.
-            const templatesCount = await this.prisma.tripTemplate.count({
-                where: { userId: demoUser.id }
-            });
+            const templatesCount = await this.prisma.tripTemplate.count();
 
             if (templatesCount > 0) {
                 throw new ConflictException('Trip templates have already been seeded.');
@@ -607,9 +605,8 @@ export class SeedService {
                         title: templateTitle,
                         description: templateDescription,
                         avatar: templateAvatar,
-                        provinceId: province.id,
+                        province: province.id ? { connect: { id: province.id } } : undefined,
                         isPublic: true,
-                        userId: demoUser.id,
                         days: {
                             create: this.generateDaysForTemplate(i, province.name)
                         }

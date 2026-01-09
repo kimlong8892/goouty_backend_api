@@ -509,12 +509,25 @@ export class ExpensesService {
             bankId: true,
             bankNumber: true
           }
+        },
+        transactions: {
+          where: {
+            status: 'success'
+          },
+          select: {
+            amount: true
+          }
         }
       },
       orderBy: { createdAt: 'desc' }
     });
 
-    return settlements.map(settlement => this.mapSettlementToResponseDto(settlement));
+    return settlements.map(settlement => {
+      const totalPaid = settlement.transactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
+      const remaining = Math.max(0, Number(settlement.amount) - totalPaid);
+
+      return this.mapSettlementToResponseDto(settlement, totalPaid, remaining);
+    });
   }
 
   async updatePaymentSettlement(
@@ -569,11 +582,22 @@ export class ExpensesService {
             fullName: true,
             profilePicture: true
           }
+        },
+        transactions: {
+          where: {
+            status: 'success'
+          },
+          select: {
+            amount: true
+          }
         }
       }
     });
 
-    return this.mapSettlementToResponseDto(updatedSettlement);
+    const totalPaid = updatedSettlement.transactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
+    const remaining = Math.max(0, Number(updatedSettlement.amount) - totalPaid);
+
+    return this.mapSettlementToResponseDto(updatedSettlement, totalPaid, remaining);
   }
 
   async createPaymentTransaction(
@@ -602,6 +626,19 @@ export class ExpensesService {
       throw new ForbiddenException('Access denied to this trip');
     }
 
+    // FORCE RECALCULATION: Ensure settlement data is correct before validating
+    // This fixes the issue where previous bugs led to incorrect settlement amounts
+    await this.expenseCalculationService.createPaymentSettlements(settlement.tripId);
+
+    // Re-fetch settlement to get the updated amount
+    const updatedSettlement = await this.prisma.paymentSettlement.findUnique({
+      where: { id: settlementId }
+    });
+
+    if (!updatedSettlement) {
+      throw new NotFoundException('Settlement disappeard after recalculation');
+    }
+
     if (dto.amount <= 0) {
       throw new BadRequestException('Amount must be greater than 0');
     }
@@ -612,17 +649,18 @@ export class ExpensesService {
       _sum: { amount: true }
     });
     const totalPaid = Number(aggregate._sum.amount ?? 0);
-    const remainingBefore = Number(settlement.amount) - totalPaid;
+    // Use updatedSettlement.amount which is now correct (Total Contract Value)
+    const remainingBefore = Number(updatedSettlement.amount) - totalPaid;
 
     if (dto.amount > remainingBefore + 1e-6) {
-      throw new BadRequestException('Amount exceeds remaining balance of this settlement');
+      throw new BadRequestException(`Amount exceeds remaining balance. Remaining: ${remainingBefore}`);
     }
 
     const transaction = await this.prisma.paymentTransaction.create({
       data: {
         settlementId,
-        fromUserId: settlement.debtorId,
-        toUserId: settlement.creditorId,
+        fromUserId: updatedSettlement.debtorId,
+        toUserId: updatedSettlement.creditorId,
         amount: dto.amount,
         status: dto.status ?? 'success',
         method: dto.method,
@@ -630,14 +668,8 @@ export class ExpensesService {
       },
     });
 
-    // Auto-complete when fully paid
-    const remainingAfter = remainingBefore - ((dto.status ?? 'success') === 'success' ? dto.amount : 0);
-    if (remainingAfter <= 0) {
-      await this.prisma.paymentSettlement.update({
-        where: { id: settlementId },
-        data: { status: 'completed', settledAt: new Date() }
-      });
-    }
+    // Recalculate again to update status if needed (completed)
+    await this.createPaymentSettlements(settlement.tripId, userId);
 
     // Lock expenses when transaction is successful
     if ((dto.status ?? 'success') === 'success') {
@@ -674,7 +706,6 @@ export class ExpensesService {
         }
       } catch (error) {
         console.error('Failed to send payment notification:', error);
-        // Don't throw error here to avoid breaking payment transaction
       }
     }
 
@@ -713,7 +744,7 @@ export class ExpensesService {
     return txs.map(t => this.mapTransactionToResponseDto(t));
   }
 
-  private mapSettlementToResponseDto(settlement: any): SettlementResponseDto {
+  private mapSettlementToResponseDto(settlement: any, totalPaid?: number, remaining?: number): SettlementResponseDto {
     return {
       id: settlement.id,
       amount: Number(settlement.amount),
@@ -726,7 +757,9 @@ export class ExpensesService {
       debtorId: settlement.debtorId,
       debtor: settlement.debtor,
       creditorId: settlement.creditorId,
-      creditor: settlement.creditor
+      creditor: settlement.creditor,
+      totalPaid,
+      remaining
     };
   }
 

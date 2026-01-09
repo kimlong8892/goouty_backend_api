@@ -35,12 +35,13 @@ async function main() {
       const templateTitle = generateTemplateTitle(province.name, i);
       const templateDescription = generateTemplateDescription(province.name, i);
       const templateAvatar = generateTemplateAvatar(i);
-      
+
       await prisma.tripTemplate.create({
         data: {
           title: templateTitle,
           description: templateDescription,
           avatar: templateAvatar,
+          fee: i * 500000,
           provinceId: province.id,
           isPublic: true,
           userId: demoUser.id,
@@ -161,7 +162,7 @@ function generateActivitiesForDay(dayNumber: number, provinceName: string) {
   if (dayNumber <= 2) {
     return activities.slice(0, 3);
   }
-  
+
   return activities;
 }
 

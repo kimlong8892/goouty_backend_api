@@ -221,7 +221,8 @@ export class EnhancedNotificationService {
       tripTitle,
       inviterName,
       actionBy: invitedUserId,
-      createdAt: new Date().toLocaleString('vi-VN')
+      createdAt: new Date().toLocaleString('vi-VN'),
+      ...(options.data || {})
     };
 
     return this.sendNotificationToUsersViaQueue(
@@ -356,9 +357,10 @@ export class EnhancedNotificationService {
             continue;
           }
 
-          // Add user info to context
+          // Add user info and options data to context
           const userContext = {
             ...context,
+            ...(options.data || {}),
             userName: user.fullName || user.email,
             userEmail: user.email
           };
@@ -420,11 +422,12 @@ export class EnhancedNotificationService {
       return { success: false, message: 'Template not found' };
     }
 
-    // Add user info to context
+    // Add user info and options data to context
     const userContext = {
       ...context,
-      userName: user ? (user.fullName || user.email) : (context.userName || context.userEmail || 'User'),
-      userEmail: user ? user.email : (context.userEmail || '')
+      ...(options?.data || {}),
+      userName: user ? (user.fullName || user.email) : (options?.data?.userName || context.userName || context.userEmail || 'User'),
+      userEmail: user ? user.email : (options?.data?.userEmail || context.userEmail || '')
     };
 
     return this.sendNotificationToUser(
@@ -520,15 +523,15 @@ export class EnhancedNotificationService {
           }
 
           if (recipientEmail) {
-            const emailTemplate = await this.templateService.getEmailTemplate(
-              template.emailTemplate || type, // Use 'type' as code if emailTemplate is not explicitly set or body is empty
-              context
-            );
+            const rawBody = template.emailBody || template.emailTemplate;
+            const emailHtml = rawBody
+              ? this.templateService.replacePlaceholders(rawBody, context)
+              : await this.templateService.getEmailTemplate(type, context);
 
             await this.emailService.sendEmail({
               to: recipientEmail,
               subject: template.emailSubject || template.title,
-              html: emailTemplate
+              html: emailHtml
             });
             result.emailSent = true;
           }

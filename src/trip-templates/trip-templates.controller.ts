@@ -30,8 +30,8 @@ export class TripTemplatesController {
   @ApiOperation({ summary: 'Create a new trip template' })
   @ApiResponse({ status: 201, description: 'Trip template created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  create(@Body() createTripTemplateDto: CreateTripTemplateDto, @Request() req) {
-    return this.tripTemplatesService.create(createTripTemplateDto, req.user.id);
+  create(@Body() createTripTemplateDto: CreateTripTemplateDto) {
+    return this.tripTemplatesService.create(createTripTemplateDto);
   }
 
   @Get()
@@ -42,12 +42,11 @@ export class TripTemplatesController {
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 10 })
   @ApiResponse({ status: 200, description: 'Trip templates retrieved successfully' })
   findAll(
-    @Request() req,
     @Query('search') search?: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
-    return this.tripTemplatesService.findAll(req.user.id, { search, page, limit });
+    return this.tripTemplatesService.findAll({ search, page, limit });
   }
 
   @Get('public')
@@ -62,8 +61,8 @@ export class TripTemplatesController {
   @ApiResponse({ status: 200, description: 'Trip template retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Trip template not found' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
-  findOne(@Param('id') id: string, @Request() req) {
-    return this.tripTemplatesService.findOneForUser(id, req.user?.id);
+  findOne(@Param('id') id: string) {
+    return this.tripTemplatesService.findOneForUser(id);
   }
 
   @Patch(':id')
@@ -75,9 +74,8 @@ export class TripTemplatesController {
   update(
     @Param('id') id: string,
     @Body() updateTripTemplateDto: UpdateTripTemplateDto,
-    @Request() req,
   ) {
-    return this.tripTemplatesService.update(id, updateTripTemplateDto, req.user.id);
+    return this.tripTemplatesService.update(id, updateTripTemplateDto);
   }
 
   @Delete(':id')
@@ -87,8 +85,8 @@ export class TripTemplatesController {
   @ApiResponse({ status: 204, description: 'Trip template deleted successfully' })
   @ApiResponse({ status: 404, description: 'Trip template not found' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
-  remove(@Param('id') id: string, @Request() req) {
-    return this.tripTemplatesService.remove(id, req.user.id);
+  remove(@Param('id') id: string) {
+    return this.tripTemplatesService.remove(id);
   }
 
   @Post(':id/duplicate')
@@ -99,10 +97,9 @@ export class TripTemplatesController {
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
   duplicate(
     @Param('id') id: string,
-    @Request() req,
     @Body() body?: { title?: string },
   ) {
-    return this.tripTemplatesService.duplicateTemplate(id, req.user.id, body?.title);
+    return this.tripTemplatesService.duplicateTemplate(id, body?.title);
   }
 
   @Post(':id/create-trip')
@@ -113,9 +110,8 @@ export class TripTemplatesController {
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
   createTripFromTemplate(
     @Param('id') id: string,
-    @Request() req,
     @Body() body?: { title?: string },
   ) {
-    return this.tripTemplatesService.createTripFromTemplate(id, req.user.id, body?.title);
+    return this.tripTemplatesService.createTripFromTemplate(id, body?.title);
   }
 }

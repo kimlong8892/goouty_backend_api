@@ -265,34 +265,36 @@ export class ExpenseCalculationService {
         const desiredPending = required;
 
         if (existing) {
+          // Amount logic: The settlement amount represents total Contract Value.
+          // It should be (Total Paid So Far) + (Remaining to be Paid).
+          const newAmount = totalPaid + desiredPending;
+
           if (existing.status === 'pending') {
-            // Đang pending: ghi đè amount theo tính toán mới (không triệt tiêu chiều ngược lại)
             await tx.paymentSettlement.update({
               where: { id: existing.id },
               data: {
-                amount: desiredPending,
-                status: desiredPending > 0 ? 'pending' : 'completed',
-                settledAt: desiredPending > 0 ? null : new Date()
+                amount: newAmount > totalPaid ? newAmount : totalPaid, // Ensure amount never drops below paid
+                status: desiredPending > 0.01 ? 'pending' : 'completed',
+                settledAt: desiredPending > 0.01 ? null : new Date()
               }
             });
           } else if (existing.status === 'completed') {
-            // Đã completed cùng chiều: cộng dồn amount mới và mở lại pending
+            // If new debt appears (desiredPending > 0), reopen
             if (desiredPending > 0.01) {
               await tx.paymentSettlement.update({
                 where: { id: existing.id },
                 data: {
-                  amount: Number(existing.amount) + desiredPending,
+                  amount: newAmount,
                   status: 'pending',
                   settledAt: null
                 }
               });
             }
-            // Nếu desiredPending ~ 0 thì giữ nguyên completed
           } else {
-            // Phòng xa: các trạng thái khác -> ghi đè amount
+            // Cancelled or other status -> re-eval
             await tx.paymentSettlement.update({
               where: { id: existing.id },
-              data: { amount: desiredPending }
+              data: { amount: newAmount }
             });
           }
         } else if (desiredPending > 0.01) {
