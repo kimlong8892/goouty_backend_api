@@ -626,6 +626,19 @@ export class ExpensesService {
       throw new ForbiddenException('Access denied to this trip');
     }
 
+    // FORCE RECALCULATION: Ensure settlement data is correct before validating
+    // This fixes the issue where previous bugs led to incorrect settlement amounts
+    await this.expenseCalculationService.createPaymentSettlements(settlement.tripId);
+
+    // Re-fetch settlement to get the updated amount
+    const updatedSettlement = await this.prisma.paymentSettlement.findUnique({
+      where: { id: settlementId }
+    });
+
+    if (!updatedSettlement) {
+      throw new NotFoundException('Settlement disappeard after recalculation');
+    }
+
     if (dto.amount <= 0) {
       throw new BadRequestException('Amount must be greater than 0');
     }
@@ -636,17 +649,18 @@ export class ExpensesService {
       _sum: { amount: true }
     });
     const totalPaid = Number(aggregate._sum.amount ?? 0);
-    const remainingBefore = Number(settlement.amount) - totalPaid;
+    // Use updatedSettlement.amount which is now correct (Total Contract Value)
+    const remainingBefore = Number(updatedSettlement.amount) - totalPaid;
 
     if (dto.amount > remainingBefore + 1e-6) {
-      throw new BadRequestException('Amount exceeds remaining balance of this settlement');
+      throw new BadRequestException(`Amount exceeds remaining balance. Remaining: ${remainingBefore}`);
     }
 
     const transaction = await this.prisma.paymentTransaction.create({
       data: {
         settlementId,
-        fromUserId: settlement.debtorId,
-        toUserId: settlement.creditorId,
+        fromUserId: updatedSettlement.debtorId,
+        toUserId: updatedSettlement.creditorId,
         amount: dto.amount,
         status: dto.status ?? 'success',
         method: dto.method,
@@ -654,9 +668,7 @@ export class ExpensesService {
       },
     });
 
-    // Recalculate settlements to ensure consistency
-    // This ensures that if the transaction covers the debt, the settlement status is updated correctly,
-    // and if there are edge cases, the amount is corrected.
+    // Recalculate again to update status if needed (completed)
     await this.createPaymentSettlements(settlement.tripId, userId);
 
     // Lock expenses when transaction is successful
