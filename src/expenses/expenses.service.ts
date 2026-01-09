@@ -509,12 +509,25 @@ export class ExpensesService {
             bankId: true,
             bankNumber: true
           }
+        },
+        transactions: {
+          where: {
+            status: 'success'
+          },
+          select: {
+            amount: true
+          }
         }
       },
       orderBy: { createdAt: 'desc' }
     });
 
-    return settlements.map(settlement => this.mapSettlementToResponseDto(settlement));
+    return settlements.map(settlement => {
+      const totalPaid = settlement.transactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
+      const remaining = Math.max(0, Number(settlement.amount) - totalPaid);
+
+      return this.mapSettlementToResponseDto(settlement, totalPaid, remaining);
+    });
   }
 
   async updatePaymentSettlement(
@@ -569,11 +582,22 @@ export class ExpensesService {
             fullName: true,
             profilePicture: true
           }
+        },
+        transactions: {
+          where: {
+            status: 'success'
+          },
+          select: {
+            amount: true
+          }
         }
       }
     });
 
-    return this.mapSettlementToResponseDto(updatedSettlement);
+    const totalPaid = updatedSettlement.transactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
+    const remaining = Math.max(0, Number(updatedSettlement.amount) - totalPaid);
+
+    return this.mapSettlementToResponseDto(updatedSettlement, totalPaid, remaining);
   }
 
   async createPaymentTransaction(
@@ -713,7 +737,7 @@ export class ExpensesService {
     return txs.map(t => this.mapTransactionToResponseDto(t));
   }
 
-  private mapSettlementToResponseDto(settlement: any): SettlementResponseDto {
+  private mapSettlementToResponseDto(settlement: any, totalPaid?: number, remaining?: number): SettlementResponseDto {
     return {
       id: settlement.id,
       amount: Number(settlement.amount),
@@ -726,7 +750,9 @@ export class ExpensesService {
       debtorId: settlement.debtorId,
       debtor: settlement.debtor,
       creditorId: settlement.creditorId,
-      creditor: settlement.creditor
+      creditor: settlement.creditor,
+      totalPaid,
+      remaining
     };
   }
 
