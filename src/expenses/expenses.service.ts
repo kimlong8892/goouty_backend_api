@@ -654,14 +654,10 @@ export class ExpensesService {
       },
     });
 
-    // Auto-complete when fully paid
-    const remainingAfter = remainingBefore - ((dto.status ?? 'success') === 'success' ? dto.amount : 0);
-    if (remainingAfter <= 0) {
-      await this.prisma.paymentSettlement.update({
-        where: { id: settlementId },
-        data: { status: 'completed', settledAt: new Date() }
-      });
-    }
+    // Recalculate settlements to ensure consistency
+    // This ensures that if the transaction covers the debt, the settlement status is updated correctly,
+    // and if there are edge cases, the amount is corrected.
+    await this.createPaymentSettlements(settlement.tripId, userId);
 
     // Lock expenses when transaction is successful
     if ((dto.status ?? 'success') === 'success') {
@@ -698,7 +694,6 @@ export class ExpensesService {
         }
       } catch (error) {
         console.error('Failed to send payment notification:', error);
-        // Don't throw error here to avoid breaking payment transaction
       }
     }
 
