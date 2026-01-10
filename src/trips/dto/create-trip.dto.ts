@@ -21,4 +21,9 @@ export class CreateTripDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional({ description: 'Template ID if trip is created from a template' })
+  @IsOptional()
+  @IsUUID()
+  templateId?: string;
 }

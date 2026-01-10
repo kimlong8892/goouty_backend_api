@@ -54,6 +54,11 @@ export class TripsService {
         tripData.province = { connect: { id: createTripDto.provinceId } };
       }
 
+      // Add template relation if templateId is provided
+      if (createTripDto.templateId) {
+        tripData.template = { connect: { id: createTripDto.templateId } };
+      }
+
       const trip = await prisma.trip.create({
         data: tripData
       });
@@ -1160,6 +1165,7 @@ export class TripsService {
       title: tripTitle || template.title,
       description: template.description,
       provinceId: template.provinceId,
+      templateId: templateId, // Ghi nhận template ID
       startDate: undefined // Let user set date later
     };
 

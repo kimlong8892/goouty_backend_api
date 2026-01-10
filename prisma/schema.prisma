@@ -47,15 +47,18 @@ model Trip {
   updatedAt          DateTime?           @updatedAt
   userId             String              @db.Uuid
   provinceId         String?             @db.Uuid
+  templateId         String?             @db.Uuid
   avatar             String?
   days               Day[]
   expenses           Expense[]
   paymentSettlements PaymentSettlement[]
   province           Province?           @relation(fields: [provinceId], references: [id])
+  template           TripTemplate?       @relation(fields: [templateId], references: [id])
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   members            TripMember[]
 
   @@index([provinceId])
+  @@index([templateId])
 }
 
 model Day {
@@ -246,6 +249,7 @@ model TripTemplate {
   fee         Decimal           @default(0) @db.Decimal(20, 2)
   province    Province?         @relation(fields: [provinceId], references: [id])
   days        TripTemplateDay[]
+  trips       Trip[]
   favoritedBy User[]            @relation("UserWishlist")
 
   @@index([provinceId])
