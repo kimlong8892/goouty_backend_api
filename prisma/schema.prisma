@@ -96,6 +96,7 @@ model Activity {
   location    String?
   notes       String?
   important   Boolean   @default(false)
+  sortOrder   Int       @default(0)
   dayId       String    @db.Uuid
   day         Day       @relation(fields: [dayId], references: [id], onDelete: Cascade)
 }

@@ -137,7 +137,9 @@ export class TripsService {
         },
         days: {
           include: {
-            activities: true
+            activities: {
+              orderBy: { sortOrder: 'asc' }
+            }
           }
         },
         members: {
@@ -1245,6 +1247,7 @@ export class TripsService {
                 location: templateActivity.location,
                 notes: templateActivity.notes,
                 important: templateActivity.important,
+                sortOrder: templateActivity.activityOrder,
                 day: { connect: { id: day.id } }
               }
             });

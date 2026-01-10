@@ -4,7 +4,7 @@ import { Day, Prisma } from '@prisma/client';
 
 @Injectable()
 export class DaysRepository {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(data: Prisma.DayCreateInput): Promise<Day> {
     return this.prisma.day.create({ data });
@@ -21,10 +21,12 @@ export class DaysRepository {
   }
 
   async findOne(id: string): Promise<Day | null> {
-    return this.prisma.day.findUnique({ 
+    return this.prisma.day.findUnique({
       where: { id },
       include: {
-        activities: true
+        activities: {
+          orderBy: { sortOrder: 'asc' }
+        }
       }
     });
   }
