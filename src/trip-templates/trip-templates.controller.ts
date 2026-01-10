@@ -11,6 +11,8 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { TripTemplatesService } from './trip-templates.service';
@@ -43,8 +45,8 @@ export class TripTemplatesController {
   @ApiResponse({ status: 200, description: 'Trip templates retrieved successfully' })
   findAll(
     @Query('search') search?: string,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number = 1,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number = 10,
   ) {
     return this.tripTemplatesService.findAll({ search, page, limit });
   }
@@ -62,8 +64,8 @@ export class TripTemplatesController {
   @ApiResponse({ status: 200, description: 'User wishlist retrieved successfully' })
   getWishlist(
     @Request() req,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number = 1,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number = 10,
   ) {
     return this.tripTemplatesService.getWishlist(req.user.userId, { page, limit });
   }
