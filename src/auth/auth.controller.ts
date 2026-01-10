@@ -54,7 +54,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get user social accounts' })
   @ApiResponse({ status: 200, description: 'Social accounts retrieved successfully' })
   async getSocialAccounts(@Request() req) {
-    return this.socialLoginService.getUserSocialAccounts(req.user.id);
+    return this.socialLoginService.getUserSocialAccounts(req.user.userId);
   }
 
   @Delete('social-accounts/:id')
@@ -64,7 +64,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Social account unlinked successfully' })
   @ApiResponse({ status: 409, description: 'Cannot unlink the only login method' })
   async unlinkSocialAccount(@Request() req, @Param('id') socialAccountId: string) {
-    await this.socialLoginService.unlinkSocialAccount(req.user.id, socialAccountId);
+    await this.socialLoginService.unlinkSocialAccount(req.user.userId, socialAccountId);
     return { message: 'Social account unlinked successfully' };
   }
 

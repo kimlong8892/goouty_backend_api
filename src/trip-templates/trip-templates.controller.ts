@@ -65,7 +65,7 @@ export class TripTemplatesController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
-    return this.tripTemplatesService.getWishlist(req.user.id, { page, limit });
+    return this.tripTemplatesService.getWishlist(req.user.userId, { page, limit });
   }
 
   @Get(':id')
@@ -132,7 +132,7 @@ export class TripTemplatesController {
   @ApiOperation({ summary: 'Add template to wishlist' })
   @ApiResponse({ status: 201, description: 'Template added to wishlist' })
   addToWishlist(@Request() req, @Param('id') id: string) {
-    return this.tripTemplatesService.addToWishlist(req.user.id, id);
+    return this.tripTemplatesService.addToWishlist(req.user.userId, id);
   }
 
   @Delete(':id/wishlist')
@@ -140,6 +140,6 @@ export class TripTemplatesController {
   @ApiOperation({ summary: 'Remove template from wishlist' })
   @ApiResponse({ status: 200, description: 'Template removed from wishlist' })
   removeFromWishlist(@Request() req, @Param('id') id: string) {
-    return this.tripTemplatesService.removeFromWishlist(req.user.id, id);
+    return this.tripTemplatesService.removeFromWishlist(req.user.userId, id);
   }
 }
