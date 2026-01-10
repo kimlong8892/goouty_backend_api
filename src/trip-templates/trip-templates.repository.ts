@@ -213,6 +213,17 @@ export class TripTemplatesRepository {
   }
 
   async addToWishlist(userId: string, templateId: string) {
+    const isFavorited = await this.prisma.tripTemplate.findFirst({
+      where: {
+        id: templateId,
+        favoritedBy: { some: { id: userId } }
+      }
+    });
+
+    if (isFavorited) {
+      return isFavorited;
+    }
+
     return this.prisma.tripTemplate.update({
       where: { id: templateId },
       data: {
@@ -224,6 +235,17 @@ export class TripTemplatesRepository {
   }
 
   async removeFromWishlist(userId: string, templateId: string) {
+    const isFavorited = await this.prisma.tripTemplate.findFirst({
+      where: {
+        id: templateId,
+        favoritedBy: { some: { id: userId } }
+      }
+    });
+
+    if (!isFavorited) {
+      return this.prisma.tripTemplate.findUnique({ where: { id: templateId } });
+    }
+
     return this.prisma.tripTemplate.update({
       where: { id: templateId },
       data: {
