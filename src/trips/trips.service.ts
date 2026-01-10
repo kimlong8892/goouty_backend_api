@@ -331,9 +331,11 @@ export class TripsService {
       where: { email: normalizedEmail },
     });
 
-    // Check if user is already a member (if user exists)
+    // Check if user is already a member or has a pending invitation
+    let existingMember: any = null;
+
     if (userToAdd) {
-      const existingMember = await this.prisma.tripMember.findUnique({
+      existingMember = await this.prisma.tripMember.findUnique({
         where: {
           userId_tripId: {
             userId: userToAdd.id,
@@ -341,13 +343,9 @@ export class TripsService {
           },
         },
       });
-
-      if (existingMember) {
-        throw new ConflictException('User is already a member of this trip');
-      }
     } else {
-      // Check if there's already a pending invitation for this email
-      const existingInvitation = await this.prisma.tripMember.findFirst({
+      // Check by email if user doesn't exist yet
+      existingMember = await this.prisma.tripMember.findFirst({
         where: {
           tripId: tripId,
           invitedEmail: {
@@ -357,37 +355,62 @@ export class TripsService {
           status: 'pending',
         },
       });
-
-      if (existingInvitation) {
-        throw new ConflictException('An invitation has already been sent to this email');
-      }
     }
 
-    // Tạo lời mời: trạng thái pending + token
+    if (existingMember && existingMember.status === 'accepted') {
+      throw new ConflictException('User is already a member of this trip');
+    }
+
+    // Tạo lời mời mới hoặc cập nhật lời mời hiện có
     const inviteToken = randomBytes(32).toString('hex');
+    let member;
 
     try {
-      const newMember = await this.prisma.tripMember.create({
-        data: {
-          userId: userToAdd?.id || null,
-          tripId: tripId,
-          status: 'pending',
-          inviteToken,
-          invitedAt: new Date(),
-          invitedById: requestUserId,
-          invitedEmail: normalizedEmail, // Lưu email đã lowercase để link sau khi user đăng ký
-        },
-        include: {
-          user: userToAdd ? {
-            select: {
-              id: true,
-              email: true,
-              fullName: true,
-              profilePicture: true,
+      if (existingMember) {
+        // Cập nhật lời mời hiện có (status must be pending here)
+        member = await this.prisma.tripMember.update({
+          where: { id: existingMember.id },
+          data: {
+            inviteToken,
+            invitedAt: new Date(),
+            invitedById: requestUserId,
+            invitedEmail: normalizedEmail,
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                fullName: true,
+                profilePicture: true,
+              },
             },
-          } : undefined,
-        },
-      });
+          },
+        });
+      } else {
+        // Tạo lời mời mới
+        member = await this.prisma.tripMember.create({
+          data: {
+            userId: userToAdd?.id || null,
+            tripId: tripId,
+            status: 'pending',
+            inviteToken,
+            invitedAt: new Date(),
+            invitedById: requestUserId,
+            invitedEmail: normalizedEmail,
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                fullName: true,
+                profilePicture: true,
+              },
+            },
+          },
+        });
+      }
 
       // Lấy thông tin người mời
       const inviter = await this.prisma.user.findUnique({
@@ -407,7 +430,7 @@ export class TripsService {
         userToAdd?.id || '',
         inviter?.fullName || inviter?.email || 'Một người bạn',
         {
-          skipEmail: false, // Giờ đã cho phép gửi mail qua queue
+          skipEmail: false,
           data: {
             userEmail: normalizedEmail,
             userName: userToAdd?.fullName || addMemberDto.email.split('@')[0],
@@ -419,13 +442,8 @@ export class TripsService {
 
       // Return với user info hoặc email
       return {
-        ...newMember,
-        user: userToAdd ? {
-          id: userToAdd.id,
-          email: userToAdd.email,
-          fullName: userToAdd.fullName,
-          profilePicture: userToAdd.profilePicture,
-        } : {
+        ...member,
+        user: member.user || {
           id: null,
           email: normalizedEmail,
           fullName: null,
@@ -433,16 +451,12 @@ export class TripsService {
         },
       };
     } catch (error: any) {
-      // Log error để debug
-      console.error('Error creating trip member invitation:', error);
-
-      // Nếu lỗi do constraint (userId NOT NULL), có nghĩa là migration chưa được apply
+      console.error('Error in addMemberToTrip:', error);
       if (error.code === 'P2002' || error.message?.includes('null value') || error.message?.includes('NOT NULL')) {
         throw new BadRequestException(
-          'Database schema chưa được cập nhật. Vui lòng chạy migration: npx prisma migrate dev'
+          'Database schema chưa được cập nhật hoặc có lỗi xung đột dữ liệu.'
         );
       }
-
       throw error;
     }
   }
@@ -624,24 +638,82 @@ export class TripsService {
       throw new ConflictException('You are the owner of this trip');
     }
 
-    const existingMember = await this.prisma.tripMember.findUnique({
+    // Get user info to check email
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true }
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Check if user is already a member or has a pending invitation
+    // We check both by userId and by their email (case-insensitive)
+    const existingMember = await this.prisma.tripMember.findFirst({
       where: {
-        userId_tripId: {
-          userId,
-          tripId: trip.id,
-        },
+        tripId: trip.id,
+        OR: [
+          { userId: userId },
+          {
+            invitedEmail: { equals: user.email, mode: 'insensitive' },
+            userId: null // Only check those not yet linked to an account
+          }
+        ]
       },
+      orderBy: { status: 'asc' } // 'accepted' comes before 'pending' alphabetically
     });
 
     if (existingMember) {
-      throw new ConflictException('You are already a member of this trip');
+      if (existingMember.status === 'accepted') {
+        throw new ConflictException('You are already a member of this trip');
+      }
+
+      // If it's pending, update it to accepted
+      return this.prisma.tripMember.update({
+        where: { id: existingMember.id },
+        data: {
+          userId: userId,
+          status: 'accepted',
+          joinedAt: new Date(),
+          inviteToken: null,
+        },
+        include: {
+          trip: {
+            select: {
+              id: true,
+              title: true,
+              provinceId: true,
+              province: {
+                select: {
+                  id: true,
+                  name: true,
+                  code: true,
+                  divisionType: true,
+                  codename: true,
+                  phoneCode: true
+                }
+              },
+              startDate: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              email: true,
+              fullName: true,
+            },
+          },
+        },
+      });
     }
 
-    // Add user as member
+    // Add user as member if no record exists
     const newMember = await this.prisma.tripMember.create({
       data: {
         userId,
         tripId: trip.id,
+        status: 'accepted',
       },
       include: {
         trip: {
