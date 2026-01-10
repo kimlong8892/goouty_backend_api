@@ -64,9 +64,10 @@ export class TripTemplatesRepository {
     search?: string;
     provinceId?: string;
     page?: number;
-    limit?: number
+    limit?: number;
+    userId?: string;
   }) {
-    const { isPublic, search, provinceId, page = 1, limit = 10 } = options || {};
+    const { isPublic, search, provinceId, page = 1, limit = 10, userId } = options || {};
     const skip = (page - 1) * limit;
 
     // Build where conditions
@@ -109,7 +110,11 @@ export class TripTemplatesRepository {
               }
             },
             orderBy: { dayOrder: 'asc' }
-          }
+          },
+          favoritedBy: userId ? {
+            where: { id: userId },
+            select: { id: true }
+          } : false
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -118,8 +123,16 @@ export class TripTemplatesRepository {
       this.prisma.tripTemplate.count({ where })
     ]);
 
+    const templatesWithWishlist = templates.map(template => {
+      const { favoritedBy, ...rest } = template as any;
+      return {
+        ...rest,
+        isWishlisted: userId ? (favoritedBy && favoritedBy.length > 0) : false
+      };
+    });
+
     return {
-      templates,
+      templates: templatesWithWishlist,
       pagination: {
         page,
         limit,
@@ -196,17 +209,18 @@ export class TripTemplatesRepository {
     });
   }
 
-  async findPublicTemplates(query: GetTripTemplatesQueryDto) {
+  async findPublicTemplates(query: GetTripTemplatesQueryDto & { userId?: string }) {
     return this.findAll({
       isPublic: true,
       search: query.search,
       provinceId: query.provinceId,
       page: query.page,
-      limit: query.limit
+      limit: query.limit,
+      userId: query.userId
     });
   }
 
-  async findUserTemplates(options?: { search?: string; page?: number; limit?: number }) {
+  async findUserTemplates(options?: { search?: string; page?: number; limit?: number; userId?: string }) {
     return this.findAll({
       ...options
     });
@@ -300,8 +314,13 @@ export class TripTemplatesRepository {
       })
     ]);
 
+    const templatesWithWishlist = templates.map(template => ({
+      ...template,
+      isWishlisted: true
+    }));
+
     return {
-      templates,
+      templates: templatesWithWishlist,
       pagination: {
         page,
         limit,

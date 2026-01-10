@@ -36,12 +36,12 @@ export class TripTemplatesService {
     });
   }
 
-  async findAll(options?: { search?: string; page?: number; limit?: number }) {
+  async findAll(options?: { search?: string; page?: number; limit?: number; userId?: string }) {
     return this.tripTemplatesRepository.findUserTemplates(options);
   }
 
-  async findPublicTemplates(query: GetTripTemplatesQueryDto) {
-    return this.tripTemplatesRepository.findPublicTemplates(query);
+  async findPublicTemplates(query: GetTripTemplatesQueryDto, userId?: string) {
+    return this.tripTemplatesRepository.findPublicTemplates({ ...query, userId } as any);
   }
 
   async findOne(id: string) {
