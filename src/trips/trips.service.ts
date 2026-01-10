@@ -603,7 +603,7 @@ export class TripsService {
     }
 
     // Generate unique share token
-    const shareToken = randomBytes(32).toString('hex');
+    const shareToken = randomBytes(6).toString('hex');
 
     // Update trip with share token and make it public
     const updatedTrip = await this.prisma.trip.update({
