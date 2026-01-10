@@ -11,7 +11,6 @@ import { AuthModule } from "./auth/auth.module";
 import { EmailModule } from './email/email.module';
 import { NotificationModule } from './notifications/notification.module';
 import { DevicesModule } from './devices/devices.module';
-import { QueueModule } from './queue/queue.module';
 import { ProvincesModule } from './provinces/provinces.module';
 import { TripTemplatesModule } from './trip-templates/trip-templates.module';
 import { UploadModule } from './upload/upload.module';
@@ -77,18 +76,6 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
         APP_URL: Joi.string().uri().optional(),
         APP_URL_API: Joi.string().uri().optional(),
 
-        // GCP / Cloud Tasks
-        USE_CLOUD_TASKS: Joi.string().valid('true', 'false').optional(),
-        GCP_PROJECT_ID: Joi.string().optional(),
-        GCP_LOCATION: Joi.string().optional(),
-        GCP_SERVICE_ACCOUNT_EMAIL: Joi.string().email().optional(),
-
-        // Queues
-        MAIL_QUEUE_CONCURRENCY: Joi.number().optional(),
-        QUEUE_TRIP: Joi.string().required(),
-        QUEUE_EXPENSE: Joi.string().required(),
-        QUEUE_PAYMENT: Joi.string().required(),
-        QUEUE_SYSTEM: Joi.string().required(),
       }),
     }),
     LoggerModule.forRootAsync({
@@ -136,7 +123,6 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
     EmailModule,
     NotificationModule,
     DevicesModule,
-    QueueModule,
     ProvincesModule,
     TripTemplatesModule,
     UploadModule,

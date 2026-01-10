@@ -8,7 +8,7 @@ import { AuthController } from './auth.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
-import { QueueModule } from '../queue/queue.module';
+import { NotificationModule } from '../notifications/notification.module';
 import { I18nHelperModule } from '../common/i18n/i18n-helper.module';
 import { TripsModule } from '../trips/trips.module';
 
@@ -24,7 +24,7 @@ import { TripsModule } from '../trips/trips.module';
       }),
       inject: [ConfigService],
     }),
-    QueueModule,
+    NotificationModule,
     I18nHelperModule,
     forwardRef(() => TripsModule),
   ],

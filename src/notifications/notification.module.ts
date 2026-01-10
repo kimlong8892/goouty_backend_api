@@ -7,27 +7,24 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { DevicesModule } from '../devices/devices.module';
 import { EmailModule } from '../email/email.module';
 import { WebPushService } from './web-push.service';
-import { QueueModule } from '../queue/queue.module';
-
 @Module({
   imports: [
-    PrismaModule, 
-    DevicesModule, 
-    EmailModule, 
-    forwardRef(() => QueueModule)
+    PrismaModule,
+    DevicesModule,
+    EmailModule,
   ],
   providers: [
-    NotificationService, 
-    EnhancedNotificationService, 
-    NotificationTemplateService, 
+    NotificationService,
+    EnhancedNotificationService,
+    NotificationTemplateService,
     WebPushService
   ],
   controllers: [NotificationController],
   exports: [
-    NotificationService, 
-    EnhancedNotificationService, 
-    NotificationTemplateService, 
+    NotificationService,
+    EnhancedNotificationService,
+    NotificationTemplateService,
     WebPushService
   ],
 })
-export class NotificationModule {}
+export class NotificationModule { }

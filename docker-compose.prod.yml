@@ -13,8 +13,6 @@ services:
       - .env.prod
     environment:
       NODE_ENV: development
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
     volumes:
       - ./:/usr/src/app
       - node_modules_prod:/usr/src/app/node_modules
@@ -22,8 +20,6 @@ services:
     restart: always
     depends_on:
       db:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api"]
@@ -50,20 +46,6 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: redis_prod
-    restart: unless-stopped
-    ports:
-      - "6381:6379"
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes --appendfsync everysec --save 900 1 --save 300 10 --save 60 10000
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   dozzle:
     image: amir20/dozzle:latest
@@ -88,7 +70,6 @@ services:
 volumes:
   postgres_data:
   pgadmin_data:
-  redis_data:
   node_modules_prod:
 
 networks:

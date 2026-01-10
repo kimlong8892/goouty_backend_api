@@ -7,7 +7,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { QueueService } from '../queue/queue.service';
+import { EnhancedNotificationService } from '../notifications/enhanced-notification.service';
 import { TranslationService } from '../common/i18n/translation.service';
 import { TripsService } from '../trips/trips.service';
 
@@ -16,7 +16,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-    private queueService: QueueService,
+    private notificationService: EnhancedNotificationService,
     private i18n: TranslationService,
     @Inject(forwardRef(() => TripsService))
     private tripsService: any, // Use any to avoid circular dependency type issues
@@ -151,21 +151,18 @@ export class AuthService {
       },
     });
 
-    // Send email via queue
-    await this.queueService.addSystemNotificationJob({
-      type: 'FORGOT_PASSWORD',
-      context: {
+    // Send email directly
+    await this.notificationService.sendCustomNotification(
+      'FORGOT_PASSWORD',
+      {
         resetToken,
-        // Assuming frontend URL needs to be constructed. 
-        // We can pass process.env.FRONTEND_URL later but for now we'll handle it in processor or here.
-        // Processor logic I added uses `frontendUrl` from context or default.
         frontendUrl: process.env.APP_URL,
       },
-      userId: user.id,
-      options: {
+      [user.id],
+      {
         skipPush: true,
       },
-    });
+    );
 
     return { message: 'If email exists, a reset link has been sent.' };
   }
