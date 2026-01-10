@@ -4,7 +4,6 @@ import { DevicesService } from '../devices/devices.service';
 import { WebPushService } from './web-push.service';
 import { EmailService } from '../email/email.service';
 import { NotificationTemplateService, NotificationContext } from './notification-template.service';
-import { QueueService } from '../queue/queue.service';
 import {
   CreateNotificationDto,
   UpdateNotificationDto,

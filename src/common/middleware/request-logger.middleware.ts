@@ -8,11 +8,7 @@ export class RequestLoggerMiddleware implements NestMiddleware {
     use(req: Request, res: Response, next: NextFunction) {
         const { method, originalUrl, headers } = req;
 
-        // Only log queue-related requests or all for debugging? Let's do all for now or specific
-        if (originalUrl.includes('/queue/process')) {
-            this.logger.log(`Incoming Request: ${method} ${originalUrl}`);
-            this.logger.log(`Headers: ${JSON.stringify(headers)}`);
-        }
+        // All requests are logged in pino-http, adding extra logging here if needed in future.
 
         next();
     }
