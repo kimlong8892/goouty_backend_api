@@ -23,7 +23,9 @@
     "seed:trip-templates": "ts-node -P tsconfig.json --transpile-only prisma/seed-trip-templates.ts",
     "seed:demo": "ts-node -P tsconfig.json --transpile-only prisma/seed-demo-data.ts",
     "seed:all": "npm run seed:provinces && npm run seed:templates && npm run seed:trip-templates && npm run seed:demo",
-    "seed:conditional": "ts-node -P tsconfig.json --transpile-only prisma/conditional-seed.ts"
+    "seed:conditional": "ts-node -P tsconfig.json --transpile-only prisma/conditional-seed.ts",
+    "export:csv": "ts-node -P tsconfig.json --transpile-only prisma/export-csv.ts",
+    "import:csv": "ts-node -P tsconfig.json --transpile-only prisma/import-csv.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.958.0",

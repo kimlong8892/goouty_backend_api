@@ -130,4 +130,19 @@ export class TripTemplatesService {
       }
     };
   }
+  async addToWishlist(userId: string, templateId: string) {
+    // Check if template exists
+    await this.findOne(templateId);
+    return this.tripTemplatesRepository.addToWishlist(userId, templateId);
+  }
+
+  async removeFromWishlist(userId: string, templateId: string) {
+    // Check if template exists
+    await this.findOne(templateId);
+    return this.tripTemplatesRepository.removeFromWishlist(userId, templateId);
+  }
+
+  async getWishlist(userId: string, query: { page?: number; limit?: number }) {
+    return this.tripTemplatesRepository.getUserWishlist(userId, query);
+  }
 }

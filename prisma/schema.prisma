@@ -33,6 +33,7 @@ model User {
   socialAccounts       SocialAccount[]
   trips                Trip[]
   tripMembers          TripMember[]
+  wishlistTemplates    TripTemplate[] @relation("UserWishlist")
 }
 
 model Trip {
@@ -244,6 +245,7 @@ model TripTemplate {
   fee         Decimal           @default(0) @db.Decimal(20, 2)
   province    Province?         @relation(fields: [provinceId], references: [id])
   days        TripTemplateDay[]
+  favoritedBy User[]            @relation("UserWishlist")
 
   @@index([provinceId])
 }

@@ -211,4 +211,81 @@ export class TripTemplatesRepository {
       ...options
     });
   }
+
+  async addToWishlist(userId: string, templateId: string) {
+    return this.prisma.tripTemplate.update({
+      where: { id: templateId },
+      data: {
+        favoritedBy: {
+          connect: { id: userId }
+        }
+      }
+    });
+  }
+
+  async removeFromWishlist(userId: string, templateId: string) {
+    return this.prisma.tripTemplate.update({
+      where: { id: templateId },
+      data: {
+        favoritedBy: {
+          disconnect: { id: userId }
+        }
+      }
+    });
+  }
+
+  async getUserWishlist(userId: string, options?: { page?: number; limit?: number }) {
+    const { page = 1, limit = 10 } = options || {};
+    const skip = (page - 1) * limit;
+
+    const [templates, total] = await Promise.all([
+      this.prisma.tripTemplate.findMany({
+        where: {
+          favoritedBy: {
+            some: { id: userId }
+          }
+        },
+        include: {
+          province: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              divisionType: true,
+              codename: true,
+              phoneCode: true
+            }
+          },
+          days: {
+            include: {
+              activities: {
+                orderBy: { activityOrder: 'asc' }
+              }
+            },
+            orderBy: { dayOrder: 'asc' }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit
+      }),
+      this.prisma.tripTemplate.count({
+        where: {
+          favoritedBy: {
+            some: { id: userId }
+          }
+        }
+      })
+    ]);
+
+    return {
+      templates,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  }
 }

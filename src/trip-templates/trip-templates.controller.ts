@@ -56,6 +56,18 @@ export class TripTemplatesController {
     return this.tripTemplatesService.findPublicTemplates(query);
   }
 
+  @Get('wishlist')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get user wishlist' })
+  @ApiResponse({ status: 200, description: 'User wishlist retrieved successfully' })
+  getWishlist(
+    @Request() req,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.tripTemplatesService.getWishlist(req.user.id, { page, limit });
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a trip template by ID' })
   @ApiResponse({ status: 200, description: 'Trip template retrieved successfully' })
@@ -113,5 +125,21 @@ export class TripTemplatesController {
     @Body() body?: { title?: string },
   ) {
     return this.tripTemplatesService.createTripFromTemplate(id, body?.title);
+  }
+
+  @Post(':id/wishlist')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Add template to wishlist' })
+  @ApiResponse({ status: 201, description: 'Template added to wishlist' })
+  addToWishlist(@Request() req, @Param('id') id: string) {
+    return this.tripTemplatesService.addToWishlist(req.user.id, id);
+  }
+
+  @Delete(':id/wishlist')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Remove template from wishlist' })
+  @ApiResponse({ status: 200, description: 'Template removed from wishlist' })
+  removeFromWishlist(@Request() req, @Param('id') id: string) {
+    return this.tripTemplatesService.removeFromWishlist(req.user.id, id);
   }
 }
