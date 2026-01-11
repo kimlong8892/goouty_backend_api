@@ -6,6 +6,7 @@ import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordOtpDto } from './dto/change-password-otp.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { EnhancedNotificationService } from '../notifications/enhanced-notification.service';
@@ -237,6 +238,32 @@ export class AuthService {
     );
 
     return { message: 'Mã OTP đã được gửi về email của bạn.' };
+  }
+
+  async verifyOtp(dto: VerifyOtpDto) {
+    const { email, otp } = dto;
+    const normalizedEmail = email.toLowerCase();
+
+    // Verify OTP
+    const otpRecord = await this.prisma.otp.findFirst({
+      where: {
+        email: normalizedEmail,
+        type: OtpType.FORGOT_PASSWORD,
+        code: otp,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    if (!otpRecord) {
+      throw new UnauthorizedException('Mã OTP không hợp lệ hoặc đã hết hạn');
+    }
+
+    return { message: 'Mã OTP hợp lệ' };
   }
 
   async changePasswordWithOtp(dto: ChangePasswordOtpDto) {

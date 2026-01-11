@@ -8,6 +8,7 @@ import { GoogleAuthDto, GoogleAuthResponseDto } from './dto/google-auth.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordOtpDto } from './dto/change-password-otp.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('Authentication')
@@ -105,6 +106,15 @@ export class AuthController {
   @ApiResponse({ status: 404, description: 'Email not found' })
   async requestOtp(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return this.authService.requestOtp(forgotPasswordDto);
+  }
+
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify OTP' })
+  @ApiResponse({ status: 200, description: 'OTP verified successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired OTP' })
+  async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
+    return this.authService.verifyOtp(verifyOtpDto);
   }
 
   @Post('change-password-otp')
