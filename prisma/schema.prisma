@@ -295,6 +295,23 @@ model Template {
   updatedAt    DateTime @updatedAt
 }
 
+model Otp {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email     String
+  type      OtpType
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email, type])
+}
+
+enum OtpType {
+  FORGOT_PASSWORD
+  VERIFY_EMAIL
+  LOGIN
+}
+
 enum NotificationType {
   INFO
   SUCCESS

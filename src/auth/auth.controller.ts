@@ -7,6 +7,7 @@ import { LoginDto } from './dto/login.dto';
 import { GoogleAuthDto, GoogleAuthResponseDto } from './dto/google-auth.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordOtpDto } from './dto/change-password-otp.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('Authentication')
@@ -95,6 +96,24 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Password reset successfully' })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @Post('request-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request OTP for password reset' })
+  @ApiResponse({ status: 200, description: 'OTP sent to email' })
+  @ApiResponse({ status: 404, description: 'Email not found' })
+  async requestOtp(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.requestOtp(forgotPasswordDto);
+  }
+
+  @Post('change-password-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Change password with OTP' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired OTP' })
+  async changePasswordOtp(@Body() changePasswordOtpDto: ChangePasswordOtpDto) {
+    return this.authService.changePasswordWithOtp(changePasswordOtpDto);
   }
 
 }
