@@ -9,7 +9,7 @@ datasource db {
 }
 
 model User {
-  id                   String               @id @default(uuid()) @db.Uuid
+  id                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                String               @unique
   password             String?
   fullName             String?
@@ -37,7 +37,7 @@ model User {
 }
 
 model Trip {
-  id                 String              @id @default(uuid()) @db.Uuid
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title              String
   startDate          DateTime?
   description        String?
@@ -62,7 +62,7 @@ model Trip {
 }
 
 model Day {
-  id          String     @id @default(uuid()) @db.Uuid
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title       String
   description String?
   date        DateTime
@@ -73,7 +73,7 @@ model Day {
 }
 
 model TripMember {
-  id           String    @id @default(uuid()) @db.Uuid
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   joinedAt     DateTime  @default(now())
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -92,7 +92,7 @@ model TripMember {
 }
 
 model Activity {
-  id          String    @id @default(uuid()) @db.Uuid
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title       String
   startTime   DateTime?
   durationMin Int?
@@ -105,7 +105,7 @@ model Activity {
 }
 
 model Expense {
-  id           String               @id @default(uuid()) @db.Uuid
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title        String
   amount       Decimal              @db.Decimal(20, 2)
   date         DateTime
@@ -121,7 +121,7 @@ model Expense {
 }
 
 model ExpenseParticipant {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   createdAt DateTime @default(now())
   expenseId String   @db.Uuid
   userId    String   @db.Uuid
@@ -133,7 +133,7 @@ model ExpenseParticipant {
 }
 
 model SocialAccount {
-  id         String   @id @default(uuid()) @db.Uuid
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   provider   String
   providerId String
   email      String
@@ -149,7 +149,7 @@ model SocialAccount {
 }
 
 model PaymentSettlement {
-  id           String               @id @default(uuid()) @db.Uuid
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   amount       Decimal              @db.Decimal(10, 2)
   status       String               @default("pending")
   description  String?
@@ -168,7 +168,7 @@ model PaymentSettlement {
 }
 
 model PaymentTransaction {
-  id           String            @id @default(uuid()) @db.Uuid
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   amount       Decimal           @db.Decimal(10, 2)
   status       String            @default("success")
   method       String?
@@ -185,7 +185,7 @@ model PaymentTransaction {
 }
 
 model Device {
-  id               String   @id @default(uuid()) @db.Uuid
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId           String   @db.Uuid
   deviceId         String
   deviceName       String?
@@ -202,7 +202,7 @@ model Device {
 }
 
 model Notification {
-  id        String             @id @default(uuid()) @db.Uuid
+  id        String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId    String             @db.Uuid
   title     String
   body      String
@@ -222,7 +222,7 @@ model Notification {
 }
 
 model Province {
-  id            String         @id @default(uuid()) @db.Uuid
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name          String
   code          Int            @unique
   divisionType  String
@@ -238,7 +238,7 @@ model Province {
 }
 
 model TripTemplate {
-  id          String            @id @default(uuid()) @db.Uuid
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title       String
   description String?
   provinceId  String?           @db.Uuid
@@ -256,7 +256,7 @@ model TripTemplate {
 }
 
 model TripTemplateDay {
-  id             String                 @id @default(uuid()) @db.Uuid
+  id             String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title          String
   description    String?
   dayOrder       Int
@@ -268,7 +268,7 @@ model TripTemplateDay {
 }
 
 model TripTemplateActivity {
-  id            String          @id @default(uuid()) @db.Uuid
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title         String
   startTime     String?
   durationMin   Int?
@@ -283,7 +283,7 @@ model TripTemplateActivity {
 }
 
 model Template {
-  id           String   @id @default(uuid()) @db.Uuid
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code         String   @unique
   title        String?
   message      String?
