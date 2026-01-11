@@ -1,6 +1,7 @@
 import { Module, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { PrismaModule } from './prisma/prisma.module';
 import { TripsModule } from './trips/trips.module';
 import { DaysModule } from './days/days.module';
@@ -76,6 +77,9 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
         APP_URL: Joi.string().uri().optional(),
         APP_URL_API: Joi.string().uri().optional(),
 
+        // Rate Limit
+        THROTTLE_TTL: Joi.number().default(60),
+        THROTTLE_LIMIT: Joi.number().default(100),
       }),
     }),
     LoggerModule.forRootAsync({
@@ -113,6 +117,16 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
         new HeaderResolver(['x-custom-lang']),
       ],
     }),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          ttl: config.get('THROTTLE_TTL'),
+          limit: config.get('THROTTLE_LIMIT'),
+        },
+      ],
+    }),
     PrismaModule,
     TripsModule,
     DaysModule,
@@ -136,6 +150,10 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
     {
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
   ],
 })

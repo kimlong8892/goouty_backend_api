@@ -20,7 +20,7 @@ import { TripsModule } from '../trips/trips.module';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '1d' },
+        signOptions: { expiresIn: '365d' },
       }),
       inject: [ConfigService],
     }),

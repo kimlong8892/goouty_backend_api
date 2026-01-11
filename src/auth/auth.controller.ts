@@ -1,4 +1,5 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Get, Delete, Param, UseGuards, Request } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { SocialLoginService } from './social-login.service';
@@ -19,6 +20,7 @@ export class AuthController {
     private readonly socialLoginService: SocialLoginService,
   ) { }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({ status: 201, description: 'User successfully created' })
@@ -27,6 +29,7 @@ export class AuthController {
     return this.authService.register(registerDto);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login a user' })
@@ -36,6 +39,7 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('google')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login/Register with Google OAuth' })
@@ -99,6 +103,7 @@ export class AuthController {
     return this.authService.resetPassword(resetPasswordDto);
   }
 
+  @Throttle({ default: { limit: 3, ttl: 300000 } }) // 3 requests per 5 minutes
   @Post('request-otp')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request OTP for password reset' })
@@ -108,6 +113,7 @@ export class AuthController {
     return this.authService.requestOtp(forgotPasswordDto);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify OTP' })
@@ -117,6 +123,7 @@ export class AuthController {
     return this.authService.verifyOtp(verifyOtpDto);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('change-password-otp')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Change password with OTP' })

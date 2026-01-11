@@ -131,7 +131,7 @@ export class AuthService {
 
   generateToken(userId: string, email: string) {
     const payload = { sub: userId, email };
-    return this.jwtService.sign(payload);
+    return this.jwtService.sign(payload, { expiresIn: '365d' });
   }
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
