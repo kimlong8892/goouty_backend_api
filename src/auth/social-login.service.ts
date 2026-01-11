@@ -318,6 +318,6 @@ export class SocialLoginService {
    */
   private generateToken(userId: string, email: string): string {
     const payload = { sub: userId, email };
-    return this.jwtService.sign(payload);
+    return this.jwtService.sign(payload, { expiresIn: '365d' });
   }
 }

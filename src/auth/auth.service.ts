@@ -5,11 +5,14 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordOtpDto } from './dto/change-password-otp.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { EnhancedNotificationService } from '../notifications/enhanced-notification.service';
 import { TranslationService } from '../common/i18n/translation.service';
 import { TripsService } from '../trips/trips.service';
+import { OtpType } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -128,7 +131,7 @@ export class AuthService {
 
   generateToken(userId: string, email: string) {
     const payload = { sub: userId, email };
-    return this.jwtService.sign(payload);
+    return this.jwtService.sign(payload, { expiresIn: '365d' });
   }
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
@@ -195,5 +198,114 @@ export class AuthService {
     });
 
     return { message: 'Password reset successfully' };
+  }
+
+  async requestOtp(forgotPasswordDto: ForgotPasswordDto) {
+    const { email } = forgotPasswordDto;
+    const normalizedEmail = email.toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+    if (!user) {
+      throw new NotFoundException('Email không tồn tại trong hệ thống');
+    }
+
+    // Generate 4-digit OTP
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Save OTP to database
+    await this.prisma.otp.create({
+      data: {
+        email: normalizedEmail,
+        type: OtpType.FORGOT_PASSWORD,
+        code: otp,
+        expiresAt,
+      },
+    });
+
+    // Send email
+    await this.notificationService.sendCustomNotification(
+      'forgot_password',
+      {
+        otp,
+        userName: user.fullName || user.email,
+        userEmail: user.email,
+      },
+      [user.id],
+      {
+        skipPush: true,
+      },
+    );
+
+    return { message: 'Mã OTP đã được gửi về email của bạn.' };
+  }
+
+  async verifyOtp(dto: VerifyOtpDto) {
+    const { email, otp } = dto;
+    const normalizedEmail = email.toLowerCase();
+
+    // Verify OTP
+    const otpRecord = await this.prisma.otp.findFirst({
+      where: {
+        email: normalizedEmail,
+        type: OtpType.FORGOT_PASSWORD,
+        code: otp,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    if (!otpRecord) {
+      throw new UnauthorizedException('Mã OTP không hợp lệ hoặc đã hết hạn');
+    }
+
+    return { message: 'Mã OTP hợp lệ' };
+  }
+
+  async changePasswordWithOtp(dto: ChangePasswordOtpDto) {
+    const { email, otp, newPassword } = dto;
+    const normalizedEmail = email.toLowerCase();
+
+    // Verify OTP
+    const otpRecord = await this.prisma.otp.findFirst({
+      where: {
+        email: normalizedEmail,
+        type: OtpType.FORGOT_PASSWORD,
+        code: otp,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    if (!otpRecord) {
+      throw new UnauthorizedException('Mã OTP không hợp lệ hoặc đã hết hạn');
+    }
+
+    // Update password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const user = await this.prisma.user.update({
+      where: { email: normalizedEmail },
+      data: {
+        password: hashedPassword,
+        // Clear old tokens just in case
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      },
+    });
+
+    // Delete used OTP
+    await this.prisma.otp.delete({
+      where: { id: otpRecord.id },
+    });
+
+    return { message: 'Đổi mật khẩu thành công' };
   }
 }

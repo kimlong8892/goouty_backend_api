@@ -13,6 +13,10 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule, { cors: true, bufferLogs: true });
     app.useLogger(app.get(Logger));
 
+    // Enable trust proxy for rate limiting (needed if behind Nginx/Cloudflare)
+    const expressApp = app.getHttpAdapter().getInstance();
+    expressApp.set('trust proxy', 1);
+
     app.setGlobalPrefix('api', {
       exclude: [{ path: '/', method: RequestMethod.GET }],
     });
