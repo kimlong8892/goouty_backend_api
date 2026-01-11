@@ -6,3 +6,4 @@ frontend/node_modules
 .env.prod
 .env.local
 frontend/.env
+csv_exports

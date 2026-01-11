@@ -14,10 +14,10 @@ import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ExpenseResponseDto, ExpenseListResponseDto } from './dto/expense-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { 
-  ExpenseCalculationResponseDto 
+import {
+  ExpenseCalculationResponseDto
 } from './dto/expense-calculation.dto';
-import { 
+import {
   UpdatePaymentSettlementDto,
   PaymentSettlementResponseDto
 } from './dto/payment-settlement.dto';
@@ -31,11 +31,11 @@ import { ApiTags } from '@nestjs/swagger';
 @Controller('expenses')
 @UseGuards(JwtAuthGuard)
 export class ExpensesController {
-  constructor(private readonly expensesService: ExpensesService) {}
+  constructor(private readonly expensesService: ExpensesService) { }
 
   @Post()
   create(@Body() createExpenseDto: CreateExpenseDto, @Request() req): Promise<ExpenseResponseDto> {
-    return this.expensesService.create(createExpenseDto, req.user.id);
+    return this.expensesService.create(createExpenseDto, req.user.userId);
   }
 
   @Get('trip/:tripId')
@@ -43,12 +43,12 @@ export class ExpensesController {
     @Param('tripId') tripId: string,
     @Request() req
   ): Promise<ExpenseListResponseDto[]> {
-    return this.expensesService.findAllByTrip(tripId, req.user.id);
+    return this.expensesService.findAllByTrip(tripId, req.user.userId);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req): Promise<ExpenseResponseDto> {
-    return this.expensesService.findOne(id, req.user.id);
+    return this.expensesService.findOne(id, req.user.userId);
   }
 
   @Patch(':id')
@@ -57,12 +57,12 @@ export class ExpensesController {
     @Body() updateExpenseDto: UpdateExpenseDto,
     @Request() req
   ): Promise<ExpenseResponseDto> {
-    return this.expensesService.update(id, updateExpenseDto, req.user.id);
+    return this.expensesService.update(id, updateExpenseDto, req.user.userId);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req): Promise<void> {
-    return this.expensesService.remove(id, req.user.id);
+    return this.expensesService.remove(id, req.user.userId);
   }
 
   // Expense calculation endpoints
@@ -71,7 +71,7 @@ export class ExpensesController {
     @Param('tripId') tripId: string,
     @Request() req
   ): Promise<ExpenseCalculationResponseDto> {
-    return this.expensesService.calculateTripExpenses(tripId, req.user.id);
+    return this.expensesService.calculateTripExpenses(tripId, req.user.userId);
   }
 
   @Post('trip/:tripId/settlements')
@@ -79,7 +79,7 @@ export class ExpensesController {
     @Param('tripId') tripId: string,
     @Request() req
   ): Promise<void> {
-    return this.expensesService.createPaymentSettlements(tripId, req.user.id);
+    return this.expensesService.createPaymentSettlements(tripId, req.user.userId);
   }
 
   @Get('trip/:tripId/settlements')
@@ -87,7 +87,7 @@ export class ExpensesController {
     @Param('tripId') tripId: string,
     @Request() req
   ): Promise<PaymentSettlementResponseDto[]> {
-    return this.expensesService.getPaymentSettlements(tripId, req.user.id);
+    return this.expensesService.getPaymentSettlements(tripId, req.user.userId);
   }
 
   @Patch('settlements/:settlementId')
@@ -96,7 +96,7 @@ export class ExpensesController {
     @Body() updateDto: UpdatePaymentSettlementDto,
     @Request() req
   ): Promise<PaymentSettlementResponseDto> {
-    return this.expensesService.updatePaymentSettlement(settlementId, updateDto, req.user.id);
+    return this.expensesService.updatePaymentSettlement(settlementId, updateDto, req.user.userId);
   }
 
   @Get('settlements/:settlementId/transactions')
@@ -104,7 +104,7 @@ export class ExpensesController {
     @Param('settlementId') settlementId: string,
     @Request() req
   ): Promise<PaymentTransactionResponseDto[]> {
-    return this.expensesService.getPaymentTransactions(settlementId, req.user.id);
+    return this.expensesService.getPaymentTransactions(settlementId, req.user.userId);
   }
 
   @Post('settlements/:settlementId/transactions')
@@ -113,6 +113,6 @@ export class ExpensesController {
     @Body() dto: CreatePaymentTransactionDto,
     @Request() req
   ): Promise<PaymentTransactionResponseDto> {
-    return this.expensesService.createPaymentTransaction(settlementId, dto, req.user.id);
+    return this.expensesService.createPaymentTransaction(settlementId, dto, req.user.userId);
   }
 }

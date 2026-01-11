@@ -36,12 +36,12 @@ export class TripTemplatesService {
     });
   }
 
-  async findAll(options?: { search?: string; page?: number; limit?: number }) {
+  async findAll(options?: { search?: string; page?: number; limit?: number; userId?: string }) {
     return this.tripTemplatesRepository.findUserTemplates(options);
   }
 
-  async findPublicTemplates(query: GetTripTemplatesQueryDto) {
-    return this.tripTemplatesRepository.findPublicTemplates(query);
+  async findPublicTemplates(query: GetTripTemplatesQueryDto, userId?: string) {
+    return this.tripTemplatesRepository.findPublicTemplates({ ...query, userId } as any);
   }
 
   async findOne(id: string) {
@@ -129,5 +129,20 @@ export class TripTemplatesService {
         }))
       }
     };
+  }
+  async addToWishlist(userId: string, templateId: string) {
+    // Check if template exists
+    await this.findOne(templateId);
+    return this.tripTemplatesRepository.addToWishlist(userId, templateId);
+  }
+
+  async removeFromWishlist(userId: string, templateId: string) {
+    // Check if template exists
+    await this.findOne(templateId);
+    return this.tripTemplatesRepository.removeFromWishlist(userId, templateId);
+  }
+
+  async getWishlist(userId: string, query: { page?: number; limit?: number }) {
+    return this.tripTemplatesRepository.getUserWishlist(userId, query);
   }
 }

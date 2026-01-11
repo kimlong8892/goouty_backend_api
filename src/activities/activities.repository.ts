@@ -4,7 +4,7 @@ import { Activity, Prisma } from '@prisma/client';
 
 @Injectable()
 export class ActivitiesRepository {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(data: Prisma.ActivityCreateInput): Promise<Activity> {
     return this.prisma.activity.create({ data });
@@ -22,7 +22,7 @@ export class ActivitiesRepository {
   }
 
   async findOne(id: string, options?: { include?: Prisma.ActivityInclude }): Promise<any> {
-    return this.prisma.activity.findUnique({ 
+    return this.prisma.activity.findUnique({
       where: { id },
       include: options?.include
     });
@@ -33,6 +33,24 @@ export class ActivitiesRepository {
       where: { id },
       data,
     });
+  }
+
+  async findLastByDay(dayId: string): Promise<Activity | null> {
+    return this.prisma.activity.findFirst({
+      where: { dayId },
+      orderBy: { sortOrder: 'desc' },
+    });
+  }
+
+  async reorder(activities: { id: string; sortOrder: number }[]): Promise<void> {
+    await this.prisma.$transaction(
+      activities.map((activity) =>
+        this.prisma.activity.update({
+          where: { id: activity.id },
+          data: { sortOrder: activity.sortOrder },
+        }),
+      ),
+    );
   }
 
   async remove(id: string): Promise<Activity> {

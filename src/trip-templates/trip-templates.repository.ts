@@ -64,9 +64,10 @@ export class TripTemplatesRepository {
     search?: string;
     provinceId?: string;
     page?: number;
-    limit?: number
+    limit?: number;
+    userId?: string;
   }) {
-    const { isPublic, search, provinceId, page = 1, limit = 10 } = options || {};
+    const { isPublic, search, provinceId, page = 1, limit = 10, userId } = options || {};
     const skip = (page - 1) * limit;
 
     // Build where conditions
@@ -109,7 +110,11 @@ export class TripTemplatesRepository {
               }
             },
             orderBy: { dayOrder: 'asc' }
-          }
+          },
+          favoritedBy: userId ? {
+            where: { id: userId },
+            select: { id: true }
+          } : false
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -118,8 +123,16 @@ export class TripTemplatesRepository {
       this.prisma.tripTemplate.count({ where })
     ]);
 
+    const templatesWithWishlist = templates.map(template => {
+      const { favoritedBy, ...rest } = template as any;
+      return {
+        ...rest,
+        isWishlisted: userId ? (favoritedBy && favoritedBy.length > 0) : false
+      };
+    });
+
     return {
-      templates,
+      templates: templatesWithWishlist,
       pagination: {
         page,
         limit,
@@ -196,19 +209,124 @@ export class TripTemplatesRepository {
     });
   }
 
-  async findPublicTemplates(query: GetTripTemplatesQueryDto) {
+  async findPublicTemplates(query: GetTripTemplatesQueryDto & { userId?: string }) {
     return this.findAll({
       isPublic: true,
       search: query.search,
       provinceId: query.provinceId,
       page: query.page,
-      limit: query.limit
+      limit: query.limit,
+      userId: query.userId
     });
   }
 
-  async findUserTemplates(options?: { search?: string; page?: number; limit?: number }) {
+  async findUserTemplates(options?: { search?: string; page?: number; limit?: number; userId?: string }) {
     return this.findAll({
       ...options
     });
+  }
+
+  async addToWishlist(userId: string, templateId: string) {
+    const isFavorited = await this.prisma.tripTemplate.findFirst({
+      where: {
+        id: templateId,
+        favoritedBy: { some: { id: userId } }
+      }
+    });
+
+    if (isFavorited) {
+      return isFavorited;
+    }
+
+    return this.prisma.tripTemplate.update({
+      where: { id: templateId },
+      data: {
+        favoritedBy: {
+          connect: { id: userId }
+        }
+      }
+    });
+  }
+
+  async removeFromWishlist(userId: string, templateId: string) {
+    const isFavorited = await this.prisma.tripTemplate.findFirst({
+      where: {
+        id: templateId,
+        favoritedBy: { some: { id: userId } }
+      }
+    });
+
+    if (!isFavorited) {
+      return this.prisma.tripTemplate.findUnique({ where: { id: templateId } });
+    }
+
+    return this.prisma.tripTemplate.update({
+      where: { id: templateId },
+      data: {
+        favoritedBy: {
+          disconnect: { id: userId }
+        }
+      }
+    });
+  }
+
+  async getUserWishlist(userId: string, options?: { page?: number; limit?: number }) {
+    const { page = 1, limit = 10 } = options || {};
+    const skip = (page - 1) * limit;
+
+    const [templates, total] = await Promise.all([
+      this.prisma.tripTemplate.findMany({
+        where: {
+          favoritedBy: {
+            some: { id: userId }
+          }
+        },
+        include: {
+          province: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              divisionType: true,
+              codename: true,
+              phoneCode: true
+            }
+          },
+          days: {
+            include: {
+              activities: {
+                orderBy: { activityOrder: 'asc' }
+              }
+            },
+            orderBy: { dayOrder: 'asc' }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit
+      }),
+      this.prisma.tripTemplate.count({
+        where: {
+          favoritedBy: {
+            some: { id: userId }
+          }
+        }
+      })
+    ]);
+
+    const templatesWithWishlist = templates.map(template => ({
+      ...template,
+      isWishlisted: true
+    }));
+
+    return {
+      templates: templatesWithWishlist,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   }
 }

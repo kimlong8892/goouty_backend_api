@@ -43,7 +43,9 @@ export class TripsRepository {
         },
         days: {
           include: {
-            activities: true
+            activities: {
+              orderBy: { sortOrder: 'asc' }
+            }
           }
         },
         members: {
@@ -91,7 +93,9 @@ export class TripsRepository {
         },
         days: {
           include: {
-            activities: true
+            activities: {
+              orderBy: { sortOrder: 'asc' }
+            }
           }
         },
         members: {

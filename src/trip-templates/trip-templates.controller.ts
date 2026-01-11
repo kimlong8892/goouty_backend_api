@@ -11,6 +11,8 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { TripTemplatesService } from './trip-templates.service';
@@ -18,6 +20,7 @@ import { CreateTripTemplateDto } from './dto/create-trip-template.dto';
 import { UpdateTripTemplateDto } from './dto/update-trip-template.dto';
 import { GetTripTemplatesQueryDto } from './dto/get-trip-templates-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 
 @ApiTags('Trip Templates')
 @ApiBearerAuth()
@@ -42,18 +45,33 @@ export class TripTemplatesController {
   @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 10 })
   @ApiResponse({ status: 200, description: 'Trip templates retrieved successfully' })
   findAll(
+    @Request() req,
     @Query('search') search?: string,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number = 1,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number = 10,
   ) {
-    return this.tripTemplatesService.findAll({ search, page, limit });
+    return this.tripTemplatesService.findAll({ search, page, limit, userId: req.user.userId });
   }
 
   @Get('public')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get public trip templates' })
   @ApiResponse({ status: 200, description: 'Public trip templates retrieved successfully' })
-  findPublicTemplates(@Query() query: GetTripTemplatesQueryDto) {
-    return this.tripTemplatesService.findPublicTemplates(query);
+  findPublicTemplates(@Request() req, @Query() query: GetTripTemplatesQueryDto) {
+    const userId = req.user?.userId;
+    return this.tripTemplatesService.findPublicTemplates(query, userId);
+  }
+
+  @Get('wishlist')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get user wishlist' })
+  @ApiResponse({ status: 200, description: 'User wishlist retrieved successfully' })
+  getWishlist(
+    @Request() req,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number = 1,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number = 10,
+  ) {
+    return this.tripTemplatesService.getWishlist(req.user.userId, { page, limit });
   }
 
   @Get(':id')
@@ -113,5 +131,21 @@ export class TripTemplatesController {
     @Body() body?: { title?: string },
   ) {
     return this.tripTemplatesService.createTripFromTemplate(id, body?.title);
+  }
+
+  @Post(':id/wishlist')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Add template to wishlist' })
+  @ApiResponse({ status: 201, description: 'Template added to wishlist' })
+  addToWishlist(@Request() req, @Param('id') id: string) {
+    return this.tripTemplatesService.addToWishlist(req.user.userId, id);
+  }
+
+  @Delete(':id/wishlist')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Remove template from wishlist' })
+  @ApiResponse({ status: 200, description: 'Template removed from wishlist' })
+  removeFromWishlist(@Request() req, @Param('id') id: string) {
+    return this.tripTemplatesService.removeFromWishlist(req.user.userId, id);
   }
 }

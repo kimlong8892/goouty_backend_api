@@ -2,13 +2,14 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestj
 import { ActivitiesService } from './activities.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
+import { ReorderActivitiesDto } from './dto/reorder-activities.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { ActivityResponseDto } from './dto/activity-response.dto';
 
 @ApiTags('activities')
 @Controller('activities')
 export class ActivitiesController {
-  constructor(private readonly activitiesService: ActivitiesService) {}
+  constructor(private readonly activitiesService: ActivitiesService) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new activity' })
@@ -23,6 +24,13 @@ export class ActivitiesController {
   @ApiQuery({ name: 'dayId', required: true, description: 'Day ID' })
   findAll(@Query('dayId') dayId: string) {
     return this.activitiesService.findAll(dayId);
+  }
+
+  @Post('reorder')
+  @ApiOperation({ summary: 'Reorder activities' })
+  @ApiResponse({ status: 200, description: 'Activities reordered successfully' })
+  reorder(@Body() reorderActivitiesDto: ReorderActivitiesDto) {
+    return this.activitiesService.reorder(reorderActivitiesDto);
   }
 
   @Get(':id')

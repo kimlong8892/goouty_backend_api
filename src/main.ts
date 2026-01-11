@@ -2,8 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { RequestMethod } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { BullMQBoardService } from './queue/bullmq-board.service';
-import { BullMQAuthMiddleware } from './queue/bullmq-auth.middleware';
 import { HttpAdapterHost } from '@nestjs/core';
 import { TelegramService } from './common/telegram/telegram.service';
 import { I18nValidationPipe, I18nValidationExceptionFilter } from 'nestjs-i18n';
@@ -34,13 +32,6 @@ async function bootstrap() {
     // Global exception filter is now registered in AppModule
 
 
-    // Setup BullMQ Board UI với authentication
-    const bullMQBoardService = app.get(BullMQBoardService);
-    const bullMQAuthMiddleware = new BullMQAuthMiddleware();
-
-    // Áp dụng basic auth middleware cho BullMQ UI
-    app.use('/admin/queues', bullMQAuthMiddleware.use.bind(bullMQAuthMiddleware));
-    app.use('/admin/queues', bullMQBoardService.getServerAdapter().getRouter());
 
     // Swagger API documentation
     const config = new DocumentBuilder()
@@ -72,7 +63,6 @@ async function bootstrap() {
     await app.listen(port, '0.0.0.0');
     console.log(`Application is running on: http://localhost:${port}`);
     console.log(`API documentation available at: http://localhost:${port}/api`);
-    console.log(`BullMQ UI available at: http://localhost:${port}/admin/queues`);
   } catch (error) {
     console.error('❌ Application failed to start:', error);
     process.exit(1);

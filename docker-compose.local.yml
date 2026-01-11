@@ -13,20 +13,11 @@ services:
       - .env
     environment:
       NODE_ENV: development
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      QUEUE_TRIP: queue-trip-notifications-local
-      QUEUE_EXPENSE: queue-expense-notifications-local
-      QUEUE_PAYMENT: queue-payment-notifications-local
-      QUEUE_SYSTEM: queue-system-notifications-local
     volumes:
       - ./:/usr/src/app
       - /usr/src/app/node_modules
     command: npm run start:dev
     restart: always
-
-volumes:
-  redis_data:
 
 networks:
   default:
