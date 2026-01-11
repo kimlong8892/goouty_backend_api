@@ -7,10 +7,10 @@ export class ChangePasswordOtpDto {
     @IsNotEmpty()
     email: string;
 
-    @ApiProperty({ example: '123456' })
+    @ApiProperty({ example: '1234' })
     @IsString()
     @IsNotEmpty()
-    @MinLength(6)
+    @MinLength(4)
     otp: string;
 
     @ApiProperty({ example: 'newPassword123' })
