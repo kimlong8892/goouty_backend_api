@@ -1,0 +1,253 @@
+{
+    "info": {
+        "name": "Goouty - Locations API",
+        "description": "Collection for testing Goong.io integration in Goouty backend",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Search Locations",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/locations/search?input=Đà Lạt&limit=5",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "locations",
+                        "search"
+                    ],
+                    "query": [
+                        {
+                            "key": "input",
+                            "value": "Đà Lạt",
+                            "description": "Search query"
+                        },
+                        {
+                            "key": "limit",
+                            "value": "5",
+                            "description": "Number of results (max 20)"
+                        },
+                        {
+                            "key": "location",
+                            "value": "10.762622,106.660172",
+                            "description": "Proximity search (lat,lng)",
+                            "disabled": true
+                        },
+                        {
+                            "key": "radius",
+                            "value": "5000",
+                            "description": "Search radius in meters",
+                            "disabled": true
+                        },
+                        {
+                            "key": "more_compound",
+                            "value": "true",
+                            "description": "Return more detailed information",
+                            "disabled": true
+                        }
+                    ]
+                },
+                "description": "Search for places using autocomplete. Suitable for searching destinations like Đà Lạt, Phú Quốc, etc."
+            }
+        },
+        {
+            "name": "Search Phu Quoc",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/locations/search?input=Phú Quốc&limit=10&more_compound=true",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "locations",
+                        "search"
+                    ],
+                    "query": [
+                        {
+                            "key": "input",
+                            "value": "Phú Quốc"
+                        },
+                        {
+                            "key": "limit",
+                            "value": "10"
+                        },
+                        {
+                            "key": "more_compound",
+                            "value": "true"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Search Nha Trang",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/locations/search?input=Nha Trang&limit=5",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "locations",
+                        "search"
+                    ],
+                    "query": [
+                        {
+                            "key": "input",
+                            "value": "Nha Trang"
+                        },
+                        {
+                            "key": "limit",
+                            "value": "5"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Search with Location (Saigon)",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/locations/search?input=quán cafe&location=10.762622,106.660172&radius=5000&limit=10",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "locations",
+                        "search"
+                    ],
+                    "query": [
+                        {
+                            "key": "input",
+                            "value": "quán cafe"
+                        },
+                        {
+                            "key": "location",
+                            "value": "10.762622,106.660172",
+                            "description": "Saigon coordinates"
+                        },
+                        {
+                            "key": "radius",
+                            "value": "5000"
+                        },
+                        {
+                            "key": "limit",
+                            "value": "10"
+                        }
+                    ]
+                },
+                "description": "Search for places near a specific location (Saigon)"
+            }
+        },
+        {
+            "name": "Get Place Detail",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/locations/detail?place_id=ChIJBwVIBKcpdTERLEfQnwfzOjA",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "locations",
+                        "detail"
+                    ],
+                    "query": [
+                        {
+                            "key": "place_id",
+                            "value": "ChIJBwVIBKcpdTERLEfQnwfzOjA",
+                            "description": "Place ID from search results (Đà Lạt)"
+                        }
+                    ]
+                },
+                "description": "Get detailed information about a place using place_id"
+            }
+        },
+        {
+            "name": "Search Destinations",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/locations/destinations?query=Hội An&limit=10",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "locations",
+                        "destinations"
+                    ],
+                    "query": [
+                        {
+                            "key": "query",
+                            "value": "Hội An"
+                        },
+                        {
+                            "key": "limit",
+                            "value": "10"
+                        }
+                    ]
+                },
+                "description": "Simplified endpoint for searching tourist destinations"
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:3000",
+            "type": "string"
+        },
+        {
+            "key": "jwt_token",
+            "value": "your_jwt_token_here",
+            "type": "string"
+        }
+    ]
+}

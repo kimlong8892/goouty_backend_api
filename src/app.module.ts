@@ -17,6 +17,7 @@ import { TripTemplatesModule } from './trip-templates/trip-templates.module';
 import { UploadModule } from './upload/upload.module';
 import { TelegramModule } from './common/telegram/telegram.module';
 import { SeedModule } from './seed/seed.module';
+import { LocationsModule } from './locations/locations.module';
 import * as Joi from 'joi';
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -80,6 +81,9 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
         // Rate Limit
         THROTTLE_TTL: Joi.number().default(60),
         THROTTLE_LIMIT: Joi.number().default(100),
+
+        // Goong API
+        GOONG_API_KEY: Joi.string().optional(),
       }),
     }),
     LoggerModule.forRootAsync({
@@ -143,6 +147,7 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
     TelegramModule,
     I18nHelperModule,
     SeedModule,
+    LocationsModule,
   ],
   controllers: [AppController],
   providers: [
