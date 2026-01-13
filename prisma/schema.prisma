@@ -279,6 +279,7 @@ model TripTemplateActivity {
   activityOrder Int
   dayId         String          @db.Uuid
   day           TripTemplateDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  avatar        String?
 
   @@index([dayId])
 }

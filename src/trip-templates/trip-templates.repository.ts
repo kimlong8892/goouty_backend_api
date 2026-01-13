@@ -29,6 +29,7 @@ export class TripTemplatesRepository {
                 durationMin: activity.durationMin,
                 location: activity.location,
                 notes: activity.notes,
+                avatar: activity.avatar,
                 important: activity.important || false,
                 activityOrder: activity.activityOrder,
               }))

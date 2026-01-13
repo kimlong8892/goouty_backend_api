@@ -96,6 +96,7 @@ export class TripTemplatesService {
           location: activity.location,
           notes: activity.notes,
           important: activity.important,
+          avatar: activity.avatar,
           activityOrder: activity.activityOrder,
         }))
       }))
@@ -125,6 +126,7 @@ export class TripTemplatesService {
             location: activity.location,
             notes: activity.notes,
             important: activity.important,
+            avatar: activity.avatar,
           }))
         }))
       }
