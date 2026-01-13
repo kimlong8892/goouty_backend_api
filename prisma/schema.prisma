@@ -102,6 +102,7 @@ model Activity {
   sortOrder   Int       @default(0)
   dayId       String    @db.Uuid
   day         Day       @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  avatar      String?
 }
 
 model Expense {

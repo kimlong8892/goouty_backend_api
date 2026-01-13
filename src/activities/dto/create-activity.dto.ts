@@ -27,6 +27,11 @@ export class CreateActivityDto {
   @IsString()
   notes?: string;
 
+  @ApiPropertyOptional({ description: 'Avatar URL' })
+  @IsOptional()
+  @IsString()
+  avatar?: string;
+
   @ApiPropertyOptional({ description: 'Mark activity as important', default: false })
   @IsOptional()
   @IsBoolean()
