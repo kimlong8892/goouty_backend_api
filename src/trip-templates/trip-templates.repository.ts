@@ -144,7 +144,7 @@ export class TripTemplatesRepository {
   }
 
   async findOne(id: string) {
-    return this.prisma.tripTemplate.findUnique({
+    const template = await this.prisma.tripTemplate.findUnique({
       where: { id },
       include: {
         province: {
@@ -167,6 +167,37 @@ export class TripTemplatesRepository {
         }
       }
     });
+
+    if (!template) {
+      return null;
+    }
+
+    const [next, previous] = await Promise.all([
+      // Next: older than current (createdAt < current) - List is DESC
+      this.prisma.tripTemplate.findFirst({
+        where: {
+          createdAt: { lt: template.createdAt },
+          isPublic: template.isPublic
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, title: true, avatar: true, createdAt: true }
+      }),
+      // Previous: newer than current (createdAt > current)
+      this.prisma.tripTemplate.findFirst({
+        where: {
+          createdAt: { gt: template.createdAt },
+          isPublic: template.isPublic
+        },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, title: true, avatar: true, createdAt: true }
+      })
+    ]);
+
+    return {
+      ...template,
+      next,
+      previous
+    };
   }
 
   async update(id: string, data: UpdateTripTemplateDto) {
