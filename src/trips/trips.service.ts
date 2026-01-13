@@ -91,14 +91,20 @@ export class TripsService {
     return trip;
   }
 
-  async findAll(userId: string, options?: { search?: string; page?: number; limit?: number }) {
-    const { search, page = 1, limit = 10 } = options || {};
+  async findAll(userId: string, options?: { search?: string; provinceId?: string; page?: number; limit?: number }) {
+    const { search, provinceId, page = 1, limit = 10 } = options || {};
     const skip = (page - 1) * limit;
 
     // Build search conditions
-    const searchConditions = search ? {
-      title: { contains: search, mode: 'insensitive' as const }
-    } : {};
+    const searchConditions: any = {};
+
+    if (search) {
+      searchConditions.title = { contains: search, mode: 'insensitive' };
+    }
+
+    if (provinceId) {
+      searchConditions.provinceId = provinceId;
+    }
 
     // Lấy tất cả chuyến đi mà người dùng là chủ sở hữu (không áp dụng pagination ở đây)
     const ownedTrips = await this.tripsRepository.findAll({

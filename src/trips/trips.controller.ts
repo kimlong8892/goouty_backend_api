@@ -62,11 +62,13 @@ export class TripsController {
   findAll(
     @Request() req: any,
     @Query('search') search?: string,
+    @Query('provinceId') provinceId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string
   ) {
     return this.tripsService.findAll(req.user.userId, {
       search,
+      provinceId,
       page: page ? parseInt(page) : 1,
       limit: limit ? parseInt(limit) : 10
     });
