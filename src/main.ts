@@ -4,7 +4,8 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpAdapterHost } from '@nestjs/core';
 import { TelegramService } from './common/telegram/telegram.service';
-import { I18nValidationPipe, I18nValidationExceptionFilter } from 'nestjs-i18n';
+import { I18nValidationPipe } from 'nestjs-i18n';
+import { CustomI18nValidationExceptionFilter } from './common/filters/custom-i18n-validation.filter';
 
 import { Logger } from 'nestjs-pino';
 
@@ -31,7 +32,7 @@ async function bootstrap() {
     );
 
     // Global exception filter for i18n validation errors
-    app.useGlobalFilters(new I18nValidationExceptionFilter());
+    app.useGlobalFilters(new CustomI18nValidationExceptionFilter());
 
     // Global exception filter is now registered in AppModule
 

@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator } from '@nestjs/common';
 import { ActivitiesService } from './activities.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
 import { ReorderActivitiesDto } from './dto/reorder-activities.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { ActivityResponseDto } from './dto/activity-response.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('activities')
 @Controller('activities')
@@ -13,8 +14,19 @@ export class ActivitiesController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new activity' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('avatar'))
   @ApiResponse({ status: 201, description: 'Activity created successfully', type: ActivityResponseDto })
-  create(@Body() createActivityDto: CreateActivityDto) {
+  create(
+    @Body() createActivityDto: CreateActivityDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (file) {
+      // If file is present, we'll handle it in the service
+      // But we can't easily assign it to DTO here if DTO expects string
+      // The service will handle the upload and update the DTO/entity
+      return this.activitiesService.create(createActivityDto, file);
+    }
     return this.activitiesService.create(createActivityDto);
   }
 
@@ -44,11 +56,17 @@ export class ActivitiesController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update an activity' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('avatar'))
   @ApiResponse({ status: 200, description: 'Activity updated successfully', type: ActivityResponseDto })
   @ApiResponse({ status: 404, description: 'Activity not found' })
   @ApiParam({ name: 'id', description: 'Activity ID' })
-  update(@Param('id') id: string, @Body() updateActivityDto: UpdateActivityDto) {
-    return this.activitiesService.update(id, updateActivityDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateActivityDto: UpdateActivityDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.activitiesService.update(id, updateActivityDto, file);
   }
 
   @Delete(':id')
