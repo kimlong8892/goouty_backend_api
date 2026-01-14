@@ -34,6 +34,7 @@ model User {
   trips                Trip[]
   tripMembers          TripMember[]
   wishlistTemplates    TripTemplate[] @relation("UserWishlist")
+  ratings              Rating[]
 }
 
 model Trip {
@@ -343,4 +344,16 @@ enum NotificationStatus {
   UNREAD
   READ
   ARCHIVED
+}
+
+model Rating {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stars     Int
+  content   String
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }

@@ -18,6 +18,7 @@ import { UploadModule } from './upload/upload.module';
 import { TelegramModule } from './common/telegram/telegram.module';
 import { SeedModule } from './seed/seed.module';
 import { LocationsModule } from './locations/locations.module';
+import { RatingsModule } from './ratings/ratings.module';
 import * as Joi from 'joi';
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -148,6 +149,7 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
     I18nHelperModule,
     SeedModule,
     LocationsModule,
+    RatingsModule,
   ],
   controllers: [AppController],
   providers: [
