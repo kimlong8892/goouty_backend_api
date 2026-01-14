@@ -47,7 +47,7 @@ export class DaysRepository {
       items.map((item) =>
         this.prisma.day.update({
           where: { id: item.id },
-          data: { order: item.order },
+          data: { sortOrder: item.order },
         }),
       ),
     );
@@ -60,9 +60,9 @@ export class DaysRepository {
   async findMaxOrder(tripId: string): Promise<number> {
     const result = await this.prisma.day.findFirst({
       where: { tripId },
-      orderBy: { order: 'desc' },
-      select: { order: true },
+      orderBy: { sortOrder: 'desc' },
+      select: { sortOrder: true },
     });
-    return result?.order ?? -1;
+    return result?.sortOrder ?? -1;
   }
 }

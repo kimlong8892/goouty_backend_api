@@ -160,7 +160,7 @@ export class TripsService {
           }
         },
         days: {
-          orderBy: { order: 'asc' },
+          orderBy: { sortOrder: 'asc' },
           include: {
             activities: {
               orderBy: { sortOrder: 'asc' }

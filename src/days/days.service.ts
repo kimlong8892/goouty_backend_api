@@ -14,7 +14,7 @@ export class DaysService {
     const maxOrder = await this.daysRepository.findMaxOrder(tripId);
     return this.daysRepository.create({
       ...dayData,
-      order: maxOrder + 1,
+      sortOrder: maxOrder + 1,
       trip: { connect: { id: tripId } }
     });
   }
@@ -22,7 +22,7 @@ export class DaysService {
   async findAll(tripId: string) {
     return this.daysRepository.findAll({
       where: { tripId },
-      orderBy: { order: 'asc' }
+      orderBy: { sortOrder: 'asc' }
     });
   }
 
