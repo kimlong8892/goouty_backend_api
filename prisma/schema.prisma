@@ -105,6 +105,8 @@ model Activity {
   dayId       String    @db.Uuid
   day         Day       @relation(fields: [dayId], references: [id], onDelete: Cascade)
   avatar      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt @default(now())
 }
 
 model Expense {
@@ -131,6 +133,7 @@ model ExpenseParticipant {
   amount    Decimal  @db.Decimal(20, 2)
   expense   Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @updatedAt @default(now())
 
   @@unique([expenseId, userId])
 }
@@ -183,6 +186,7 @@ model PaymentTransaction {
   fromUser     User              @relation("TransactionsFromUser", fields: [fromUserId], references: [id], onDelete: Cascade)
   settlement   PaymentSettlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
   toUser       User              @relation("TransactionsToUser", fields: [toUserId], references: [id], onDelete: Cascade)
+  updatedAt    DateTime          @updatedAt @default(now())
 
   @@index([settlementId])
 }
@@ -266,6 +270,8 @@ model TripTemplateDay {
   tripTemplateId String                 @db.Uuid
   activities     TripTemplateActivity[]
   tripTemplate   TripTemplate           @relation(fields: [tripTemplateId], references: [id], onDelete: Cascade)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt @default(now())
 
   @@index([tripTemplateId])
 }
@@ -282,6 +288,8 @@ model TripTemplateActivity {
   dayId         String          @db.Uuid
   day           TripTemplateDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
   avatar        String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt @default(now())
 
   @@index([dayId])
 }
@@ -306,6 +314,7 @@ model Otp {
   code      String
   expiresAt DateTime
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
 
   @@index([email, type])
 }
