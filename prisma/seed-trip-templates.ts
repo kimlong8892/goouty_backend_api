@@ -44,7 +44,7 @@ async function main() {
           fee: i * 500000,
           provinceId: province.id,
           isPublic: true,
-          userId: demoUser.id,
+
           days: {
             create: generateDaysForTemplate(i, province.name)
           }

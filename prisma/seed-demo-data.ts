@@ -8,7 +8,7 @@ async function main() {
 
   // Create demo user
   const hashedPassword = await bcrypt.hash('demo123', 10);
-  
+
   const demoUser = await prisma.user.upsert({
     where: { email: 'longshare9201@gmail.com' },
     update: {},
@@ -29,7 +29,7 @@ async function main() {
     'Nguyễn Văn An', 'Trần Thị Bình', 'Lê Minh Cường', 'Phạm Thị Dung', 'Hoàng Văn Em',
     'Vũ Thị Phương', 'Đặng Minh Giang', 'Bùi Thị Hoa', 'Ngô Văn Ích', 'Dương Thị Kim'
   ];
-  
+
   for (let i = 0; i < 10; i++) {
     const hashedPassword = await bcrypt.hash('demo123', 10);
     const user = await prisma.user.upsert({
@@ -52,7 +52,7 @@ async function main() {
   const hanoi = await prisma.province.findFirst({
     where: { codename: 'thanh_pho_ha_noi' }
   });
-  
+
   const hcm = await prisma.province.findFirst({
     where: { codename: 'thanh_pho_ho_chi_minh' }
   });
@@ -251,10 +251,10 @@ async function main() {
     const trip = await prisma.trip.create({
       data: {
         ...tripInfo,
-      userId: demoUser.id,
-      isPublic: true,
-    },
-  });
+        userId: demoUser.id,
+        isPublic: true,
+      },
+    });
     trips.push(trip);
     console.log(`✅ Trip created: ${trip.title}`);
   }
@@ -264,27 +264,27 @@ async function main() {
   for (const trip of trips) {
     const tripMembers = [demoUser, ...additionalUsers];
     allTripMembers.push(tripMembers);
-    
+
     for (const user of tripMembers) {
       await prisma.tripMember.create({
-    data: {
+        data: {
           userId: user.id,
           tripId: trip.id,
           status: 'accepted',
           joinedAt: new Date(),
-    },
-  });
+        },
+      });
     }
     console.log(`✅ Added ${tripMembers.length} members to ${trip.title}`);
   }
 
   // Create expenses and settlements for all 20 trips
   console.log('💰 Creating expenses and settlements for all trips...');
-  
+
   for (let tripIndex = 0; tripIndex < trips.length; tripIndex++) {
     const trip = trips[tripIndex];
     const members = allTripMembers[tripIndex];
-    
+
     // Generate 30-35 expenses per trip with even amounts
     const expenseTypes = [
       { title: 'Khách sạn', baseAmount: 2000000, description: 'Chi phí khách sạn cho cả nhóm' },
@@ -321,12 +321,12 @@ async function main() {
 
     const expenses: any[] = [];
     const numExpenses = 30 + Math.floor(Math.random() * 6); // 30-35 expenses
-    
+
     for (let i = 0; i < numExpenses; i++) {
       const expenseType = expenseTypes[Math.floor(Math.random() * expenseTypes.length)];
       const variation = 0.8 + Math.random() * 0.4; // ±20% variation
       const amount = Math.round(expenseType.baseAmount * variation / 1000) * 1000; // Round to nearest 1000
-      
+
       expenses.push({
         title: expenseType.title,
         amount: amount,
@@ -340,15 +340,15 @@ async function main() {
     // Create expenses in database
     for (const expenseData of expenses) {
       const expense = await prisma.expense.create({
-    data: {
+        data: {
           title: expenseData.title,
           amount: expenseData.amount,
           date: expenseData.date,
           description: expenseData.description,
           payerId: expenseData.payerId,
           tripId: trip.id,
-    },
-  });
+        },
+      });
 
       // Create ExpenseParticipant records for each participant
       const amountPerPerson = Math.round(expenseData.amount / expenseData.participantIds.length / 1000) * 1000; // Round to nearest 1000
@@ -362,17 +362,17 @@ async function main() {
         });
       }
     }
-    
+
     console.log(`✅ Created ${expenses.length} expenses for ${trip.title}`);
   }
 
   // Create PaymentSettlements for all trips
   console.log('💳 Creating payment settlements for all trips...');
-  
+
   for (let tripIndex = 0; tripIndex < trips.length; tripIndex++) {
     const trip = trips[tripIndex];
     const members = allTripMembers[tripIndex];
-    
+
     // Get all expenses for this trip
     const tripExpenses = await prisma.expense.findMany({
       where: { tripId: trip.id },
@@ -384,7 +384,7 @@ async function main() {
 
     // Calculate net amounts for each user
     const userBalances = new Map<string, number>();
-    
+
     // Initialize balances
     members.forEach(member => {
       userBalances.set(member.id, 0);
@@ -394,10 +394,10 @@ async function main() {
     tripExpenses.forEach(expense => {
       const payerId = expense.payerId;
       const totalAmount = Number(expense.amount);
-      
+
       // Add to payer's balance (they paid)
       userBalances.set(payerId, userBalances.get(payerId)! + totalAmount);
-      
+
       // Subtract from each participant's balance (they owe)
       expense.participants.forEach(participant => {
         const amountOwed = Number(participant.amount);
@@ -439,21 +439,21 @@ async function main() {
 
       // Calculate settlement amount
       const settlementAmount = Math.min(creditor.balance, Math.abs(debtor.balance));
-      
+
       if (settlementAmount > 0.01) { // Only create if amount is significant
         const settlement = await prisma.paymentSettlement.create({
-    data: {
+          data: {
             amount: Math.round(settlementAmount / 1000) * 1000, // Round to nearest 1000
             status: 'pending',
             description: `${debtor.user.fullName} nợ ${creditor.user.fullName} ${Math.round(settlementAmount / 1000) * 1000} VND`,
             tripId: trip.id,
             creditorId: creditor.userId,
             debtorId: debtor.userId,
-    },
-  });
+          },
+        });
 
         settlements.push(settlement);
-        
+
         // Update balances
         creditor.balance -= settlementAmount;
         debtor.balance += settlementAmount;
@@ -463,7 +463,7 @@ async function main() {
       if (Math.abs(creditor.balance) < 0.01) i++;
       if (Math.abs(debtor.balance) < 0.01) j--;
     }
-    
+
     console.log(`✅ Created ${settlements.length} payment settlements for ${trip.title}`);
   }
 
@@ -478,33 +478,33 @@ async function main() {
 
   // Create days and activities for all trips
   console.log('📅 Creating days and activities for all trips...');
-  
+
   for (let tripIndex = 0; tripIndex < trips.length; tripIndex++) {
     const trip = trips[tripIndex];
     const tripStartDate = new Date(trip.startDate!);
     // Default to 3 days if no end date (since we removed endDate)
     const daysDiff = 3;
-    
+
     console.log(`📅 Creating ${daysDiff} days for ${trip.title}`);
-    
+
     // Create days for the trip
     const days: any[] = [];
     for (let dayIndex = 0; dayIndex < daysDiff; dayIndex++) {
       const dayDate = new Date(tripStartDate);
       dayDate.setDate(dayDate.getDate() + dayIndex);
-      
+
       const day = await prisma.day.create({
         data: {
           title: `Ngày ${dayIndex + 1}`,
           description: `Ngày ${dayIndex + 1} của chuyến du lịch`,
-          date: dayDate,
+
           startTime: new Date(dayDate.getTime() + 8 * 60 * 60 * 1000), // 8:00 AM
           tripId: trip.id,
         },
       });
       days.push(day);
     }
-    
+
     // Create activities for each day
     const activityTemplates = [
       { title: 'Ăn sáng', duration: 60, location: 'Khách sạn', notes: 'Bữa sáng tại khách sạn' },
@@ -523,15 +523,15 @@ async function main() {
       { title: 'Massage', duration: 90, location: 'Spa', notes: 'Thư giãn và chăm sóc sức khỏe' },
       { title: 'Karaoke', duration: 120, location: 'Karaoke', notes: 'Giải trí và ca hát' },
     ];
-    
+
     for (let dayIndex = 0; dayIndex < days.length; dayIndex++) {
       const day = days[dayIndex];
       const dayDate = new Date(day.date);
-      
+
       // Create 3-5 activities per day
       const numActivities = 3 + Math.floor(Math.random() * 3); // 3-5 activities
       let currentTime = new Date(dayDate.getTime() + 8 * 60 * 60 * 1000); // Start at 8:00 AM
-      
+
       for (let activityIndex = 0; activityIndex < numActivities; activityIndex++) {
         const template = activityTemplates[Math.floor(Math.random() * activityTemplates.length)];
         const activity = await prisma.activity.create({
@@ -546,15 +546,15 @@ async function main() {
           },
         });
 
-        
+
         // Move to next activity time
         currentTime = new Date(currentTime.getTime() + template.duration * 60 * 1000 + 30 * 60 * 1000); // Add 30 min break
       }
     }
-    
+
     console.log(`✅ Created ${days.length} days with activities for ${trip.title}`);
   }
-  
+
   console.log('🎉 Demo data seeding completed!');
   console.log(`📊 Created:`);
   console.log(`   - 11 users total (1 demo + 10 additional)`);
