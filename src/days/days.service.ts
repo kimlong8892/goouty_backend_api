@@ -11,8 +11,10 @@ export class DaysService {
   async create(createDayDto: CreateDayDto) {
     const { tripId, ...dayData } = createDayDto;
 
+    const maxOrder = await this.daysRepository.findMaxOrder(tripId);
     return this.daysRepository.create({
       ...dayData,
+      order: maxOrder + 1,
       trip: { connect: { id: tripId } }
     });
   }

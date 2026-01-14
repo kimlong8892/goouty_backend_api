@@ -52,4 +52,17 @@ export class DaysRepository {
       ),
     );
   }
+
+  async count(where: Prisma.DayWhereInput): Promise<number> {
+    return this.prisma.day.count({ where });
+  }
+
+  async findMaxOrder(tripId: string): Promise<number> {
+    const result = await this.prisma.day.findFirst({
+      where: { tripId },
+      orderBy: { order: 'desc' },
+      select: { order: true },
+    });
+    return result?.order ?? -1;
+  }
 }
