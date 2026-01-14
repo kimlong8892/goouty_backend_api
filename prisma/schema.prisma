@@ -41,6 +41,7 @@ model Trip {
   id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title              String
   startDate          DateTime?
+  endDate            DateTime?
   description        String?
   shareToken         String?             @unique
   isPublic           Boolean             @default(false)

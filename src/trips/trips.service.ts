@@ -39,6 +39,18 @@ export class TripsService {
       }
     }
 
+    let endDate: Date | undefined;
+    if (createTripDto.endDate) {
+      endDate = new Date(createTripDto.endDate);
+      if (isNaN(endDate.getTime())) {
+        throw new BadRequestException('Invalid end date format');
+      }
+
+      if (startDate && endDate < startDate) {
+        throw new BadRequestException('End date must be after start date');
+      }
+    }
+
     // Create trip and add creator as admin member in a transaction
     const trip = await this.prisma.$transaction(async (prisma) => {
       // Create the trip
@@ -46,6 +58,7 @@ export class TripsService {
         title: createTripDto.title,
         description: createTripDto.description,
         startDate: startDate,
+        endDate: endDate,
         user: { connect: { id: userId } }
       };
 
@@ -252,6 +265,22 @@ export class TripsService {
       data.startDate = startDate;
     } else if (updateTripDto.startDate === null) { // Explicitly handle null to clear date
       data.startDate = null;
+    }
+
+    if (updateTripDto.endDate) {
+      const endDate = new Date(updateTripDto.endDate);
+      if (isNaN(endDate.getTime())) {
+        throw new BadRequestException('Invalid end date format');
+      }
+      data.endDate = endDate;
+
+      // Check date validity if both dates are present (either in update or existing)
+      const startDate = data.startDate || existingTrip.startDate;
+      if (startDate && endDate < startDate) {
+        throw new BadRequestException('End date must be after start date');
+      }
+    } else if (updateTripDto.endDate === null) {
+      data.endDate = null;
     }
 
     const updatedTrip = await this.tripsRepository.update(id, data);
