@@ -5,7 +5,7 @@ import { UpdateDayDto } from './dto/update-day.dto';
 
 @Injectable()
 export class DaysService {
-  constructor(private readonly daysRepository: DaysRepository) {}
+  constructor(private readonly daysRepository: DaysRepository) { }
 
   async create(createDayDto: CreateDayDto) {
     const { tripId, ...dayData } = createDayDto;
@@ -21,7 +21,7 @@ export class DaysService {
   async findAll(tripId: string) {
     return this.daysRepository.findAll({
       where: { tripId },
-      orderBy: { date: 'asc' }
+      orderBy: { createdAt: 'asc' }
     });
   }
 
