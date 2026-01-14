@@ -42,6 +42,7 @@ export class TripsRepository {
           }
         },
         days: {
+          orderBy: { createdAt: 'asc' },
           include: {
             activities: {
               orderBy: { sortOrder: 'asc' }
@@ -92,6 +93,7 @@ export class TripsRepository {
           }
         },
         days: {
+          orderBy: { createdAt: 'asc' },
           include: {
             activities: {
               orderBy: { sortOrder: 'asc' }
