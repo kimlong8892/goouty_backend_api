@@ -13,8 +13,6 @@ export class DaysService {
 
     return this.daysRepository.create({
       ...dayData,
-      // "date" now includes time component
-      date: new Date(createDayDto.date),
       trip: { connect: { id: tripId } }
     });
   }
@@ -40,10 +38,7 @@ export class DaysService {
 
     const data: any = { ...updateDayDto };
 
-    if (updateDayDto.date) {
-      // "date" now includes time component
-      data.date = new Date(updateDayDto.date);
-    }
+
 
     if (updateDayDto.tripId) {
       data.trip = { connect: { id: updateDayDto.tripId } };

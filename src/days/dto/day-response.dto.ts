@@ -11,8 +11,7 @@ export class DayResponseDto implements Partial<Day> {
   @ApiProperty({ description: 'Day description', required: false })
   description?: string;
 
-  @ApiProperty({ description: 'Day date' })
-  date: Date;
+
 
   @ApiProperty({ description: 'Day start time', required: false })
   startTime: Date | null;

@@ -66,7 +66,6 @@ model Day {
   id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title       String
   description String?
-  date        DateTime
   startTime   DateTime?
   tripId      String     @db.Uuid
   activities  Activity[]
