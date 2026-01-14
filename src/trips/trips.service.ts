@@ -1257,7 +1257,6 @@ export class TripsService {
           data: {
             title: templateDay.title,
             description: templateDay.description,
-            date: new Date(), // Set to current date, user can modify later
             trip: { connect: { id: trip.id } }
           }
         });

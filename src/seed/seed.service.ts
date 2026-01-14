@@ -487,7 +487,6 @@ export class SeedService {
                     data: {
                         title: `Ngày ${dayIndex + 1}`,
                         description: `Ngày ${dayIndex + 1} của chuyến du lịch`,
-                        date: dayDate,
                         startTime: new Date(dayDate.getTime() + 8 * 60 * 60 * 1000), // 8:00 AM
                         tripId: trip.id,
                     },
