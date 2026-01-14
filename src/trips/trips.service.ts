@@ -147,7 +147,7 @@ export class TripsService {
           }
         },
         days: {
-          orderBy: { createdAt: 'asc' },
+          orderBy: { order: 'asc' },
           include: {
             activities: {
               orderBy: { sortOrder: 'asc' }

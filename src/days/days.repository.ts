@@ -14,7 +14,7 @@ export class DaysRepository {
     skip?: number;
     take?: number;
     where?: Prisma.DayWhereInput;
-    orderBy?: Prisma.DayOrderByWithRelationInput;
+    orderBy?: Prisma.DayOrderByWithRelationInput | Prisma.DayOrderByWithRelationInput[];
   }): Promise<Day[]> {
     const { skip, take, where, orderBy } = params;
     return this.prisma.day.findMany({ skip, take, where, orderBy });
@@ -40,5 +40,16 @@ export class DaysRepository {
 
   async remove(id: string): Promise<Day> {
     return this.prisma.day.delete({ where: { id } });
+  }
+
+  async reorder(items: { id: string; order: number }[]): Promise<void> {
+    await this.prisma.$transaction(
+      items.map((item) =>
+        this.prisma.day.update({
+          where: { id: item.id },
+          data: { order: item.order },
+        }),
+      ),
+    );
   }
 }

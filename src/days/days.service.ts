@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DaysRepository } from './days.repository';
 import { CreateDayDto } from './dto/create-day.dto';
 import { UpdateDayDto } from './dto/update-day.dto';
+import { ReorderDaysDto } from './dto/reorder-days.dto';
 
 @Injectable()
 export class DaysService {
@@ -21,7 +22,7 @@ export class DaysService {
   async findAll(tripId: string) {
     return this.daysRepository.findAll({
       where: { tripId },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { order: 'asc' }
     });
   }
 
@@ -56,5 +57,14 @@ export class DaysService {
     // Check if day exists
     await this.findOne(id);
     return this.daysRepository.remove(id);
+  }
+
+  async reorder(reorderDaysDto: ReorderDaysDto) {
+    const items = reorderDaysDto.dayIds.map((id, index) => ({
+      id,
+      order: index,
+    }));
+    await this.daysRepository.reorder(items);
+    return { success: true };
   }
 }
