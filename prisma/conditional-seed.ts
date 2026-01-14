@@ -10,21 +10,22 @@ async function main() {
             (prisma as any).template.count()
         ]);
 
-        if (provinceCount === 0) {
-            console.log('🌱 Provinces missing. Seeding provinces...');
-            execSync('npm run seed:provinces', { stdio: 'inherit' });
-        }
+        console.log('🚫 Seeding disabled by user request.');
+        // if (provinceCount === 0) {
+        //     console.log('🌱 Provinces missing. Seeding provinces...');
+        //     execSync('npm run seed:provinces', { stdio: 'inherit' });
+        // }
 
-        if (templateCount === 0) {
-            console.log('🌱 Templates missing. Seeding templates...');
-            execSync('npm run seed:templates', { stdio: 'inherit' });
-        }
+        // if (templateCount === 0) {
+        //     console.log('🌱 Templates missing. Seeding templates...');
+        //     execSync('npm run seed:templates', { stdio: 'inherit' });
+        // }
 
-        if (provinceCount === 0 || templateCount === 0) {
-            console.log('✅ Basic essential data seeding completed.');
-        } else {
-            console.log('✅ Essential data already exists. Skipping seed.');
-        }
+        // if (provinceCount === 0 || templateCount === 0) {
+        //     console.log('✅ Basic essential data seeding completed.');
+        // } else {
+        //     console.log('✅ Essential data already exists. Skipping seed.');
+        // }
     } catch (error) {
         console.error('❌ Error checking database status:', error);
         // If the table doesn't exist yet, it might be the very first run
