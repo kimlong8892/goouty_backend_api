@@ -1,4 +1,3 @@
-
 import {
     Injectable,
     NestInterceptor,
@@ -8,6 +7,7 @@ import {
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { formatInTimeZone } from 'date-fns-tz';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class TimezoneInterceptor implements NestInterceptor {
@@ -21,11 +21,11 @@ export class TimezoneInterceptor implements NestInterceptor {
         }
 
         if (data instanceof Date) {
-            // Format to ISO with +07:00 (Asia/Ho_Chi_Minh)
-            // Standard ISO format: yyyy-MM-dd'T'HH:mm:ss.SSSXXX
-            // We keep milliseconds to be precise, or remove them if preferred.
-            // Usually matching default JS toISOString (which has ms) is safe.
             return formatInTimeZone(data, 'Asia/Ho_Chi_Minh', "yyyy-MM-dd'T'HH:mm:ss.SSS");
+        }
+
+        if (data instanceof Decimal) {
+            return data.toNumber();
         }
 
         if (Array.isArray(data)) {
