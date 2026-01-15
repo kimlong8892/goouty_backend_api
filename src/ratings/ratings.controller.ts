@@ -15,7 +15,7 @@ export class RatingsController {
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Create a new rating' })
     create(@Req() req, @Body() createRatingDto: CreateRatingDto) {
-        return this.ratingsService.create(req.user.id, createRatingDto);
+        return this.ratingsService.create(req.user.userId, createRatingDto);
     }
 
     @Get()
