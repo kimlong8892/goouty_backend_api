@@ -412,6 +412,7 @@ export class EnhancedNotificationService {
       'expense_updated': NotificationType.EXPENSE_UPDATED,
       'payment_created': NotificationType.SETTLEMENT_CREATED,
       'system_announcement': NotificationType.SYSTEM_ANNOUNCEMENT,
+      'trip_invitation': NotificationType.INFO,
       'info': NotificationType.INFO,
       'success': NotificationType.SUCCESS,
       'warning': NotificationType.WARNING,
@@ -687,9 +688,11 @@ export class EnhancedNotificationService {
       let notification = null;
 
       // Determine URL based on notification type
-      let notificationUrl = `/trip/${context.tripId}` || '/';
-      if (type === 'trip_invitation' && context.acceptUrl) {
-        notificationUrl = context.acceptUrl;
+      // Determine URL based on notification type and data
+      let notificationUrl = context.acceptUrl || (options.data && options.data.acceptUrl) || context.url || (options.data && options.data.url);
+
+      if (!notificationUrl) {
+        notificationUrl = context.tripId ? `/trip/${context.tripId}` : '/';
       }
 
 
