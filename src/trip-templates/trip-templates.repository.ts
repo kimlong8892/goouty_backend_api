@@ -54,7 +54,7 @@ export class TripTemplatesRepository {
               orderBy: { activityOrder: 'asc' }
             }
           },
-          orderBy: { dayOrder: 'asc' }
+          orderBy: { createdAt: 'asc' }
         }
       }
     });
@@ -110,7 +110,7 @@ export class TripTemplatesRepository {
                 orderBy: { activityOrder: 'asc' }
               }
             },
-            orderBy: { dayOrder: 'asc' }
+            orderBy: { createdAt: 'asc' }
           },
           favoritedBy: userId ? {
             where: { id: userId },
@@ -163,7 +163,7 @@ export class TripTemplatesRepository {
               orderBy: { activityOrder: 'asc' }
             }
           },
-          orderBy: { dayOrder: 'asc' }
+          orderBy: { createdAt: 'asc' }
         }
       }
     });
@@ -229,7 +229,7 @@ export class TripTemplatesRepository {
               orderBy: { activityOrder: 'asc' }
             }
           },
-          orderBy: { dayOrder: 'asc' }
+          orderBy: { createdAt: 'asc' }
         }
       }
     });
@@ -330,7 +330,7 @@ export class TripTemplatesRepository {
                 orderBy: { activityOrder: 'asc' }
               }
             },
-            orderBy: { dayOrder: 'asc' }
+            orderBy: { createdAt: 'asc' }
           }
         },
         orderBy: { createdAt: 'desc' },
