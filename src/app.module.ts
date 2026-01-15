@@ -1,7 +1,7 @@
 import { Module, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { PrismaModule } from './prisma/prisma.module';
 import { TripsModule } from './trips/trips.module';
 import { DaysModule } from './days/days.module';
@@ -28,6 +28,7 @@ import { I18nModule, AcceptLanguageResolver, QueryResolver, HeaderResolver } fro
 import * as path from 'path';
 import { I18nHelperModule } from './common/i18n/i18n-helper.module';
 import { RequestLoggerMiddleware } from './common/middleware/request-logger.middleware';
+import { TimezoneInterceptor } from './common/interceptors/timezone.interceptor';
 
 @Module({
   imports: [
@@ -161,6 +162,10 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TimezoneInterceptor,
     },
   ],
 })
