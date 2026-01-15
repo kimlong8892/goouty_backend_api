@@ -692,6 +692,7 @@ export class EnhancedNotificationService {
         notificationUrl = context.acceptUrl;
       }
 
+
       // Create notification in database ONLY if userId exists
       if (userId) {
         notification = await this.createNotification(userId, {
