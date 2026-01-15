@@ -914,7 +914,6 @@ export class TripsService {
       where: { id: member.id },
       data: {
         status: 'accepted',
-        inviteToken: null,
         joinedAt: new Date(),
       },
       include: {
@@ -1040,7 +1039,6 @@ export class TripsService {
       where: { id: member.id },
       data: {
         status: 'accepted',
-        inviteToken: null,
         joinedAt: new Date(),
       },
       include: {
