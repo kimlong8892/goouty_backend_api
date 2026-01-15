@@ -686,6 +686,12 @@ export class EnhancedNotificationService {
     try {
       let notification = null;
 
+      // Determine URL based on notification type
+      let notificationUrl = `/trip/${context.tripId}` || '/';
+      if (type === 'trip_invitation' && context.acceptUrl) {
+        notificationUrl = context.acceptUrl;
+      }
+
       // Create notification in database ONLY if userId exists
       if (userId) {
         notification = await this.createNotification(userId, {
@@ -696,7 +702,7 @@ export class EnhancedNotificationService {
             ...options.data,
             type,
             context,
-            url: `/trip/${context.tripId}` || '/'
+            url: notificationUrl
           }
         });
       }
@@ -725,7 +731,7 @@ export class EnhancedNotificationService {
                   ...options.data,
                   notificationId: notification?.id || null,
                   type,
-                  url: `/trip/${context.tripId}` || '/'
+                  url: notificationUrl
                 }
               };
 
