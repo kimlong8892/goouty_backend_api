@@ -675,6 +675,17 @@ export class EnhancedNotificationService {
   }
 
   /**
+   * Clean email HTML by removing Unlayer design metadata
+   */
+  private cleanEmailHtml(html: string): string {
+    if (!html) return '';
+
+    // Remove Unlayer design metadata comments
+    // Pattern: <!-- unlayer:design:{...} -->
+    return html.replace(/<!--\s*unlayer:design:\{[^>]*-->/gi, '');
+  }
+
+  /**
    * Send notification to a single user
    */
   public async sendNotificationToUser(
@@ -768,9 +779,12 @@ export class EnhancedNotificationService {
 
           if (recipientEmail) {
             const rawBody = template.emailBody || template.emailTemplate;
-            const emailHtml = rawBody
+            let emailHtml = rawBody
               ? this.templateService.replacePlaceholders(rawBody, context)
               : await this.templateService.getEmailTemplate(type, context);
+
+            // Clean Unlayer metadata from email HTML
+            emailHtml = this.cleanEmailHtml(emailHtml);
 
             await this.emailService.sendEmail({
               to: recipientEmail,
