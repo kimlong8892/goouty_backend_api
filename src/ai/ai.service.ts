@@ -1,15 +1,19 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import * as Tesseract from 'tesseract.js';
+import { PrismaService } from '../prisma/prisma.service';
 import axios from 'axios';
+import { format } from 'date-fns';
 
 @Injectable()
 export class AiService {
     private readonly logger = new Logger(AiService.name);
     private genAI: GoogleGenerativeAI;
 
-    constructor(private configService: ConfigService) {
+    constructor(
+        private configService: ConfigService,
+        private prisma: PrismaService,
+    ) {
         const apiKey = this.configService.get<string>('GEMINI_API_KEY');
         if (apiKey && apiKey !== 'GEMINI_API_KEY') {
             this.genAI = new GoogleGenerativeAI(apiKey);
@@ -19,10 +23,13 @@ export class AiService {
         }
     }
 
-    async processBillImage(file: Express.Multer.File): Promise<{ name: string; total: number }> {
+    async processBillImage(userId: string, file: Express.Multer.File): Promise<{ name: string; total: number }> {
         if (!this.genAI) {
             throw new Error('Gemini API is not configured. Please set GEMINI_API_KEY in .env file.');
         }
+
+        // Check and increment usage
+        await this.checkAndIncrementUsage(userId);
 
         try {
             this.logger.log(`Processing bill image directly with Gemini (${file.size} bytes)...`);
@@ -89,6 +96,79 @@ export class AiService {
             this.logger.error(`Error processing bill: ${error.message}`);
             throw error;
         }
+    }
+
+    private async checkAndIncrementUsage(userId: string) {
+        const today = format(new Date(), 'yyyy-MM-dd');
+
+        // Get daily limit from config
+        const limitConfig = await this.prisma.systemConfig.findUnique({
+            where: { key: 'AI_BILL_SCAN_DAILY_LIMIT' },
+        });
+        const dailyLimit = limitConfig ? parseInt(limitConfig.value) : 5;
+
+        // Get current usage
+        const usage = await this.prisma.userAiUsage.findUnique({
+            where: {
+                userId_date: {
+                    userId,
+                    date: today,
+                },
+            },
+        });
+
+        if (usage && usage.count >= dailyLimit) {
+            throw new ForbiddenException(`Bạn đã hết lượt quét bill trong ngày hôm nay. Giới hạn là ${dailyLimit} lần/ngày.`);
+        }
+
+        // Increment or create usage record
+        await this.prisma.userAiUsage.upsert({
+            where: {
+                userId_date: {
+                    userId,
+                    date: today,
+                },
+            },
+            create: {
+                userId,
+                date: today,
+                count: 1,
+            },
+            update: {
+                count: {
+                    increment: 1,
+                },
+            },
+        });
+    }
+
+    async getUsageInfo(userId: string) {
+        const today = format(new Date(), 'yyyy-MM-dd');
+
+        // Get daily limit from config
+        const limitConfig = await this.prisma.systemConfig.findUnique({
+            where: { key: 'AI_BILL_SCAN_DAILY_LIMIT' },
+        });
+        const dailyLimit = limitConfig ? parseInt(limitConfig.value) : 5;
+
+        // Get current usage
+        const usage = await this.prisma.userAiUsage.findUnique({
+            where: {
+                userId_date: {
+                    userId,
+                    date: today,
+                },
+            },
+        });
+
+        const usedCount = usage ? usage.count : 0;
+        const remaining = Math.max(0, dailyLimit - usedCount);
+
+        return {
+            usedCount,
+            dailyLimit,
+            remaining,
+        };
     }
 
     async listModels() {
