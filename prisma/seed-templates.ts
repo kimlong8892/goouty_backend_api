@@ -50,7 +50,7 @@ async function main() {
       `,
       icon: '🔑',
       color: '#3b82f6',
-      variables: ['userName', 'resetUrl', 'resetToken', 'frontendUrl']
+      variables: ['userName', 'resetUrl', 'frontendUrl']
     },
     {
       code: 'trip_invitation',
@@ -75,7 +75,7 @@ async function main() {
       `,
       icon: '📨',
       color: '#2563eb',
-      variables: ['userName', 'inviterName', 'tripTitle', 'acceptUrl', 'tripId']
+      variables: ['userName', 'inviterName', 'tripTitle', 'acceptUrl']
     },
     {
       code: 'trip_created',
@@ -85,7 +85,7 @@ async function main() {
       emailBody: '<p>Chuyến đi <strong>{{tripTitle}}</strong> đã được tạo bởi <strong>{{actionBy}}</strong> vào lúc {{createdAt}}.</p>',
       icon: '🌍',
       color: '#10b981',
-      variables: ['tripTitle', 'actionBy', 'createdAt', 'tripId']
+      variables: ['tripTitle', 'actionBy', 'createdAt']
     },
     {
       code: 'trip_updated',
@@ -95,7 +95,7 @@ async function main() {
       emailBody: '<p>Chuyến đi <strong>{{tripTitle}}</strong> đã được cập nhật bởi <strong>{{actionBy}}</strong> vào lúc {{updatedAt}}.</p>',
       icon: '📝',
       color: '#f59e0b',
-      variables: ['tripTitle', 'actionBy', 'updatedAt', 'tripId']
+      variables: ['tripTitle', 'actionBy', 'updatedAt']
     },
     {
       code: 'trip_deleted',
@@ -105,7 +105,7 @@ async function main() {
       emailBody: '<p>Chuyến đi <strong>{{tripTitle}}</strong> đã bị xoá bởi <strong>{{actionBy}}</strong>.</p>',
       icon: '🗑️',
       color: '#ef4444',
-      variables: ['tripTitle', 'actionBy', 'deletedAt', 'tripId']
+      variables: ['tripTitle', 'actionBy', 'deletedAt']
     },
     {
       code: 'expense_added',
@@ -207,7 +207,7 @@ async function main() {
     });
   }
 
-  console.log('✅ All notification templates seeded successfully!');
+  console.log('✅ All notification templates seeded successfully (IDs removed)!');
 }
 
 main()
