@@ -19,6 +19,7 @@ import { TelegramModule } from './common/telegram/telegram.module';
 import { SeedModule } from './seed/seed.module';
 import { LocationsModule } from './locations/locations.module';
 import { RatingsModule } from './ratings/ratings.module';
+import { AiModule } from './ai/ai.module';
 import * as Joi from 'joi';
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -86,6 +87,9 @@ import { TimezoneInterceptor } from './common/interceptors/timezone.interceptor'
 
         // Goong API
         GOONG_API_KEY: Joi.string().optional(),
+
+        // Gemini API
+        GEMINI_API_KEY: Joi.string().optional(),
       }),
     }),
     LoggerModule.forRootAsync({
@@ -151,6 +155,7 @@ import { TimezoneInterceptor } from './common/interceptors/timezone.interceptor'
     SeedModule,
     LocationsModule,
     RatingsModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [
