@@ -675,14 +675,23 @@ export class EnhancedNotificationService {
   }
 
   /**
-   * Clean email HTML by removing Unlayer design metadata
+   * Clean email HTML by removing Unlayer design metadata and extracting content inside html tag
    */
   private cleanEmailHtml(html: string): string {
     if (!html) return '';
 
-    // Remove Unlayer design metadata comments
-    // Pattern: <!-- unlayer:design:{...} -->
-    return html.replace(/<!--\s*unlayer:design:\{[^>]*-->/gi, '');
+    // First remove specific Unlayer metadata comments if they exist
+    let cleaned = html.replace(/<!--\s*unlayer:design:\{[^>]*-->/gi, '');
+
+    // Extract content inside <html> tag if present
+    // This matches <html ...> CONTENT </html> and returns CONTENT
+    const htmlContentMatch = cleaned.match(/<html[^>]*>([\s\S]*)<\/html>/i);
+
+    if (htmlContentMatch && htmlContentMatch[1]) {
+      return htmlContentMatch[1].trim();
+    }
+
+    return cleaned;
   }
 
   /**
