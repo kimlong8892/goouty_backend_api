@@ -5,27 +5,20 @@ const prisma = new PrismaClient();
 
 async function main() {
     try {
-        const [provinceCount, templateCount] = await Promise.all([
+        const [provinceCount] = await Promise.all([
             prisma.province.count(),
-            (prisma as any).template.count()
         ]);
 
-        console.log('🚫 Seeding disabled by user request.');
-        // if (provinceCount === 0) {
-        //     console.log('🌱 Provinces missing. Seeding provinces...');
-        //     execSync('npm run seed:provinces', { stdio: 'inherit' });
-        // }
+        if (provinceCount === 0) {
+            console.log('🌱 Provinces missing. Seeding provinces...');
+            execSync('npm run seed:provinces', { stdio: 'inherit' });
+        }
 
-        // if (templateCount === 0) {
-        //     console.log('🌱 Templates missing. Seeding templates...');
-        //     execSync('npm run seed:templates', { stdio: 'inherit' });
-        // }
+        // Always run templates seed to ensure they are up to date (uses upsert)
+        console.log('🌱 Updating notification templates...');
+        execSync('npm run seed:templates', { stdio: 'inherit' });
 
-        // if (provinceCount === 0 || templateCount === 0) {
-        //     console.log('✅ Basic essential data seeding completed.');
-        // } else {
-        //     console.log('✅ Essential data already exists. Skipping seed.');
-        // }
+        console.log('✅ Essential data seeding completed.');
     } catch (error) {
         console.error('❌ Error checking database status:', error);
         // If the table doesn't exist yet, it might be the very first run
