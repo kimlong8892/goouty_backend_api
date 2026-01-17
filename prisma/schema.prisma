@@ -340,6 +340,7 @@ enum NotificationType {
   EXPENSE_UPDATED
   SETTLEMENT_CREATED
   SYSTEM_ANNOUNCEMENT
+  PAYMENT_COMPLETED
 }
 
 enum NotificationStatus {

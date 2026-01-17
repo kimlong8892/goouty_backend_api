@@ -138,6 +138,16 @@ async function main() {
       variables: ['tripTitle', 'debtorName', 'creditorName', 'paymentAmount', 'actionBy', 'createdAt']
     },
     {
+      code: 'payment_completed',
+      title: 'Quyết toán hoàn tất',
+      message: '{{debtorName}} đã thanh toán {{paymentAmount}} cho {{creditorName}} trong "{{tripTitle}}"',
+      emailSubject: '[Goouty] Xác nhận thanh toán: {{paymentAmount}}',
+      emailBody: '<p><strong>{{debtorName}}</strong> đã xác nhận thanh toán số tiền <strong>{{paymentAmount}}</strong> cho <strong>{{creditorName}}</strong>.</p><p>Chuyến đi: {{tripTitle}}</p>',
+      icon: '✅',
+      color: '#10b981',
+      variables: ['tripTitle', 'debtorName', 'creditorName', 'paymentAmount', 'actionBy', 'createdAt']
+    },
+    {
       code: 'system_announcement',
       title: 'Thông báo hệ thống',
       message: '{{message}}',
@@ -200,14 +210,19 @@ async function main() {
   ];
 
   for (const template of templates) {
-    await prisma.template.upsert({
+    const exists = await prisma.template.findUnique({
       where: { code: template.code },
-      update: template,
-      create: template,
     });
+
+    if (!exists) {
+      console.log(`🌱 Creating template: ${template.code}`);
+      await prisma.template.create({
+        data: template,
+      });
+    }
   }
 
-  console.log('✅ All notification templates seeded successfully (IDs removed)!');
+  console.log('✅ Template sync completed!');
 }
 
 main()

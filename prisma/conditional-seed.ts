@@ -15,13 +15,9 @@ async function main() {
             execSync('npm run seed:provinces', { stdio: 'inherit' });
         }
 
-        // Only run templates seed if the table is empty
-        if (templateCount === 0) {
-            console.log('🌱 Templates missing. Seeding notification templates...');
-            execSync('npm run seed:templates', { stdio: 'inherit' });
-        } else {
-            console.log('✅ Notification templates already exist. Skipping seed.');
-        }
+        // Always run templates seed to ensure new codes are added
+        console.log('🌱 Checking notification templates...');
+        execSync('npm run seed:templates', { stdio: 'inherit' });
 
         console.log('✅ Essential data seeding completed.');
     } catch (error) {
