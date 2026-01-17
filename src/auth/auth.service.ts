@@ -159,6 +159,7 @@ export class AuthService {
       'FORGOT_PASSWORD',
       {
         resetToken,
+        resetUrl: `${process.env.APP_URL}/reset-password?token=${resetToken}`,
         frontendUrl: process.env.APP_URL,
       },
       [user.id],
@@ -225,7 +226,7 @@ export class AuthService {
 
     // Send email
     await this.notificationService.sendCustomNotification(
-      'forgot_password',
+      'auth_otp',
       {
         otp,
         userName: user.fullName || user.email,

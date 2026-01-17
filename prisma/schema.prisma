@@ -305,6 +305,7 @@ model Template {
   emailBody    String?
   icon         String?
   color        String?
+  variables    Json?
   createdAt    DateTime @db.Timestamptz(3) @default(now())
   updatedAt    DateTime @db.Timestamptz(3) @updatedAt
 }
