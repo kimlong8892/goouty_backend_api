@@ -5,8 +5,9 @@ const prisma = new PrismaClient();
 
 async function main() {
     try {
-        const [provinceCount] = await Promise.all([
+        const [provinceCount, templateCount] = await Promise.all([
             prisma.province.count(),
+            (prisma as any).template.count(),
         ]);
 
         if (provinceCount === 0) {
@@ -14,9 +15,13 @@ async function main() {
             execSync('npm run seed:provinces', { stdio: 'inherit' });
         }
 
-        // Always run templates seed to ensure they are up to date (uses upsert)
-        console.log('🌱 Updating notification templates...');
-        execSync('npm run seed:templates', { stdio: 'inherit' });
+        // Only run templates seed if the table is empty
+        if (templateCount === 0) {
+            console.log('🌱 Templates missing. Seeding notification templates...');
+            execSync('npm run seed:templates', { stdio: 'inherit' });
+        } else {
+            console.log('✅ Notification templates already exist. Skipping seed.');
+        }
 
         console.log('✅ Essential data seeding completed.');
     } catch (error) {
