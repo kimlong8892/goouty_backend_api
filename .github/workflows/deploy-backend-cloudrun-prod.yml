@@ -114,8 +114,7 @@ jobs:
           echo "Running database migration..."
           docker run --rm \
             --env-file .env.temp \
-            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
-            /bin/sh -c "npx ts-node prisma/clear-locks.ts && npx prisma migrate deploy && npm run seed:conditional"
+            /bin/sh -c "npx ts-node prisma/clear-locks.ts && npx prisma migrate deploy"
 
       - name: Create Cloud Tasks Queues
         run: |
