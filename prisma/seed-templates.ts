@@ -62,6 +62,10 @@ async function main() {
           <h2 style="color: #2563eb; text-align: center;">Lời mời tham gia chuyến đi</h2>
           <p>Xin chào <strong>{{userName}}</strong>,</p>
           <p><strong>{{inviterName}}</strong> đã mời bạn tham gia chuyến đi <strong>"{{tripTitle}}"</strong> trên Goouty.</p>
+          <div style="background-color: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>📍 Địa điểm:</strong> {{location}}</p>
+            <p style="margin: 5px 0;"><strong>📅 Thời gian:</strong> {{startDate}} - {{endDate}}</p>
+          </div>
           <p>Nếu bạn đồng ý tham gia, vui lòng nhấn nút bên dưới:</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="{{acceptUrl}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Chấp nhận lời mời</a>
@@ -75,7 +79,7 @@ async function main() {
       `,
       icon: '📨',
       color: '#2563eb',
-      variables: ['userName', 'inviterName', 'tripTitle', 'acceptUrl']
+      variables: ['userName', 'inviterName', 'tripTitle', 'acceptUrl', 'location', 'startDate', 'endDate']
     },
     {
       code: 'trip_created',

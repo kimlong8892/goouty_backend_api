@@ -227,6 +227,9 @@ export class EnhancedNotificationService {
     tripTitle: string,
     invitedUserId: string,
     inviterName?: string,
+    location?: string,
+    startDate?: string,
+    endDate?: string,
     options: SendNotificationOptions = {}
   ) {
     const context: NotificationContext = {
@@ -235,6 +238,9 @@ export class EnhancedNotificationService {
       inviterName,
       actionBy: invitedUserId,
       createdAt: new Date().toLocaleString('vi-VN'),
+      location: location || '',
+      startDate: startDate || '',
+      endDate: endDate || '',
       ...(options.data || {})
     };
 

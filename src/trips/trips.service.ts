@@ -481,6 +481,9 @@ export class TripsService {
         trip.title,
         userToAdd?.id || '',
         inviter?.fullName || inviter?.email || 'Một người bạn',
+        (trip as any).province?.name || 'Chưa xác định',
+        trip.startDate ? trip.startDate.toLocaleDateString('vi-VN') : '',
+        trip.endDate ? trip.endDate.toLocaleDateString('vi-VN') : '',
         {
           skipEmail: false,
           data: {
@@ -630,6 +633,9 @@ export class TripsService {
       trip.title,
       member.userId || '',
       inviter?.fullName || inviter?.email || 'Một người bạn',
+      (trip as any).province?.name || 'Chưa xác định',
+      trip.startDate ? trip.startDate.toLocaleDateString('vi-VN') : '',
+      trip.endDate ? trip.endDate.toLocaleDateString('vi-VN') : '',
       {
         skipEmail: false,
         data: {
@@ -1007,6 +1013,9 @@ export class TripsService {
             trip.title,
             userId,
             undefined,
+            undefined, // location
+            undefined, // startDate
+            undefined, // endDate
             { skipEmail: true } // Email đã được gửi trước đó
           );
         }
