@@ -23,4 +23,12 @@ export class RatingsController {
     findAll(@Query() query: GetRatingsQueryDto) {
         return this.ratingsService.findAll(query);
     }
+
+    @Get('check')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Check if current user has rated' })
+    checkUserRating(@Req() req) {
+        return this.ratingsService.checkUserRating(req.user.userId);
+    }
 }
