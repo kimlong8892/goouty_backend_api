@@ -1,24 +1,49 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import { CloudTasksService } from '../cloud-tasks/cloud-tasks.service';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
-  constructor(private configService: ConfigService) { }
+  constructor(
+    private configService: ConfigService,
+    @Optional() @Inject(CloudTasksService) private cloudTasksService?: CloudTasksService
+  ) { }
 
   /**
    * Send email with custom template (HTML)
+   * Will use Cloud Tasks if enabled, otherwise sends directly via SMTP
    */
   async sendEmail(params: {
     to: string;
     subject: string;
     html: string;
+    notificationType?: string;
   }): Promise<void> {
     try {
+      // Try to use Cloud Tasks if available and enabled
+      if (this.cloudTasksService?.isEnabled()) {
+        const taskCreated = await this.cloudTasksService.createEmailTask({
+          to: params.to,
+          subject: params.subject,
+          html: params.html,
+          notificationType: params.notificationType,
+        });
+
+        if (taskCreated) {
+          this.logger.log(`📤 Email task queued for ${params.to} (type: ${params.notificationType || 'system'})`);
+          return;
+        }
+
+        // If task creation failed, fallback to direct sending
+        this.logger.warn('Cloud Task creation failed, falling back to direct SMTP');
+      }
+
+      // Direct SMTP sending (fallback or default)
       await this.sendWithSmtp(params);
-      this.logger.log(`Email sent to ${params.to}`);
+      this.logger.log(`📧 Email sent directly to ${params.to}`);
     } catch (error) {
       this.logger.error(`Failed to send email to ${params.to}`, error as Error);
       throw error;

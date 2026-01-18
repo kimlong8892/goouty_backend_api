@@ -158,7 +158,7 @@ model SocialAccount {
 
 model PaymentSettlement {
   id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  amount       Decimal              @db.Decimal(10, 2)
+  amount       Decimal              @db.Decimal(20, 2)
   status       String               @default("pending")
   description  String?
   createdAt    DateTime @db.Timestamptz(3)             @default(now())
@@ -177,7 +177,7 @@ model PaymentSettlement {
 
 model PaymentTransaction {
   id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  amount       Decimal           @db.Decimal(10, 2)
+  amount       Decimal           @db.Decimal(20, 2)
   status       String            @default("success")
   method       String?
   note         String?

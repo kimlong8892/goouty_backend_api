@@ -112,9 +112,7 @@
              echo 'Running database migrations...'
              docker compose -p goouty-api-prod exec -T app npx prisma migrate deploy
             
-             # Run seed only if database is empty
-             echo 'Checking if database needs seeding...'
-             docker compose -p goouty-api-prod exec -T app npm run seed:conditional
+             echo 'Seeding removed as requested'
             
              echo '--- Container Logs ---'
              docker compose -p goouty-api-prod logs --tail=50

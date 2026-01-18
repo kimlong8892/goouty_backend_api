@@ -16,11 +16,12 @@ import { ProvincesModule } from './provinces/provinces.module';
 import { TripTemplatesModule } from './trip-templates/trip-templates.module';
 import { UploadModule } from './upload/upload.module';
 import { TelegramModule } from './common/telegram/telegram.module';
-import { SeedModule } from './seed/seed.module';
+import { InternalModule } from './internal/internal.module';
+
 import { LocationsModule } from './locations/locations.module';
 import { RatingsModule } from './ratings/ratings.module';
 import { AiModule } from './ai/ai.module';
-import { MigrationModule } from './migration/migration.module';
+
 import * as Joi from 'joi';
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -91,6 +92,16 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
 
         // Gemini API
         GEMINI_API_KEY: Joi.string().optional(),
+
+        // Cloud Tasks
+        USE_CLOUD_TASKS: Joi.string().valid('true', 'false').optional(),
+        GCP_PROJECT_ID: Joi.string().optional(),
+        GCP_LOCATION: Joi.string().optional(),
+        CLOUD_TASKS_SERVICE_URL: Joi.string().uri().optional(),
+        QUEUE_TRIP: Joi.string().optional(),
+        QUEUE_EXPENSE: Joi.string().optional(),
+        QUEUE_PAYMENT: Joi.string().optional(),
+        QUEUE_SYSTEM: Joi.string().optional(),
       }),
     }),
     LoggerModule.forRootAsync({
@@ -153,11 +164,12 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
     UploadModule,
     TelegramModule,
     I18nHelperModule,
-    SeedModule,
+    InternalModule,
+
     LocationsModule,
     RatingsModule,
     AiModule,
-    MigrationModule,
+
   ],
   controllers: [AppController],
   providers: [

@@ -78,6 +78,16 @@ export class ExpensesService {
       throw new BadRequestException('Some participants are not members of the trip');
     }
 
+    // Validate expense amount to prevent database overflow
+    // DECIMAL(20,2) max value is 999,999,999,999,999,999.99
+    const MAX_EXPENSE_AMOUNT = 999999999999999999.99;
+    if (Number(createExpenseDto.amount) > MAX_EXPENSE_AMOUNT) {
+      throw new BadRequestException(`Expense amount exceeds maximum allowed value (${MAX_EXPENSE_AMOUNT})`);
+    }
+    if (Number(createExpenseDto.amount) <= 0) {
+      throw new BadRequestException('Expense amount must be greater than 0');
+    }
+
     // Validate and compute per-participant amounts
     let perParticipantAmounts: number[];
     if (createExpenseDto.amounts && createExpenseDto.amounts.length > 0) {
@@ -275,6 +285,17 @@ export class ExpensesService {
     });
     if (lockCheck?.isLocked) {
       throw new BadRequestException('Expense đã được khóa và không thể chỉnh sửa');
+    }
+
+    // Validate expense amount if being updated
+    if (updateExpenseDto.amount !== undefined) {
+      const MAX_EXPENSE_AMOUNT = 999999999999999999.99;
+      if (Number(updateExpenseDto.amount) > MAX_EXPENSE_AMOUNT) {
+        throw new BadRequestException(`Expense amount exceeds maximum allowed value (${MAX_EXPENSE_AMOUNT})`);
+      }
+      if (Number(updateExpenseDto.amount) <= 0) {
+        throw new BadRequestException('Expense amount must be greater than 0');
+      }
     }
 
     // If updating participants, verify they are trip members
@@ -685,24 +706,34 @@ export class ExpensesService {
 
     // Send notification about payment transaction
     if ((dto.status ?? 'success') === 'success') {
+      console.log('🔔 [PAYMENT_COMPLETED] Starting notification process...');
+      console.log('🔔 [PAYMENT_COMPLETED] Settlement ID:', settlementId);
+      console.log('🔔 [PAYMENT_COMPLETED] Trip ID:', settlement.tripId);
+      console.log('🔔 [PAYMENT_COMPLETED] Payment Amount:', dto.amount);
+      console.log('🔔 [PAYMENT_COMPLETED] Paid By User ID:', userId);
+
       try {
         const trip = await this.prisma.trip.findUnique({
           where: { id: settlement.tripId },
           select: { title: true }
         });
+        console.log('🔔 [PAYMENT_COMPLETED] Trip found:', trip?.title);
 
         const debtor = await this.prisma.user.findUnique({
           where: { id: settlement.debtorId },
-          select: { fullName: true }
+          select: { fullName: true, email: true }
         });
+        console.log('🔔 [PAYMENT_COMPLETED] Debtor:', debtor?.fullName || debtor?.email);
 
         const creditor = await this.prisma.user.findUnique({
           where: { id: settlement.creditorId },
-          select: { fullName: true }
+          select: { fullName: true, email: true }
         });
+        console.log('🔔 [PAYMENT_COMPLETED] Creditor:', creditor?.fullName || creditor?.email);
 
         if (trip && debtor && creditor) {
-          await this.notificationService.sendPaymentCreatedNotification(
+          console.log('🔔 [PAYMENT_COMPLETED] Calling sendPaymentCompletedNotification...');
+          await this.notificationService.sendPaymentCompletedNotification(
             settlement.tripId,
             trip.title,
             debtor.fullName || 'Người dùng',
@@ -710,10 +741,17 @@ export class ExpensesService {
             dto.amount,
             userId
           );
+          console.log('✅ [PAYMENT_COMPLETED] Notification sent successfully!');
+        } else {
+          console.warn('⚠️ [PAYMENT_COMPLETED] Missing data - Trip:', !!trip, 'Debtor:', !!debtor, 'Creditor:', !!creditor);
         }
       } catch (error) {
-        console.error('Failed to send payment notification:', error);
+        console.error('❌ [PAYMENT_COMPLETED] Failed to send payment notification:', error);
+        console.error('❌ [PAYMENT_COMPLETED] Error details:', error.message);
+        console.error('❌ [PAYMENT_COMPLETED] Error stack:', error.stack);
       }
+    } else {
+      console.log('⏭️ [PAYMENT_COMPLETED] Skipping notification - Transaction status is not success:', dto.status);
     }
 
     return this.mapTransactionToResponseDto(transaction);

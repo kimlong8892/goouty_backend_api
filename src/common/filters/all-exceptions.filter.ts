@@ -86,16 +86,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
         }
 
         // Gửi thông báo tới Telegram nếu là lỗi hệ thống (>= 500)
+        // Disabled for now
+        /*
         if (httpStatus >= 500) {
             const telegramMsg =
                 `❌ <b>Server Error (${httpStatus})</b>\n` +
                 `<b>Method:</b> ${method}\n` +
                 `<b>URL:</b> ${url}\n` +
-                `<b>Error:</b> ${errorMessage}\n` +
                 `<code>${stack?.substring(0, 500)}...</code>`;
 
             this.telegramService.sendMessage(telegramMsg);
         }
+        */
 
         httpAdapter.reply(ctx.getResponse(), responseBody, httpStatus);
     }

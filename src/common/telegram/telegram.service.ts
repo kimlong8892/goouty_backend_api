@@ -17,7 +17,7 @@ export class TelegramService {
 
     async sendMessage(message: string) {
         if (!this.botToken || !this.chatId) {
-            this.logger.warn('Telegram Bot Token or Chat ID not configured. Skipping notification.');
+            // Telegram not configured, skip silently
             return;
         }
 

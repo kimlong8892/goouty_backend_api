@@ -23,6 +23,7 @@ export interface NotificationContext {
   paymentAmount?: number | string;
   debtorName?: string;
   creditorName?: string;
+  detailUrl?: string;
   [key: string]: any;
 }
 

@@ -191,9 +191,9 @@ export class EnhancedNotificationService {
   }
 
   /**
-   * Send notification for payment creation
+   * Send notification for payment completion
    */
-  async sendPaymentCreatedNotification(
+  async sendPaymentCompletedNotification(
     tripId: string,
     tripTitle: string,
     debtorName: string,
@@ -215,7 +215,7 @@ export class EnhancedNotificationService {
     };
 
     return this.sendNotificationToTripMembersDirectly(
-      'payment_created',
+      'payment_completed',
       context,
       tripId,
       options
@@ -435,7 +435,7 @@ export class EnhancedNotificationService {
       'trip_deleted': NotificationType.TRIP_DELETED,
       'expense_added': NotificationType.EXPENSE_ADDED,
       'expense_updated': NotificationType.EXPENSE_UPDATED,
-      'payment_created': NotificationType.SETTLEMENT_CREATED,
+      'payment_completed': NotificationType.SETTLEMENT_CREATED,
       'system_announcement': NotificationType.SYSTEM_ANNOUNCEMENT,
       'trip_invitation': NotificationType.INFO,
       'info': NotificationType.INFO,
@@ -751,7 +751,7 @@ export class EnhancedNotificationService {
 
       // Determine URL based on notification type
       // Determine URL based on notification type and data
-      let notificationUrl = context.acceptUrl || (options.data && options.data.acceptUrl) || context.url || (options.data && options.data.url);
+      let notificationUrl = context.acceptUrl || (options.data && options.data.acceptUrl) || context.url || (options.data && options.data.url) || context.detailUrl;
 
       if (!notificationUrl) {
         notificationUrl = context.tripId ? `/trip/${context.tripId}` : '/';
@@ -815,6 +815,10 @@ export class EnhancedNotificationService {
 
       // Send email notification
       if (!options.skipEmail) {
+        console.log('📧 [EMAIL] Starting email send process...');
+        console.log('📧 [EMAIL] Notification type:', type);
+        console.log('📧 [EMAIL] User ID:', userId);
+
         try {
           let recipientEmail = context.userEmail;
 
@@ -825,28 +829,55 @@ export class EnhancedNotificationService {
             });
             if (user) {
               recipientEmail = user.email;
+              console.log('📧 [EMAIL] Recipient found:', user.fullName, '(' + recipientEmail + ')');
             }
+          } else {
+            console.log('📧 [EMAIL] No userId, using context email:', recipientEmail);
           }
 
           if (recipientEmail) {
+            console.log('📧 [EMAIL] Template info:', {
+              hasEmailBody: !!template.emailBody,
+              hasEmailTemplate: !!template.emailTemplate,
+              emailSubject: template.emailSubject,
+              title: template.title
+            });
+
             const rawBody = template.emailBody || template.emailTemplate;
             let emailHtml = rawBody
               ? this.templateService.replacePlaceholders(rawBody, context)
               : await this.templateService.getEmailTemplate(type, context);
 
+            console.log('📧 [EMAIL] Raw HTML length:', rawBody?.length || 0);
+            console.log('📧 [EMAIL] Context for replacement:', JSON.stringify(context, null, 2));
+
             // Clean Unlayer metadata from email HTML
             emailHtml = this.cleanEmailHtml(emailHtml);
+
+            console.log('📧 [EMAIL] Cleaned HTML length:', emailHtml?.length || 0);
+            console.log('📧 [EMAIL] Email subject:', template.emailSubject || template.title);
+            console.log('📧 [EMAIL] HTML preview (first 500 chars):', emailHtml?.substring(0, 500));
 
             await this.emailService.sendEmail({
               to: recipientEmail,
               subject: template.emailSubject || template.title,
-              html: emailHtml
+              html: emailHtml,
+              notificationType: type,
             });
+
+            console.log('✅ [EMAIL] Email sent successfully to:', recipientEmail);
             result.emailSent = true;
+          } else {
+            console.warn('⚠️ [EMAIL] No recipient email found!');
           }
         } catch (emailError) {
+          console.error('❌ [EMAIL] Failed to send email notification:', emailError);
+          console.error('❌ [EMAIL] Error message:', emailError.message);
+          console.error('❌ [EMAIL] Error stack:', emailError.stack);
           this.logger.error(`Failed to send email notification:`, emailError);
         }
+      } else {
+        console.log('⏭️ [EMAIL] Skipping email - skipEmail option is true');
       }
 
       return result;
