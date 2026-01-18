@@ -92,6 +92,9 @@ export class CloudTasksService {
 
             const parent = this.client.queuePath(this.projectId, this.location, queueName);
 
+            // Create task payload without notificationType (to avoid 400 Bad Request due to strict whitelist validation)
+            const { notificationType, ...emailPayload } = payload;
+
             const task = {
                 httpRequest: {
                     httpMethod: 'POST' as const,
@@ -100,7 +103,7 @@ export class CloudTasksService {
                         'Content-Type': 'application/json',
                         'x-internal-api-key': this.configService.get<string>('INTERNAL_API_KEY') || '',
                     },
-                    body: Buffer.from(JSON.stringify(payload)).toString('base64'),
+                    body: Buffer.from(JSON.stringify(emailPayload)).toString('base64'),
                 },
             };
 

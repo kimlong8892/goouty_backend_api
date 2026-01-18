@@ -1,10 +1,19 @@
 import { Controller, Post, Body, Logger, HttpCode, Headers, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../email/email.service';
+import { IsString, IsNotEmpty, IsEmail } from 'class-validator';
 
 export class SendEmailDto {
+    @IsEmail()
+    @IsNotEmpty()
     to: string;
+
+    @IsString()
+    @IsNotEmpty()
     subject: string;
+
+    @IsString()
+    @IsNotEmpty()
     html: string;
 }
 
