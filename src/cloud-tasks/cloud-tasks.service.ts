@@ -2,12 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CloudTasksClient } from '@google-cloud/tasks';
 
-export interface EmailTaskPayload {
-    to: string;
-    subject: string;
-    html: string;
-    notificationType?: string; // For routing to appropriate queue
-}
+
 
 export interface EmailTaskPayload {
     to: string;
@@ -72,7 +67,8 @@ export class CloudTasksService {
                     httpMethod: 'POST' as const,
                     url: `${this.serviceUrl}/api/internal/send-email`,
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json; charset=utf-8',
+                        'Accept': '*/*',
                     },
                     body: Buffer.from(JSON.stringify(emailPayload)).toString('base64'),
                 },
