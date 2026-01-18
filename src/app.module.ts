@@ -20,6 +20,7 @@ import { SeedModule } from './seed/seed.module';
 import { LocationsModule } from './locations/locations.module';
 import { RatingsModule } from './ratings/ratings.module';
 import { AiModule } from './ai/ai.module';
+import { MigrationModule } from './migration/migration.module';
 import * as Joi from 'joi';
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -156,6 +157,7 @@ import { TimezoneInterceptor } from './common/interceptors/timezone.interceptor'
     LocationsModule,
     RatingsModule,
     AiModule,
+    MigrationModule,
   ],
   controllers: [AppController],
   providers: [
