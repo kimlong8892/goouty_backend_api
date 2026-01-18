@@ -57,12 +57,13 @@ export class MigrationService {
                 },
             });
 
-            // 3. Clone Users involved in these trips first (to avoid FK errors)
-            this.logger.log('Cloning relevant Users...');
+            // 3. Clone Users involved and map IDs (Source ID -> Target ID)
+            this.logger.log('Cloning relevant Users and mapping IDs...');
             const userIds = new Set<string>();
+            const userIdMap = new Map<string, string>(); // Source ID -> Target ID
 
             sourceTrips.forEach(trip => {
-                userIds.add(trip.userId); // Owner
+                if (trip.userId) userIds.add(trip.userId); // Owner
                 trip.members.forEach(m => {
                     if (m.userId) userIds.add(m.userId);
                 });
@@ -72,21 +73,44 @@ export class MigrationService {
                 where: { id: { in: Array.from(userIds) } },
             });
 
-            for (const user of sourceUsers) {
-                // Upsert users (preserve existing data if matched by email or ID)
-                // Note: Password hashes might be different, but we prioritize keeping existing local users if they conflict
-                const existingUser = await this.prisma.user.findUnique({ where: { id: user.id } });
-                if (!existingUser) {
-                    await this.prisma.user.create({ data: user });
+            for (const srcUser of sourceUsers) {
+                // Find existing user by EMAIL in target DB
+                let targetUser = await this.prisma.user.findUnique({
+                    where: { email: srcUser.email }
+                });
+
+                if (!targetUser) {
+                    // Create new user if not exists (using source data, but generate new ID)
+                    // We remove id to let Prisma/DB generate it or we can set it if we really want to preserve it and it doesn't conflict
+                    // ideally we let the system generate a new ID to avoid PK collisions if UUIDs are used differently
+                    const { id, ...userData } = srcUser;
+                    targetUser = await this.prisma.user.create({
+                        data: {
+                            ...userData,
+                            // Ensure unique constraints if any other than ID/Email are handled
+                        }
+                    });
                     results.users++;
                 }
+
+                // Map Source ID to Target ID
+                userIdMap.set(srcUser.id, targetUser.id);
             }
 
-            // 4. Insert Trips
+            // 4. Insert Trips with mapped User IDs
             this.logger.log('Inserting Trips...');
             for (const trip of sourceTrips) {
                 const { days, members, ...tripData } = trip;
 
+                // Map the trip owner ID
+                const newOwnerId = userIdMap.get(trip.userId);
+                if (!newOwnerId) {
+                    this.logger.warn(`Skipping trip ${trip.title} because owner (Source ID: ${trip.userId}) could not be mapped (Email not found?).`);
+                    continue;
+                }
+
+                // Check existence by ID (we assume we keep trip IDs, or handle collision)
+                // If we want to strictly keep Trip IDs, we check. 
                 const existingTrip = await this.prisma.trip.findUnique({ where: { id: trip.id } });
                 if (existingTrip) {
                     this.logger.log(`Skipping trip ${trip.title} (ID: ${trip.id}) as it already exists.`);
@@ -96,6 +120,7 @@ export class MigrationService {
                 await this.prisma.trip.create({
                     data: {
                         ...tripData,
+                        userId: newOwnerId, // Use mapped ID
                         days: {
                             create: days.map(day => ({
                                 ...day,
@@ -105,16 +130,19 @@ export class MigrationService {
                             }))
                         },
                         members: {
-                            create: members.map(m => ({
-                                ...m,
-                                user: undefined // Remove user object relation, only keep userId FK
-                            }))
+                            create: members.map(m => {
+                                const mappedMemberUserId = m.userId ? userIdMap.get(m.userId) : null;
+                                return {
+                                    ...m,
+                                    userId: mappedMemberUserId, // Use mapped ID or null
+                                    user: undefined
+                                };
+                            })
                         }
                     }
                 });
                 results.trips++;
             }
-
             this.logger.log('Clone completed successfully');
             return { success: true, imported: results };
 
