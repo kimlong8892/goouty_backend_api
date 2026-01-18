@@ -9,11 +9,11 @@ export interface EmailTaskPayload {
     notificationType?: string; // For routing to appropriate queue
 }
 
-export enum NotificationQueueType {
-    TRIP = 'trip',
-    EXPENSE = 'expense',
-    PAYMENT = 'payment',
-    SYSTEM = 'system',
+export interface EmailTaskPayload {
+    to: string;
+    subject: string;
+    html: string;
+    notificationType?: string; // Kept for backward compatibility/logging
 }
 
 @Injectable()
@@ -22,7 +22,7 @@ export class CloudTasksService {
     private client: CloudTasksClient | null = null;
     private projectId: string;
     private location: string;
-    private queues: Map<NotificationQueueType, string>;
+    private defaultQueue: string;
     private serviceUrl: string;
 
     constructor(private configService: ConfigService) {
@@ -30,13 +30,8 @@ export class CloudTasksService {
         this.location = this.configService.get<string>('GCP_LOCATION') || 'asia-southeast1';
         this.serviceUrl = this.configService.get<string>('CLOUD_TASKS_SERVICE_URL') || '';
 
-        // Initialize queue mappings
-        this.queues = new Map([
-            [NotificationQueueType.TRIP, this.configService.get<string>('QUEUE_TRIP') || 'queue-trip-notifications-dev'],
-            [NotificationQueueType.EXPENSE, this.configService.get<string>('QUEUE_EXPENSE') || 'queue-expense-notifications-dev'],
-            [NotificationQueueType.PAYMENT, this.configService.get<string>('QUEUE_PAYMENT') || 'queue-payment-notifications-dev'],
-            [NotificationQueueType.SYSTEM, this.configService.get<string>('QUEUE_SYSTEM') || 'queue-system-notifications-dev'],
-        ]);
+        // Initialize default queue
+        this.defaultQueue = this.configService.get<string>('QUEUE_MAIL') || 'queue-mail-notifications';
 
         // Only initialize Cloud Tasks if credentials are provided
         const useCloudTasks = this.configService.get<string>('USE_CLOUD_TASKS') === 'true';
@@ -45,34 +40,13 @@ export class CloudTasksService {
             try {
                 this.client = new CloudTasksClient();
                 this.logger.log('✅ Cloud Tasks client initialized');
-                this.logger.log(`📋 Configured queues:`, Object.fromEntries(this.queues));
+                this.logger.log(`📋 Configured queue: ${this.defaultQueue}`);
             } catch (error) {
                 this.logger.warn('⚠️ Failed to initialize Cloud Tasks client, will use direct email sending', error);
             }
         } else {
             this.logger.log('ℹ️ Cloud Tasks disabled, using direct email sending');
         }
-    }
-
-    /**
-     * Determine queue type based on notification type
-     */
-    private getQueueType(notificationType?: string): NotificationQueueType {
-        if (!notificationType) return NotificationQueueType.SYSTEM;
-
-        const type = notificationType.toLowerCase();
-
-        if (type.includes('trip') || type.includes('invitation')) {
-            return NotificationQueueType.TRIP;
-        }
-        if (type.includes('expense')) {
-            return NotificationQueueType.EXPENSE;
-        }
-        if (type.includes('payment') || type.includes('settlement')) {
-            return NotificationQueueType.PAYMENT;
-        }
-
-        return NotificationQueueType.SYSTEM;
     }
 
     /**
@@ -86,10 +60,8 @@ export class CloudTasksService {
         }
 
         try {
-            // Determine which queue to use
-            const queueType = this.getQueueType(payload.notificationType);
-            const queueName = this.queues.get(queueType) || this.queues.get(NotificationQueueType.SYSTEM)!;
-
+            // Use the single default queue
+            const queueName = this.defaultQueue;
             const parent = this.client.queuePath(this.projectId, this.location, queueName);
 
             // Create task payload without notificationType (to avoid 400 Bad Request due to strict whitelist validation)
@@ -107,7 +79,7 @@ export class CloudTasksService {
                 },
             };
 
-            this.logger.log(`📤 Creating Cloud Task for email to: ${payload.to} (queue: ${queueName}, type: ${queueType})`);
+            this.logger.log(`📤 Creating Cloud Task for email to: ${payload.to} (queue: ${queueName})`);
 
             const [response] = await this.client.createTask({ parent, task });
 
