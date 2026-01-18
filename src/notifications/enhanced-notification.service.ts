@@ -1,14 +1,14 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Inject, forwardRef, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DevicesService } from '../devices/devices.service';
 import { WebPushService } from './web-push.service';
 import { EmailService } from '../email/email.service';
+import { ConfigService } from '@nestjs/config';
 import { NotificationTemplateService, NotificationContext } from './notification-template.service';
-import { QueueService } from '../queue/queue.service';
-import { 
-  CreateNotificationDto, 
-  UpdateNotificationDto, 
-  NotificationResponseDto, 
+import {
+  CreateNotificationDto,
+  UpdateNotificationDto,
+  NotificationResponseDto,
   NotificationListResponseDto,
   NotificationStatsDto,
   NotificationType,
@@ -26,15 +26,16 @@ export interface SendNotificationOptions {
 
 @Injectable()
 export class EnhancedNotificationService {
+  private readonly logger = new Logger(EnhancedNotificationService.name);
+
   constructor(
     private prisma: PrismaService,
     private devicesService: DevicesService,
     private webPushService: WebPushService,
     private emailService: EmailService,
     private templateService: NotificationTemplateService,
-    @Inject(forwardRef(() => QueueService))
-    private queueService: QueueService,
-  ) {}
+    private configService: ConfigService,
+  ) { }
 
   /**
    * Send notification for trip creation
@@ -45,9 +46,9 @@ export class EnhancedNotificationService {
     createdBy: string,
     options: SendNotificationOptions = {}
   ) {
-    console.log('📤 EnhancedNotificationService: sendTripCreatedNotification called');
-    console.log('Trip ID:', tripId, 'Title:', tripTitle, 'Created by:', createdBy);
-    
+    this.logger.log('📤 EnhancedNotificationService: sendTripCreatedNotification called');
+    this.logger.log('Trip ID:', tripId, 'Title:', tripTitle, 'Created by:', createdBy);
+
     const context: NotificationContext = {
       tripId,
       tripTitle,
@@ -56,18 +57,18 @@ export class EnhancedNotificationService {
     };
 
     console.log('Context:', context);
-    
+
     try {
-      const result = await this.sendNotificationToTripMembersViaQueue(
+      const result = await this.sendNotificationToTripMembersDirectly(
         'trip_created',
         context,
         tripId,
         options
       );
-      console.log('📤 Queue result:', result);
+      this.logger.log('📤 Direct result:', result);
       return result;
     } catch (error) {
-      console.error('❌ Error in sendTripCreatedNotification:', error);
+      this.logger.error('❌ Error in sendTripCreatedNotification:', error);
       throw error;
     }
   }
@@ -79,16 +80,25 @@ export class EnhancedNotificationService {
     tripId: string,
     tripTitle: string,
     updatedBy: string,
+    location?: string,
+    startDate?: string,
+    endDate?: string,
     options: SendNotificationOptions = {}
   ) {
+    const frontendUrl = this.configService.get<string>('APP_URL');
     const context: NotificationContext = {
       tripId,
       tripTitle,
       actionBy: updatedBy,
-      updatedAt: new Date().toLocaleString('vi-VN')
+      updatedAt: new Date().toLocaleString('vi-VN'),
+      detailUrl: `${frontendUrl}/trip/${tripId}`,
+      location: location || '',
+      startDate: startDate || '',
+      endDate: endDate || '',
+      inviterName: updatedBy // Mapping updatedBy to inviterName for template consistency
     };
 
-    return this.sendNotificationToTripMembersViaQueue(
+    return this.sendNotificationToTripMembersDirectly(
       'trip_updated',
       context,
       tripId,
@@ -112,7 +122,7 @@ export class EnhancedNotificationService {
       deletedAt: new Date().toLocaleString('vi-VN')
     };
 
-    return this.sendNotificationToTripMembersViaQueue(
+    return this.sendNotificationToTripMembersDirectly(
       'trip_deleted',
       context,
       tripId,
@@ -131,16 +141,18 @@ export class EnhancedNotificationService {
     addedBy: string,
     options: SendNotificationOptions = {}
   ) {
+    const frontendUrl = this.configService.get<string>('APP_URL');
     const context: NotificationContext = {
       tripId,
       tripTitle,
       expenseTitle,
       expenseAmount,
       actionBy: addedBy,
-      createdAt: new Date().toLocaleString('vi-VN')
+      createdAt: new Date().toLocaleString('vi-VN'),
+      detailUrl: `${frontendUrl}/trip/${tripId}`
     };
 
-    return this.sendNotificationToTripMembersViaQueue(
+    return this.sendNotificationToTripMembersDirectly(
       'expense_added',
       context,
       tripId,
@@ -155,18 +167,22 @@ export class EnhancedNotificationService {
     tripId: string,
     tripTitle: string,
     expenseTitle: string,
+    expenseAmount: number,
     updatedBy: string,
     options: SendNotificationOptions = {}
   ) {
+    const frontendUrl = this.configService.get<string>('APP_URL');
     const context: NotificationContext = {
       tripId,
       tripTitle,
       expenseTitle,
+      expenseAmount,
       actionBy: updatedBy,
-      updatedAt: new Date().toLocaleString('vi-VN')
+      updatedAt: new Date().toLocaleString('vi-VN'),
+      detailUrl: `${frontendUrl}/trip/${tripId}`
     };
 
-    return this.sendNotificationToTripMembersViaQueue(
+    return this.sendNotificationToTripMembersDirectly(
       'expense_updated',
       context,
       tripId,
@@ -186,6 +202,7 @@ export class EnhancedNotificationService {
     paidBy: string,
     options: SendNotificationOptions = {}
   ) {
+    const frontendUrl = this.configService.get<string>('APP_URL');
     const context: NotificationContext = {
       tripId,
       tripTitle,
@@ -193,13 +210,47 @@ export class EnhancedNotificationService {
       creditorName,
       paymentAmount,
       actionBy: paidBy,
-      createdAt: new Date().toLocaleString('vi-VN')
+      createdAt: new Date().toLocaleString('vi-VN'),
+      detailUrl: `${frontendUrl}/trip/${tripId}`
     };
 
-    return this.sendNotificationToTripMembersViaQueue(
+    return this.sendNotificationToTripMembersDirectly(
       'payment_created',
       context,
       tripId,
+      options
+    );
+  }
+
+  /**
+   * Send trip invitation notification
+   */
+  async sendTripInvitationNotification(
+    tripId: string,
+    tripTitle: string,
+    invitedUserId: string,
+    inviterName?: string,
+    location?: string,
+    startDate?: string,
+    endDate?: string,
+    options: SendNotificationOptions = {}
+  ) {
+    const context: NotificationContext = {
+      tripId,
+      tripTitle,
+      inviterName,
+      actionBy: invitedUserId,
+      createdAt: new Date().toLocaleString('vi-VN'),
+      location: location || '',
+      startDate: startDate || '',
+      endDate: endDate || '',
+      ...(options.data || {})
+    };
+
+    return this.sendNotificationToUsersDirectly(
+      'trip_invitation',
+      context,
+      [invitedUserId],
       options
     );
   }
@@ -222,7 +273,7 @@ export class EnhancedNotificationService {
       select: { id: true, email: true, fullName: true }
     });
 
-    return this.sendNotificationToUsersViaQueue(
+    return this.sendNotificationToUsersDirectly(
       'system_announcement',
       context,
       users.map(u => u.id),
@@ -239,22 +290,24 @@ export class EnhancedNotificationService {
     userIds: string[],
     options: SendNotificationOptions = {}
   ) {
-    return this.sendNotificationToUsersViaQueue(type, context, userIds, options);
+    return this.sendNotificationToUsersDirectly(type, context, userIds, options);
   }
 
   /**
    * Core method to send notifications to trip members
    */
-  private async sendNotificationToTripMembers(
+  private async sendNotificationToTripMembersDirectly(
     type: string,
     context: NotificationContext,
     tripId: string,
     options: SendNotificationOptions = {}
   ) {
     try {
+      this.logger.log('🔄 sendNotificationToTripMembersDirectly called');
+
       // Get trip members
       const tripMembers = await this.prisma.tripMember.findMany({
-        where: { 
+        where: {
           tripId,
           status: 'accepted'
         },
@@ -286,14 +339,24 @@ export class EnhancedNotificationService {
         }
       });
 
-      const userIds = [
+      const allUserIds = [
         ...tripMembers.map(m => m.user.id),
         ...(trip ? [trip.userId] : [])
       ].filter((id, index, arr) => arr.indexOf(id) === index); // Remove duplicates
 
-      return this.sendNotificationToUsersViaQueue(type, context, userIds, options);
+      // Filter out the creator if needed
+      const userIds = options.userIds
+        ? allUserIds.filter(id => options.userIds!.includes(id))
+        : allUserIds.filter(id => id !== context.actionBy);
+
+      if (userIds.length === 0) {
+        this.logger.log(`No users to notify for trip ${tripId}`);
+        return { success: false, message: 'No users to notify' };
+      }
+
+      return this.sendNotificationToUsersDirectly(type, context, userIds, options);
     } catch (error) {
-      console.error('Error sending notification to trip members:', error);
+      this.logger.error('Error sending notification to trip members:', error);
       throw error;
     }
   }
@@ -301,14 +364,14 @@ export class EnhancedNotificationService {
   /**
    * Core method to send notifications to specific users
    */
-  private async sendNotificationToUsers(
+  private async sendNotificationToUsersDirectly(
     type: string,
     context: NotificationContext,
     userIds: string[],
     options: SendNotificationOptions = {}
   ) {
     try {
-      const template = this.templateService.getTemplate(type, context);
+      const template = await this.templateService.getTemplate(type, context);
       const results = [];
 
       for (const userId of userIds) {
@@ -328,9 +391,10 @@ export class EnhancedNotificationService {
             continue;
           }
 
-          // Add user info to context
+          // Add user info and options data to context
           const userContext = {
             ...context,
+            ...(options.data || {}),
             userName: user.fullName || user.email,
             userEmail: user.email
           };
@@ -345,7 +409,7 @@ export class EnhancedNotificationService {
 
           results.push(result);
         } catch (error) {
-          console.error(`Error sending notification to user ${userId}:`, error);
+          this.logger.error(`Error sending notification to user ${userId}:`, error);
         }
       }
 
@@ -356,104 +420,7 @@ export class EnhancedNotificationService {
         results
       };
     } catch (error) {
-      console.error('Error sending notifications to users:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Send notification to a single user
-   */
-  private async sendNotificationToUser(
-    userId: string,
-    type: string,
-    context: NotificationContext,
-    template: any,
-    options: SendNotificationOptions = {}
-  ) {
-    try {
-      // Create notification in database
-      const notification = await this.createNotification(userId, {
-        title: template.title,
-        body: template.message,
-        type: this.mapTypeToEnum(type),
-        data: {
-          ...options.data,
-          type,
-          context,
-          url: `/trip/${context.tripId}` || '/'
-        }
-      });
-
-      const result = {
-        userId,
-        notificationId: notification.id,
-        pushSent: false,
-        emailSent: false
-      };
-
-      // Send push notification
-      if (!options.skipPush) {
-        try {
-          const userDevices = await this.devicesService.getUserDevicesWithPushSubscription(userId);
-          
-          for (const device of userDevices) {
-            if (device.pushSubscription) {
-              const pushPayload = {
-                title: template.title,
-                body: template.message,
-                icon: '/icon-192x192.png',
-                badge: '/icon-192x192.png',
-                tag: `notification-${notification.id}`,
-                data: {
-                  ...options.data,
-                  notificationId: notification.id,
-                  type,
-                  url: `/trip/${context.tripId}` || '/'
-                }
-              };
-
-              await this.webPushService.sendNotification(
-                device.pushSubscription,
-                JSON.stringify(pushPayload)
-              );
-              result.pushSent = true;
-            }
-          }
-        } catch (pushError) {
-          console.error(`Failed to send push notification to user ${userId}:`, pushError);
-        }
-      }
-
-      // Send email notification
-      if (!options.skipEmail) {
-        try {
-          const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: { email: true, fullName: true }
-          });
-
-          if (user) {
-            const emailTemplate = this.templateService.getEmailTemplate(
-              template.emailTemplate || 'default',
-              context
-            );
-
-            await this.emailService.sendEmail({
-              to: user.email,
-              subject: template.emailSubject || template.title,
-              html: emailTemplate
-            });
-            result.emailSent = true;
-          }
-        } catch (emailError) {
-          console.error(`Failed to send email notification to user ${userId}:`, emailError);
-        }
-      }
-
-      return result;
-    } catch (error) {
-      console.error(`Error sending notification to user ${userId}:`, error);
+      this.logger.error('Error sending notifications to users:', error);
       throw error;
     }
   }
@@ -470,6 +437,7 @@ export class EnhancedNotificationService {
       'expense_updated': NotificationType.EXPENSE_UPDATED,
       'payment_created': NotificationType.SETTLEMENT_CREATED,
       'system_announcement': NotificationType.SYSTEM_ANNOUNCEMENT,
+      'trip_invitation': NotificationType.INFO,
       'info': NotificationType.INFO,
       'success': NotificationType.SUCCESS,
       'warning': NotificationType.WARNING,
@@ -479,7 +447,7 @@ export class EnhancedNotificationService {
     return typeMap[type] || NotificationType.INFO;
   }
 
-  // ==================== EXISTING NOTIFICATION CRUD METHODS ====================
+  // ==================== NOTIFICATION CRUD METHODS ====================
 
   /**
    * Tạo notification mới cho user
@@ -497,10 +465,10 @@ export class EnhancedNotificationService {
         },
       });
 
-      console.log(`📝 Created notification ${notification.id} for user ${userId}`);
+      this.logger.log(`📝 Created notification ${notification.id} for user ${userId}`);
       return notification as NotificationResponseDto;
     } catch (error) {
-      console.error('Error creating notification:', error);
+      this.logger.error('Error creating notification:', error);
       throw error;
     }
   }
@@ -517,7 +485,7 @@ export class EnhancedNotificationService {
   ): Promise<NotificationListResponseDto> {
     try {
       const skip = (page - 1) * limit;
-      
+
       const where: any = { userId };
       if (status) where.status = status;
       if (type) where.type = type;
@@ -530,8 +498,8 @@ export class EnhancedNotificationService {
           take: limit,
         }),
         this.prisma.notification.count({ where }),
-        this.prisma.notification.count({ 
-          where: { userId, status: NotificationStatus.UNREAD } 
+        this.prisma.notification.count({
+          where: { userId, status: NotificationStatus.UNREAD }
         }),
       ]);
 
@@ -546,7 +514,7 @@ export class EnhancedNotificationService {
         unreadCount,
       };
     } catch (error) {
-      console.error('Error getting user notifications:', error);
+      this.logger.error('Error getting user notifications:', error);
       throw error;
     }
   }
@@ -569,7 +537,7 @@ export class EnhancedNotificationService {
 
       return notification as NotificationResponseDto;
     } catch (error) {
-      console.error('Error getting notification by ID:', error);
+      this.logger.error('Error getting notification by ID:', error);
       throw error;
     }
   }
@@ -584,7 +552,7 @@ export class EnhancedNotificationService {
   ): Promise<NotificationResponseDto> {
     try {
       const updateData: any = { ...updateNotificationDto };
-      
+
       // Nếu mark as read, set readAt
       if (updateNotificationDto.status === NotificationStatus.READ) {
         updateData.readAt = new Date();
@@ -598,10 +566,10 @@ export class EnhancedNotificationService {
         data: updateData,
       });
 
-      console.log(`📝 Updated notification ${notificationId} for user ${userId}`);
+      this.logger.log(`📝 Updated notification ${notificationId} for user ${userId}`);
       return notification as NotificationResponseDto;
     } catch (error) {
-      console.error('Error updating notification:', error);
+      this.logger.error('Error updating notification:', error);
       throw error;
     }
   }
@@ -618,9 +586,9 @@ export class EnhancedNotificationService {
         },
       });
 
-      console.log(`🗑️ Deleted notification ${notificationId} for user ${userId}`);
+      this.logger.log(`🗑️ Deleted notification ${notificationId} for user ${userId}`);
     } catch (error) {
-      console.error('Error deleting notification:', error);
+      this.logger.error('Error deleting notification:', error);
       throw error;
     }
   }
@@ -642,10 +610,10 @@ export class EnhancedNotificationService {
         },
       });
 
-      console.log(`✅ Marked ${result.count} notifications as read for user ${userId}`);
+      this.logger.log(`✅ Marked ${result.count} notifications as read for user ${userId}`);
       return { updated: result.count };
     } catch (error) {
-      console.error('Error marking notifications as read:', error);
+      this.logger.error('Error marking notifications as read:', error);
       throw error;
     }
   }
@@ -666,10 +634,10 @@ export class EnhancedNotificationService {
         },
       });
 
-      console.log(`✅ Marked all ${result.count} notifications as read for user ${userId}`);
+      this.logger.log(`✅ Marked all ${result.count} notifications as read for user ${userId}`);
       return { updated: result.count };
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      this.logger.error('Error marking all notifications as read:', error);
       throw error;
     }
   }
@@ -706,7 +674,7 @@ export class EnhancedNotificationService {
         byType,
       };
     } catch (error) {
-      console.error('Error getting notification stats:', error);
+      this.logger.error('Error getting notification stats:', error);
       throw error;
     }
   }
@@ -723,145 +691,167 @@ export class EnhancedNotificationService {
         },
       });
 
-      console.log(`🗑️ Cleared ${result.count} read notifications for user ${userId}`);
+      this.logger.log(`🗑️ Cleared ${result.count} read notifications for user ${userId}`);
       return { deleted: result.count };
     } catch (error) {
-      console.error('Error clearing read notifications:', error);
+      this.logger.error('Error clearing read notifications:', error);
       throw error;
     }
   }
 
   /**
-   * Send notification to trip members via queue
+   * Clean email HTML by removing Unlayer design metadata and extracting content inside html tag
    */
-  private async sendNotificationToTripMembersViaQueue(
-    type: string,
-    context: NotificationContext,
-    tripId: string,
-    options: SendNotificationOptions = {}
-  ) {
-    try {
-      console.log('🔄 sendNotificationToTripMembersViaQueue called');
-      console.log('Type:', type, 'TripId:', tripId, 'Options:', options);
-      
-      // Get trip members
-      const tripMembers = await this.prisma.tripMember.findMany({
-        where: { tripId },
-        include: { user: true }
-      });
+  private cleanEmailHtml(html: string): string {
+    if (!html) return '';
 
-      console.log('Found trip members:', tripMembers.length);
+    let cleaned = html;
 
-      if (tripMembers.length === 0) {
-        console.log(`No members found for trip ${tripId}`);
-        return { success: false, message: 'No trip members found' };
-      }
+    // 1. Truncate trailing Unlayer metadata
+    // We prioritize removing the specific unlayer design comment block first
+    // regardless of whether there is an </html> tag or not, because sometimes
+    // there might be content after </html> that isn't the unlayer comment.
 
-      // Filter out the creator if needed
-      const membersToNotify = options.userIds 
-        ? tripMembers.filter(member => options.userIds!.includes(member.userId))
-        : tripMembers.filter(member => member.userId !== context.actionBy);
-
-      console.log('Members to notify:', membersToNotify.length);
-
-      if (membersToNotify.length === 0) {
-        console.log(`No members to notify for trip ${tripId}`);
-        return { success: false, message: 'No members to notify' };
-      }
-
-      // Create jobs for each member
-      const jobs = membersToNotify.map(member => ({
-        type,
-        context,
-        userId: member.userId,
-        options: {
-          skipEmail: options.skipEmail,
-          skipPush: options.skipPush,
-          data: options.data
-        }
-      }));
-
-      console.log('Created jobs:', jobs.length);
-      console.log('QueueService available:', !!this.queueService);
-
-      // Add jobs to appropriate queue based on type
-      let result;
-      console.log(`🔍 Routing notification type: "${type}"`);
-      
-      if (type.includes('trip')) {
-        console.log('📤 Using trip-notifications queue');
-        result = await this.queueService.addBulkTripNotificationJobs(jobs);
-      } else if (type.includes('expense')) {
-        console.log('📤 Using expense-notifications queue');
-        result = await this.queueService.addBulkExpenseNotificationJobs(jobs);
-      } else if (type.includes('payment')) {
-        console.log('📤 Using payment-notifications queue');
-        result = await this.queueService.addBulkPaymentNotificationJobs(jobs);
-      } else {
-        console.log('📤 Using system-notifications queue (fallback)');
-        result = await this.queueService.addBulkSystemNotificationJobs(jobs);
-      }
-
-      console.log(`📤 Added ${jobs.length} ${type} notification jobs to queue for trip ${tripId}`);
-      return { 
-        success: true, 
-        message: `${jobs.length} notifications queued successfully`,
-        jobCount: jobs.length
-      };
-    } catch (error) {
-      console.error('Error queuing notifications:', error);
-      throw error;
+    const unlayerIndex = cleaned.indexOf('<!-- unlayer:design');
+    if (unlayerIndex !== -1) {
+      cleaned = cleaned.substring(0, unlayerIndex);
     }
+
+    // THEN check for </html> and truncate after it if it exists
+    // This is safer because unlayer comment is usually at the very end
+    const endHtmlIndex = cleaned.lastIndexOf('</html>');
+    if (endHtmlIndex !== -1) {
+      cleaned = cleaned.substring(0, endHtmlIndex + 7); // +7 length of </html>
+    }
+
+    // 2. Aggressively remove all HTML comments within the content
+    cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
+
+    // 3. Unlayer or JSON stringify sometimes escapes newlines as literal \n characters
+    cleaned = cleaned.replace(/\\r\\n/g, ' ').replace(/\\n/g, ' ').replace(/\\r/g, ' ');
+
+    // 4. Normalize whitespace
+    cleaned = cleaned.replace(/\s+/g, ' ');
+
+    return cleaned.trim();
   }
 
   /**
-   * Send notification to specific users via queue
+   * Send notification to a single user
    */
-  private async sendNotificationToUsersViaQueue(
+  public async sendNotificationToUser(
+    userId: string,
     type: string,
     context: NotificationContext,
-    userIds: string[],
+    template: any,
     options: SendNotificationOptions = {}
   ) {
     try {
-      // Create jobs for each user
-      const jobs = userIds.map(userId => ({
-        type,
-        context,
+      let notification = null;
+
+      // Determine URL based on notification type
+      // Determine URL based on notification type and data
+      let notificationUrl = context.acceptUrl || (options.data && options.data.acceptUrl) || context.url || (options.data && options.data.url);
+
+      if (!notificationUrl) {
+        notificationUrl = context.tripId ? `/trip/${context.tripId}` : '/';
+      }
+
+
+      // Create notification in database ONLY if userId exists
+      if (userId) {
+        notification = await this.createNotification(userId, {
+          title: template.title,
+          body: template.message,
+          type: this.mapTypeToEnum(type),
+          data: {
+            ...options.data,
+            type,
+            context,
+            url: notificationUrl
+          }
+        });
+      }
+
+      const result = {
         userId,
-        options: {
-          skipEmail: options.skipEmail,
-          skipPush: options.skipPush,
-          data: options.data
-        }
-      }));
+        notificationId: notification?.id || null,
+        pushSent: false,
+        emailSent: false
+      };
 
-      // Add jobs to appropriate queue based on type
-      let result;
-      console.log(`🔍 Routing notification type: "${type}"`);
-      
-      if (type.includes('trip')) {
-        console.log('📤 Using trip-notifications queue');
-        result = await this.queueService.addBulkTripNotificationJobs(jobs);
-      } else if (type.includes('expense')) {
-        console.log('📤 Using expense-notifications queue');
-        result = await this.queueService.addBulkExpenseNotificationJobs(jobs);
-      } else if (type.includes('payment')) {
-        console.log('📤 Using payment-notifications queue');
-        result = await this.queueService.addBulkPaymentNotificationJobs(jobs);
-      } else {
-        console.log('📤 Using system-notifications queue (fallback)');
-        result = await this.queueService.addBulkSystemNotificationJobs(jobs);
+      // Send push notification ONLY if userId exists
+      if (!options.skipPush && userId) {
+        try {
+          const userDevices = await this.devicesService.getUserDevicesWithPushSubscription(userId);
+
+          for (const device of userDevices) {
+            if (device.pushSubscription) {
+              const pushPayload = {
+                title: template.title,
+                body: template.message,
+                icon: '/icon-192x192.png',
+                badge: '/icon-192x192.png',
+                tag: `notification-${notification?.id || 'system'}`,
+                data: {
+                  ...options.data,
+                  notificationId: notification?.id || null,
+                  type,
+                  url: notificationUrl
+                }
+              };
+
+              await this.webPushService.sendNotification(
+                device.pushSubscription,
+                JSON.stringify(pushPayload)
+              );
+              result.pushSent = true;
+            }
+          }
+        } catch (pushError) {
+          this.logger.error(`Failed to send push notification to user ${userId}:`, pushError);
+        }
       }
 
-      console.log(`📤 Added ${jobs.length} notification jobs to queue for users: ${userIds.join(', ')}`);
-      return { 
-        success: true, 
-        message: `${jobs.length} notifications queued successfully`,
-        jobCount: jobs.length
-      };
+      // Send email notification
+      if (!options.skipEmail) {
+        try {
+          let recipientEmail = context.userEmail;
+
+          if (userId) {
+            const user = await this.prisma.user.findUnique({
+              where: { id: userId },
+              select: { email: true, fullName: true }
+            });
+            if (user) {
+              recipientEmail = user.email;
+            }
+          }
+
+          if (recipientEmail) {
+            const rawBody = template.emailBody || template.emailTemplate;
+            let emailHtml = rawBody
+              ? this.templateService.replacePlaceholders(rawBody, context)
+              : await this.templateService.getEmailTemplate(type, context);
+
+            // Clean Unlayer metadata from email HTML
+            emailHtml = this.cleanEmailHtml(emailHtml);
+
+            await this.emailService.sendEmail({
+              to: recipientEmail,
+              subject: template.emailSubject || template.title,
+              html: emailHtml
+            });
+            result.emailSent = true;
+          }
+        } catch (emailError) {
+          this.logger.error(`Failed to send email notification:`, emailError);
+        }
+      }
+
+      return result;
     } catch (error) {
-      console.error('Error queuing notifications:', error);
+      this.logger.error(`Error sending notification:`, error);
       throw error;
     }
   }

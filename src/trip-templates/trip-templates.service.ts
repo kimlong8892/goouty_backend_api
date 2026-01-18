@@ -10,7 +10,7 @@ export class TripTemplatesService {
     private readonly tripTemplatesRepository: TripTemplatesRepository,
   ) { }
 
-  async create(createTripTemplateDto: CreateTripTemplateDto, userId: string) {
+  async create(createTripTemplateDto: CreateTripTemplateDto) {
     // Validate day orders are unique
     if (createTripTemplateDto.days) {
       const dayOrders = createTripTemplateDto.days.map(day => day.dayOrder);
@@ -32,17 +32,16 @@ export class TripTemplatesService {
     }
 
     return this.tripTemplatesRepository.create({
-      ...createTripTemplateDto,
-      userId
+      ...createTripTemplateDto
     });
   }
 
-  async findAll(userId: string, options?: { search?: string; page?: number; limit?: number }) {
-    return this.tripTemplatesRepository.findUserTemplates(userId, options);
+  async findAll(options?: { search?: string; page?: number; limit?: number; userId?: string }) {
+    return this.tripTemplatesRepository.findUserTemplates(options);
   }
 
-  async findPublicTemplates(query: GetTripTemplatesQueryDto) {
-    return this.tripTemplatesRepository.findPublicTemplates(query);
+  async findPublicTemplates(query: GetTripTemplatesQueryDto, userId?: string) {
+    return this.tripTemplatesRepository.findPublicTemplates({ ...query, userId } as any);
   }
 
   async findOne(id: string) {
@@ -53,56 +52,37 @@ export class TripTemplatesService {
     return template;
   }
 
-  async findOneForUser(id: string, requestUserId?: string) {
+  async findOneForUser(id: string) {
     const template = await this.tripTemplatesRepository.findOne(id);
     if (!template) {
       throw new NotFoundException(`Trip template with ID ${id} not found`);
     }
 
-    // Allow if template is public
-    if (template.isPublic) {
-      return template;
-    }
-
-    // Allow if user is the owner
-    if (requestUserId && template.userId === requestUserId) {
-      return template;
-    }
-
-    throw new ForbiddenException('You do not have permission to view this trip template');
+    return template;
   }
 
-  async update(id: string, updateTripTemplateDto: UpdateTripTemplateDto, requestUserId: string) {
+  async update(id: string, updateTripTemplateDto: UpdateTripTemplateDto) {
     // Check if template exists
-    const existingTemplate = await this.findOne(id);
-
-    // Check if the requesting user is the template owner
-    if (existingTemplate.userId !== requestUserId) {
-      throw new ForbiddenException('Only template owner can update the template');
-    }
+    await this.findOne(id);
 
     return this.tripTemplatesRepository.update(id, updateTripTemplateDto);
   }
 
-  async remove(id: string, requestUserId: string) {
+  async remove(id: string) {
     // Check if template exists
-    const template = await this.findOne(id);
-
-    // Check if the requesting user is the template owner
-    if (template.userId !== requestUserId) {
-      throw new ForbiddenException('Only template owner can delete the template');
-    }
+    await this.findOne(id);
 
     return this.tripTemplatesRepository.remove(id);
   }
 
-  async duplicateTemplate(templateId: string, userId: string, newTitle?: string) {
-    const originalTemplate = await this.findOneForUser(templateId, userId);
+  async duplicateTemplate(templateId: string, newTitle?: string) {
+    const originalTemplate = await this.findOneForUser(templateId);
 
     const duplicateData: CreateTripTemplateDto = {
       title: newTitle || `${originalTemplate.title} (Copy)`,
       description: originalTemplate.description,
       avatar: originalTemplate.avatar,
+      fee: originalTemplate.fee ? Number(originalTemplate.fee) : 0,
       provinceId: originalTemplate.provinceId,
       isPublic: false, // Duplicated templates are private by default
       days: originalTemplate.days.map(day => ({
@@ -116,16 +96,17 @@ export class TripTemplatesService {
           location: activity.location,
           notes: activity.notes,
           important: activity.important,
+          avatar: activity.avatar,
           activityOrder: activity.activityOrder,
         }))
       }))
     };
 
-    return this.create(duplicateData, userId);
+    return this.create(duplicateData);
   }
 
-  async createTripFromTemplate(templateId: string, userId: string, tripTitle?: string) {
-    const template = await this.findOneForUser(templateId, userId);
+  async createTripFromTemplate(templateId: string, tripTitle?: string) {
+    const template = await this.findOneForUser(templateId);
 
     // This would typically integrate with the trips service
     // For now, we'll return the template data that can be used to create a trip
@@ -145,9 +126,25 @@ export class TripTemplatesService {
             location: activity.location,
             notes: activity.notes,
             important: activity.important,
+            avatar: activity.avatar,
           }))
         }))
       }
     };
+  }
+  async addToWishlist(userId: string, templateId: string) {
+    // Check if template exists
+    await this.findOne(templateId);
+    return this.tripTemplatesRepository.addToWishlist(userId, templateId);
+  }
+
+  async removeFromWishlist(userId: string, templateId: string) {
+    // Check if template exists
+    await this.findOne(templateId);
+    return this.tripTemplatesRepository.removeFromWishlist(userId, templateId);
+  }
+
+  async getWishlist(userId: string, query: { page?: number; limit?: number }) {
+    return this.tripTemplatesRepository.getUserWishlist(userId, query);
   }
 }

@@ -134,7 +134,6 @@ export class TestApp {
                 title: 'Test Trip',
                 provinceId: null,
                 startDate: new Date('2024-01-01'),
-                endDate: new Date('2024-01-07'),
                 description: 'Test trip description',
                 userId: user.id
             }

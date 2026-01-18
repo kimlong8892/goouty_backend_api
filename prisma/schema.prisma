@@ -9,107 +9,117 @@ datasource db {
 }
 
 model User {
-  id                  String               @id @default(uuid()) @db.Uuid
-  email               String               @unique
-  password            String?
-  fullName            String?
-  phoneNumber         String?
-  profilePicture      String?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  bankId              String?
-  bankNumber          String?
-  notificationsEnabled Boolean             @default(true)
-  paidExpenses        Expense[]            @relation("ExpensePayer")
-  expenseParticipants ExpenseParticipant[]
-  creditorSettlements PaymentSettlement[]  @relation("PaymentCreditor")
-  debtorSettlements   PaymentSettlement[]  @relation("PaymentDebtor")
-  transactionsFrom    PaymentTransaction[] @relation("TransactionsFromUser")
-  transactionsTo      PaymentTransaction[] @relation("TransactionsToUser")
-  socialAccounts      SocialAccount[]
-  trips               Trip[]
-  tripMembers         TripMember[]
-  devices             Device[]
-  notifications       Notification[]
-  tripTemplates       TripTemplate[]
-  resetPasswordToken  String?
-  resetPasswordExpires DateTime?
+  id                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                String               @unique
+  password             String?
+  fullName             String?
+  phoneNumber          String?
+  profilePicture       String?
+  createdAt            DateTime @db.Timestamptz(3)             @default(now())
+  updatedAt            DateTime @db.Timestamptz(3)             @updatedAt
+  bankId               String?
+  bankNumber           String?
+  notificationsEnabled Boolean              @default(true)
+  resetPasswordExpires DateTime? @db.Timestamptz(3)
+  resetPasswordToken   String?
+  devices              Device[]
+  paidExpenses         Expense[]            @relation("ExpensePayer")
+  expenseParticipants  ExpenseParticipant[]
+  notifications        Notification[]
+  creditorSettlements  PaymentSettlement[]  @relation("PaymentCreditor")
+  debtorSettlements    PaymentSettlement[]  @relation("PaymentDebtor")
+  transactionsFrom     PaymentTransaction[] @relation("TransactionsFromUser")
+  transactionsTo       PaymentTransaction[] @relation("TransactionsToUser")
+  socialAccounts       SocialAccount[]
+  trips                Trip[]
+  tripMembers          TripMember[]
+  wishlistTemplates    TripTemplate[] @relation("UserWishlist")
+  ratings              Rating[]
 }
 
 model Trip {
-  id                 String              @id @default(uuid()) @db.Uuid
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title              String
-  provinceId         String?             @db.Uuid
-  startDate          DateTime?
-  endDate            DateTime?
+  startDate          DateTime? @db.Timestamptz(3)
+  endDate            DateTime? @db.Timestamptz(3)
   description        String?
-  avatar             String?             // S3 URL for trip avatar
   shareToken         String?             @unique
   isPublic           Boolean             @default(false)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime?           @updatedAt
-  userId             String              @db.Uuid   // 👈 thêm @db.Uuid
+  createdAt          DateTime @db.Timestamptz(3)            @default(now())
+  updatedAt          DateTime? @db.Timestamptz(3)           @updatedAt
+  userId             String              @db.Uuid
+  provinceId         String?             @db.Uuid
+  templateId         String?             @db.Uuid
+  avatar             String?
   days               Day[]
   expenses           Expense[]
   paymentSettlements PaymentSettlement[]
+  province           Province?           @relation(fields: [provinceId], references: [id])
+  template           TripTemplate?       @relation(fields: [templateId], references: [id])
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   members            TripMember[]
-  province           Province?          @relation(fields: [provinceId], references: [id], onDelete: SetNull)
 
   @@index([provinceId])
+  @@index([templateId])
 }
 
 model Day {
-  id          String     @id @default(uuid()) @db.Uuid
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title       String
   description String?
-  date        DateTime
-  startTime   DateTime?
-  tripId      String  @db.Uuid
+  startTime   DateTime? @db.Timestamptz(3)
+  tripId      String     @db.Uuid
   activities  Activity[]
   trip        Trip       @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @db.Timestamptz(3)   @default(now())
+  updatedAt   DateTime @db.Timestamptz(3)   @updatedAt @default(now())
+  sortOrder   Int        @default(0)
 }
 
 model TripMember {
-  id        String   @id @default(uuid()) @db.Uuid
-  joinedAt  DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId    String  @db.Uuid
-  tripId    String  @db.Uuid
-  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Invitation flow
-  status       String   @default("accepted") // 'pending' | 'accepted'
-  inviteToken  String?  @unique
-  invitedAt    DateTime?
-  invitedById  String?  @db.Uuid
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  joinedAt     DateTime @db.Timestamptz(3)  @default(now())
+  createdAt    DateTime @db.Timestamptz(3)  @default(now())
+  updatedAt    DateTime @db.Timestamptz(3)  @updatedAt
+  userId       String?   @db.Uuid
+  tripId       String    @db.Uuid
+  inviteToken  String?   @unique
+  invitedAt    DateTime? @db.Timestamptz(3)
+  invitedById  String?   @db.Uuid
+  status       String    @default("accepted")
+  invitedEmail String?
+  trip         Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user         User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, tripId])
+  @@index([invitedEmail, tripId])
 }
 
 model Activity {
-  id          String    @id @default(uuid()) @db.Uuid
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title       String
-  startTime   DateTime?
+  startTime   DateTime? @db.Timestamptz(3)
   durationMin Int?
   location    String?
   notes       String?
   important   Boolean   @default(false)
-  dayId       String  @db.Uuid
+  sortOrder   Int       @default(0)
+  dayId       String    @db.Uuid
   day         Day       @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  avatar      String?
+  createdAt   DateTime @db.Timestamptz(3)  @default(now())
+  updatedAt   DateTime @db.Timestamptz(3)  @updatedAt @default(now())
 }
 
 model Expense {
-  id           String               @id @default(uuid()) @db.Uuid
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title        String
   amount       Decimal              @db.Decimal(20, 2)
-  date         DateTime
+  date         DateTime @db.Timestamptz(3)
   description  String?
   isLocked     Boolean              @default(false)
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
+  createdAt    DateTime @db.Timestamptz(3)             @default(now())
+  updatedAt    DateTime @db.Timestamptz(3)             @updatedAt
   tripId       String               @db.Uuid
   payerId      String               @db.Uuid
   payer        User                 @relation("ExpensePayer", fields: [payerId], references: [id], onDelete: Cascade)
@@ -118,26 +128,27 @@ model Expense {
 }
 
 model ExpenseParticipant {
-  id        String   @id @default(uuid()) @db.Uuid
-  createdAt DateTime @default(now())
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt DateTime @db.Timestamptz(3) @default(now())
   expenseId String   @db.Uuid
   userId    String   @db.Uuid
   amount    Decimal  @db.Decimal(20, 2)
   expense   Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @db.Timestamptz(3) @updatedAt @default(now())
 
   @@unique([expenseId, userId])
 }
 
 model SocialAccount {
-  id         String   @id @default(uuid()) @db.Uuid
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   provider   String
   providerId String
   email      String
   name       String?
   picture    String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @db.Timestamptz(3) @default(now())
+  updatedAt  DateTime @db.Timestamptz(3) @updatedAt
   userId     String   @db.Uuid
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -146,13 +157,13 @@ model SocialAccount {
 }
 
 model PaymentSettlement {
-  id           String               @id @default(uuid()) @db.Uuid
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   amount       Decimal              @db.Decimal(10, 2)
   status       String               @default("pending")
   description  String?
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
-  settledAt    DateTime?
+  createdAt    DateTime @db.Timestamptz(3)             @default(now())
+  updatedAt    DateTime @db.Timestamptz(3)             @updatedAt
+  settledAt    DateTime? @db.Timestamptz(3)
   tripId       String               @db.Uuid
   debtorId     String               @db.Uuid
   creditorId   String               @db.Uuid
@@ -165,33 +176,34 @@ model PaymentSettlement {
 }
 
 model PaymentTransaction {
-  id           String            @id @default(uuid()) @db.Uuid
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   amount       Decimal           @db.Decimal(10, 2)
   status       String            @default("success")
   method       String?
   note         String?
-  createdAt    DateTime          @default(now())
+  createdAt    DateTime @db.Timestamptz(3)          @default(now())
   settlementId String            @db.Uuid
   fromUserId   String            @db.Uuid
   toUserId     String            @db.Uuid
   fromUser     User              @relation("TransactionsFromUser", fields: [fromUserId], references: [id], onDelete: Cascade)
   settlement   PaymentSettlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
   toUser       User              @relation("TransactionsToUser", fields: [toUserId], references: [id], onDelete: Cascade)
+  updatedAt    DateTime @db.Timestamptz(3)          @updatedAt @default(now())
 
   @@index([settlementId])
 }
 
 model Device {
-  id               String   @id @default(uuid()) @db.Uuid
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId           String   @db.Uuid
-  deviceId         String   // Unique identifier for the device (browser fingerprint, etc.)
-  deviceName       String?  // User-friendly name for the device
-  userAgent        String?  // Browser user agent
-  pushSubscription String?  // Push subscription JSON string
+  deviceId         String
+  deviceName       String?
+  userAgent        String?
+  pushSubscription String?
   isActive         Boolean  @default(true)
-  lastSeen         DateTime @default(now())
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  lastSeen         DateTime @db.Timestamptz(3) @default(now())
+  createdAt        DateTime @db.Timestamptz(3) @default(now())
+  updatedAt        DateTime @db.Timestamptz(3) @updatedAt
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, deviceId])
@@ -199,23 +211,121 @@ model Device {
 }
 
 model Notification {
-  id          String            @id @default(uuid()) @db.Uuid
-  userId      String            @db.Uuid
-  title       String
-  body        String
-  type        NotificationType  @default(INFO)
-  status      NotificationStatus @default(UNREAD)
-  data        Json?             // Additional data (URL, metadata, etc.)
-  sentAt      DateTime?         // When notification was sent
-  readAt      DateTime?         // When user read the notification
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String             @db.Uuid
+  title     String
+  body      String
+  type      NotificationType   @default(INFO)
+  status    NotificationStatus @default(UNREAD)
+  data      Json?
+  sentAt    DateTime? @db.Timestamptz(3)
+  readAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime @db.Timestamptz(3)           @default(now())
+  updatedAt DateTime @db.Timestamptz(3)           @updatedAt
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, status])
   @@index([userId, createdAt])
   @@index([type])
+}
+
+model Province {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  code          Int            @unique
+  divisionType  String
+  codename      String         @unique
+  phoneCode     Int
+  createdAt     DateTime @db.Timestamptz(3)       @default(now())
+  updatedAt     DateTime @db.Timestamptz(3)       @updatedAt
+  trips         Trip[]
+  tripTemplates TripTemplate[]
+
+  @@index([code])
+  @@index([divisionType])
+}
+
+model TripTemplate {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String
+  description String?
+  provinceId  String?           @db.Uuid
+  isPublic    Boolean           @default(false)
+  createdAt   DateTime @db.Timestamptz(3)          @default(now())
+  updatedAt   DateTime @db.Timestamptz(3)          @updatedAt
+  avatar      String?
+  fee         Decimal           @default(0) @db.Decimal(20, 2)
+  province    Province?         @relation(fields: [provinceId], references: [id])
+  days        TripTemplateDay[]
+  trips       Trip[]
+  favoritedBy User[]            @relation("UserWishlist")
+
+  @@index([provinceId])
+}
+
+model TripTemplateDay {
+  id             String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title          String
+  description    String?
+  dayOrder       Int
+  tripTemplateId String                 @db.Uuid
+  activities     TripTemplateActivity[]
+  tripTemplate   TripTemplate           @relation(fields: [tripTemplateId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @db.Timestamptz(3)               @default(now())
+  updatedAt      DateTime @db.Timestamptz(3)               @updatedAt @default(now())
+
+  @@index([tripTemplateId])
+}
+
+model TripTemplateActivity {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title         String
+  startTime     String?
+  durationMin   Int?
+  location      String?
+  notes         String?
+  important     Boolean         @default(false)
+  activityOrder Int
+  dayId         String          @db.Uuid
+  day           TripTemplateDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  avatar        String?
+  createdAt     DateTime @db.Timestamptz(3)        @default(now())
+  updatedAt     DateTime @db.Timestamptz(3)        @updatedAt @default(now())
+
+  @@index([dayId])
+}
+
+model Template {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code         String   @unique
+  title        String?
+  message      String?
+  emailSubject String?
+  emailBody    String?
+  icon         String?
+  color        String?
+  variables    Json?
+  createdAt    DateTime @db.Timestamptz(3) @default(now())
+  updatedAt    DateTime @db.Timestamptz(3) @updatedAt
+}
+
+model Otp {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email     String
+  type      OtpType
+  code      String
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @db.Timestamptz(3) @default(now())
+  updatedAt DateTime @db.Timestamptz(3) @updatedAt @default(now())
+
+  @@index([email, type])
+}
+
+enum OtpType {
+  FORGOT_PASSWORD
+  VERIFY_EMAIL
+  LOGIN
 }
 
 enum NotificationType {
@@ -230,6 +340,7 @@ enum NotificationType {
   EXPENSE_UPDATED
   SETTLEMENT_CREATED
   SYSTEM_ANNOUNCEMENT
+  PAYMENT_COMPLETED
 }
 
 enum NotificationStatus {
@@ -238,64 +349,34 @@ enum NotificationStatus {
   ARCHIVED
 }
 
-model Province {
-  id           String   @id @default(uuid()) @db.Uuid
-  name         String
-  code         Int      @unique
-  divisionType String   // "tỉnh" or "thành phố"
-  codename     String   @unique
-  phoneCode    Int
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  trips        Trip[]
-  tripTemplates TripTemplate[]
+model Rating {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stars     Int
+  content   String
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
-  @@index([code])
-  @@index([divisionType])
-}
-
-model TripTemplate {
-  id          String              @id @default(uuid()) @db.Uuid
-  title       String
-  description String?
-  avatar      String?             // S3 URL for trip template avatar
-  provinceId  String?             @db.Uuid
-  isPublic    Boolean             @default(false)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  userId      String              @db.Uuid
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  province    Province?           @relation(fields: [provinceId], references: [id], onDelete: SetNull)
-  days        TripTemplateDay[]
-
-  @@index([provinceId])
   @@index([userId])
 }
 
-model TripTemplateDay {
-  id          String                    @id @default(uuid()) @db.Uuid
-  title       String
-  description String?
-  dayOrder    Int                       // Order of the day in the template
-  tripTemplateId String                 @db.Uuid
-  tripTemplate   TripTemplate           @relation(fields: [tripTemplateId], references: [id], onDelete: Cascade)
-  activities     TripTemplateActivity[]
-
-  @@index([tripTemplateId])
+model SystemConfig {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 }
 
-model TripTemplateActivity {
-  id          String              @id @default(uuid()) @db.Uuid
-  title       String
-  startTime   String?              // Store as string (e.g., "09:00")
-  durationMin Int?
-  location    String?
-  notes       String?
-  important   Boolean              @default(false)
-  activityOrder Int                // Order of the activity in the day
-  dayId       String              @db.Uuid
-  day         TripTemplateDay      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+model UserAiUsage {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid
+  date      String   // Format: YYYY-MM-DD
+  count     Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
-  @@index([dayId])
+  @@unique([userId, date])
+  @@index([userId, date])
 }
-

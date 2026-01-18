@@ -39,7 +39,7 @@ export class PaymentSettlementResponseDto {
   createdAt: Date;
   updatedAt: Date;
   settledAt?: Date;
-  
+
   tripId: string;
   debtorId: string;
   debtor: {
@@ -53,4 +53,8 @@ export class PaymentSettlementResponseDto {
     email: string;
     fullName: string;
   };
+
+  // Calculated fields
+  totalPaid?: number;  // Total amount paid through successful transactions
+  remaining?: number;  // Amount still to be paid (amount - totalPaid)
 }

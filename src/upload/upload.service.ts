@@ -1,6 +1,17 @@
 import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3 } from 'aws-sdk';
+import {
+  S3Client,
+  HeadBucketCommand,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  HeadObjectCommand,
+  GetObjectCommand,
+  CopyObjectCommand
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { Upload } from '@aws-sdk/lib-storage';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
@@ -28,7 +39,7 @@ export interface DeleteResult {
 
 @Injectable()
 export class UploadService {
-  private s3: S3;
+  private s3Control: S3Client;
   private bucketName: string;
 
   constructor(private configService: ConfigService) {
@@ -49,14 +60,14 @@ export class UploadService {
       - ForcePathStyle: ${forcePathStyle}
       - Env: ${env}`);
 
-    this.s3 = new S3({
-      accessKeyId: this.configService.get('S3_ACCESS_KEY_ID'),
-      secretAccessKey: this.configService.get('S3_SECRET_ACCESS_KEY'),
+    this.s3Control = new S3Client({
       region: region,
       endpoint: endpoint,
-      s3ForcePathStyle: forcePathStyle,
-      signatureVersion: 'v4',
-      sslEnabled: endpoint.startsWith('https://'),
+      forcePathStyle: forcePathStyle,
+      credentials: {
+        accessKeyId: this.configService.get('S3_ACCESS_KEY_ID'),
+        secretAccessKey: this.configService.get('S3_SECRET_ACCESS_KEY'),
+      },
     });
 
     // Verify bucket exists
@@ -65,7 +76,7 @@ export class UploadService {
 
   private async checkBucketExists() {
     try {
-      await this.s3.headBucket({ Bucket: this.bucketName }).promise();
+      await this.s3Control.send(new HeadBucketCommand({ Bucket: this.bucketName }));
       console.log(`[UploadService] Bucket "${this.bucketName}" is ready.`);
     } catch (error) {
       console.error(`[UploadService] WARNING: Bucket "${this.bucketName}" NOT FOUND or ACCESS DENIED. 
@@ -96,30 +107,39 @@ export class UploadService {
       // Upload to S3
       console.log(`[UploadService] Uploading to Bucket: ${this.bucketName}, Key: ${key}`);
 
-      const uploadParams: S3.PutObjectRequest = {
+      const uploadParams: any = {
         Bucket: this.bucketName,
         Key: key,
         Body: file.buffer,
         ContentType: options.contentType || file.mimetype,
       };
 
-      // Only add ACL if provided, some providers don't like public-read by default
+      // Only add ACL if specified (some S3-compatible services don't support ACL)
       if (options.acl) {
         uploadParams.ACL = options.acl;
       }
 
-      const uploadResult = await this.s3
-        .upload(uploadParams)
-        .promise();
+      const upload = new Upload({
+        client: this.s3Control,
+        params: uploadParams,
+      });
+
+      await upload.done();
 
       // Generate final public URL
-      let finalUrl = uploadResult.Location;
+      // S3Client doesn't directly return Location, we construct it
+      let finalUrl = `${this.configService.get('S3_ENDPOINT')}/${this.bucketName}/${key}`;
       const publicUrl = this.configService.get('S3_PUBLIC_URL');
 
       if (publicUrl) {
         // Nếu có public URL cấu hình riêng, thay thế endpoint/location gốc
         const baseUrl = publicUrl.endsWith('/') ? publicUrl.slice(0, -1) : publicUrl;
         finalUrl = `${baseUrl}/${this.bucketName}/${key}`;
+      } else {
+        // Construct standard URL if no public URL is provided
+        let endpoint = this.configService.get('S3_ENDPOINT', '');
+        if (endpoint.endsWith('/')) endpoint = endpoint.slice(0, -1);
+        finalUrl = `${endpoint}/${this.bucketName}/${key}`;
       }
 
       console.log(`[UploadService] Upload success. Public URL: ${finalUrl}`);
@@ -198,12 +218,10 @@ export class UploadService {
    */
   async deleteFile(key: string): Promise<DeleteResult> {
     try {
-      await this.s3
-        .deleteObject({
-          Bucket: this.bucketName,
-          Key: key,
-        })
-        .promise();
+      await this.s3Control.send(new DeleteObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      }));
 
       return {
         success: true,
@@ -228,18 +246,16 @@ export class UploadService {
     try {
       const deleteObjects = keys.map(key => ({ Key: key }));
 
-      const result = await this.s3
-        .deleteObjects({
-          Bucket: this.bucketName,
-          Delete: {
-            Objects: deleteObjects,
-          },
-        })
-        .promise();
+      const result = await this.s3Control.send(new DeleteObjectsCommand({
+        Bucket: this.bucketName,
+        Delete: {
+          Objects: deleteObjects,
+        },
+      }));
 
       return result.Deleted?.map(deleted => ({
         success: true,
-        key: deleted.Key,
+        key: deleted.Key!,
       })) || [];
     } catch (error) {
       console.error('Bulk delete error:', error);
@@ -263,12 +279,10 @@ export class UploadService {
    */
   async getFileMetadata(key: string): Promise<any> {
     try {
-      const result = await this.s3
-        .headObject({
-          Bucket: this.bucketName,
-          Key: key,
-        })
-        .promise();
+      const result = await this.s3Control.send(new HeadObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      }));
 
       return {
         key,
@@ -290,12 +304,10 @@ export class UploadService {
    */
   async fileExists(key: string): Promise<boolean> {
     try {
-      await this.s3
-        .headObject({
-          Bucket: this.bucketName,
-          Key: key,
-        })
-        .promise();
+      await this.s3Control.send(new HeadObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      }));
       return true;
     } catch (error) {
       return false;
@@ -310,11 +322,11 @@ export class UploadService {
    */
   async getPresignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
     try {
-      return this.s3.getSignedUrl('getObject', {
+      const command = new GetObjectCommand({
         Bucket: this.bucketName,
         Key: key,
-        Expires: expiresIn,
       });
+      return await getSignedUrl(this.s3Control, command, { expiresIn });
     } catch (error) {
       console.error('Presigned URL error:', error);
       throw new BadRequestException('Failed to generate presigned URL');
@@ -359,9 +371,55 @@ export class UploadService {
   }
 
   /**
+   * Copy a file within S3
+   * @param sourceKey - The source S3 key
+   * @param targetKey - The target S3 key
+   * @returns Copy result
+   */
+  async copyFile(sourceKey: string, targetKey: string): Promise<UploadResult> {
+    try {
+      console.log(`[UploadService] Copying from ${sourceKey} to ${targetKey}`);
+
+      await this.s3Control.send(new CopyObjectCommand({
+        Bucket: this.bucketName,
+        CopySource: `${this.bucketName}/${sourceKey}`,
+        Key: targetKey,
+        ACL: 'public-read', // Ensure copied file is public as well
+      }));
+
+      // Construct public URL
+      let finalUrl = `${this.configService.get('S3_ENDPOINT')}/${this.bucketName}/${targetKey}`;
+      const publicUrl = this.configService.get('S3_PUBLIC_URL');
+
+      if (publicUrl) {
+        const baseUrl = publicUrl.endsWith('/') ? publicUrl.slice(0, -1) : publicUrl;
+        finalUrl = `${baseUrl}/${this.bucketName}/${targetKey}`;
+      } else {
+        let endpoint = this.configService.get('S3_ENDPOINT', '');
+        if (endpoint.endsWith('/')) endpoint = endpoint.slice(0, -1);
+        finalUrl = `${endpoint}/${this.bucketName}/${targetKey}`;
+      }
+
+      // Get metadata for the copied object to return complete result
+      const metadata = await this.getFileMetadata(targetKey);
+
+      return {
+        url: finalUrl,
+        key: targetKey,
+        bucket: this.bucketName,
+        size: metadata.size,
+        contentType: metadata.contentType,
+      };
+    } catch (error) {
+      console.error('Copy error:', error);
+      throw new BadRequestException(`Failed to copy file: ${error.message}`);
+    }
+  }
+
+  /**
    * Get S3 instance (for advanced usage)
    */
-  getS3Instance(): S3 {
-    return this.s3;
+  getS3Instance(): S3Client {
+    return this.s3Control;
   }
 }

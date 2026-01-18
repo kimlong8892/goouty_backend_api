@@ -1,9 +1,9 @@
-import {Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Query, Put, UseInterceptors, UploadedFile} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Query, Put, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TripsService } from './trips.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
-import {ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiConsumes, ApiBody} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { TripResponseDto } from './dto/trip-response.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { TripMemberResponseDto } from './dto/trip-member-response.dto';
@@ -11,9 +11,10 @@ import { GenerateShareLinkDto } from './dto/generate-share-link.dto';
 import { JoinTripDto } from './dto/join-trip.dto';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { UploadTripAvatarDto, UploadTripAvatarResponseDto } from './dto/upload-trip-avatar.dto';
-import {DaysService} from "../days/days.service";
-import {DayResponseDto} from "../days/dto/day-response.dto";
-import {JwtAuthGuard} from "../auth/guards/jwt-auth.guard";
+import { DaysService } from "../days/days.service";
+import { DayResponseDto } from "../days/dto/day-response.dto";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('trips')
 @Controller('trips')
@@ -23,7 +24,18 @@ export class TripsController {
   constructor(
     private readonly tripsService: TripsService,
     private readonly daysService: DaysService
-  ) {}
+  ) { }
+
+  // Public endpoint - no auth required
+  @Public()
+  @Get('invites/:token')
+  @ApiOperation({ summary: 'Get invitation details by token (public)' })
+  @ApiResponse({ status: 200, description: 'Invitation details' })
+  @ApiResponse({ status: 404, description: 'Invalid or expired invite' })
+  @ApiParam({ name: 'token', description: 'Invitation token' })
+  getInvitationByToken(@Param('token') token: string) {
+    return this.tripsService.getInvitationByToken(token);
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create a new trip' })
@@ -50,11 +62,13 @@ export class TripsController {
   findAll(
     @Request() req: any,
     @Query('search') search?: string,
+    @Query('provinceId') provinceId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string
   ) {
     return this.tripsService.findAll(req.user.userId, {
       search,
+      provinceId,
       page: page ? parseInt(page) : 1,
       limit: limit ? parseInt(limit) : 10
     });
@@ -139,6 +153,22 @@ export class TripsController {
     return this.tripsService.removeMemberFromTrip(id, memberId, req.user.userId);
   }
 
+  @Post(':id/members/:memberId/resend')
+  @ApiOperation({ summary: 'Resend invitation to a pending member' })
+  @ApiResponse({ status: 200, description: 'Invitation resent successfully', type: TripMemberResponseDto })
+  @ApiResponse({ status: 404, description: 'Trip or member not found' })
+  @ApiResponse({ status: 403, description: 'Only trip owner can resend invitations' })
+  @ApiResponse({ status: 400, description: 'Can only resend invitations for pending members' })
+  @ApiParam({ name: 'id', description: 'Trip ID' })
+  @ApiParam({ name: 'memberId', description: 'Member ID' })
+  resendInvitation(
+    @Param('id') id: string,
+    @Param('memberId') memberId: string,
+    @Request() req: any,
+  ) {
+    return this.tripsService.resendInvitation(id, memberId, req.user.userId);
+  }
+
   // ===== SHARE LINK ENDPOINTS =====
 
   @Post(':id/share')
@@ -166,6 +196,19 @@ export class TripsController {
   @ApiResponse({ status: 404, description: 'Invalid or expired invite' })
   acceptInvite(@Body() dto: AcceptInviteDto, @Request() req: any) {
     return this.tripsService.acceptInvite(dto, req.user.userId);
+  }
+
+  @Post(':id/members/:memberId/accept')
+  @ApiOperation({ summary: 'Accept trip invitation by member ID' })
+  @ApiResponse({ status: 201, description: 'Invitation accepted', type: TripMemberResponseDto })
+  @ApiResponse({ status: 404, description: 'Member not found' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  acceptInviteByMemberId(
+    @Param('id') tripId: string,
+    @Param('memberId') memberId: string,
+    @Request() req: any,
+  ) {
+    return this.tripsService.acceptInviteByMemberId(tripId, memberId, req.user.userId);
   }
 
   @Delete(':id/share')

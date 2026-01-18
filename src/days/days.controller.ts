@@ -2,23 +2,31 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { DaysService } from './days.service';
 import { CreateDayDto } from './dto/create-day.dto';
 import { UpdateDayDto } from './dto/update-day.dto';
+import { ReorderDaysDto } from './dto/reorder-days.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { DayResponseDto } from './dto/day-response.dto';
-import {ActivitiesService} from "../activities/activities.service";
+import { ActivitiesService } from "../activities/activities.service";
 
 @ApiTags('days')
 @Controller('days')
 export class DaysController {
   constructor(
-      private readonly daysService: DaysService,
-      private readonly activitiesService: ActivitiesService
-  ) {}
+    private readonly daysService: DaysService,
+    private readonly activitiesService: ActivitiesService
+  ) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new day' })
   @ApiResponse({ status: 201, description: 'Day created successfully', type: DayResponseDto })
   create(@Body() createDayDto: CreateDayDto) {
     return this.daysService.create(createDayDto);
+  }
+
+  @Patch('reorder')
+  @ApiOperation({ summary: 'Reorder days' })
+  @ApiResponse({ status: 200, description: 'Days reordered successfully' })
+  reorder(@Body() reorderDaysDto: ReorderDaysDto) {
+    return this.daysService.reorder(reorderDaysDto);
   }
 
   @Get(':id')

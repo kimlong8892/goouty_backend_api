@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -8,7 +8,9 @@ import { AuthController } from './auth.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
-import { QueueModule } from '../queue/queue.module';
+import { NotificationModule } from '../notifications/notification.module';
+import { I18nHelperModule } from '../common/i18n/i18n-helper.module';
+import { TripsModule } from '../trips/trips.module';
 
 @Module({
   imports: [
@@ -18,11 +20,13 @@ import { QueueModule } from '../queue/queue.module';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '1d' },
+        signOptions: { expiresIn: '365d' },
       }),
       inject: [ConfigService],
     }),
-    QueueModule,
+    NotificationModule,
+    I18nHelperModule,
+    forwardRef(() => TripsModule),
   ],
   controllers: [AuthController],
   providers: [AuthService, SocialLoginService, JwtStrategy, LocalStrategy],

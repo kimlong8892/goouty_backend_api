@@ -12,12 +12,12 @@ export class CreateTripDto {
   @IsUUID()
   provinceId?: string;
 
-  @ApiPropertyOptional({ description: 'Trip start date', example: '2025-09-20T00:00:00.000Z' })
+  @ApiPropertyOptional({ description: 'Trip start date (ngày đi)', example: '2025-09-20T00:00:00.000Z' })
   @IsOptional()
   @IsDateString()
   startDate?: string;
 
-  @ApiPropertyOptional({ description: 'Trip end date', example: '2025-09-27T00:00:00.000Z' })
+  @ApiPropertyOptional({ description: 'Trip end date (ngày về)', example: '2025-09-25T00:00:00.000Z' })
   @IsOptional()
   @IsDateString()
   endDate?: string;
@@ -26,4 +26,9 @@ export class CreateTripDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional({ description: 'Template ID if trip is created from a template' })
+  @IsOptional()
+  @IsUUID()
+  templateId?: string;
 }

@@ -1,11 +1,11 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class TripMemberResponseDto {
   @ApiProperty({ description: 'Member ID' })
   id: number;
 
-  @ApiProperty({ description: 'User ID' })
-  userId: number;
+  @ApiPropertyOptional({ description: 'User ID (nullable for pending invitations)' })
+  userId: number | null;
 
   @ApiProperty({ description: 'Trip ID' })
   tripId: number;
@@ -16,11 +16,14 @@ export class TripMemberResponseDto {
   @ApiProperty({ description: 'When user joined the trip' })
   joinedAt: Date;
 
+  @ApiPropertyOptional({ description: 'Invited email (for pending invitations when user not exists)' })
+  invitedEmail?: string;
+
   @ApiProperty({ description: 'User information' })
   user: {
-    id: number;
+    id: number | null;
     email: string;
-    fullName?: string;
-    profilePicture?: string;
+    fullName?: string | null;
+    profilePicture?: string | null;
   };
 }

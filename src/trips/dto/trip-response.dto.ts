@@ -37,9 +37,6 @@ export class TripResponseDto {
   startDate?: Date;
 
   @ApiPropertyOptional()
-  endDate?: Date;
-
-  @ApiPropertyOptional()
   description?: string;
 
   @ApiProperty()
@@ -50,6 +47,9 @@ export class TripResponseDto {
 
   @ApiPropertyOptional()
   isPublic?: boolean;
+
+  @ApiPropertyOptional({ description: 'Template ID if trip was created from a template' })
+  templateId?: string;
 
   @ApiPropertyOptional()
   createdAt?: Date;

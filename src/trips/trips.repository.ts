@@ -4,7 +4,7 @@ import { Trip, Prisma } from '@prisma/client';
 
 @Injectable()
 export class TripsRepository {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(data: Prisma.TripCreateInput): Promise<Trip> {
     return this.prisma.trip.create({ data });
@@ -17,10 +17,10 @@ export class TripsRepository {
     orderBy?: Prisma.TripOrderByWithRelationInput;
   }): Promise<Trip[]> {
     const { skip, take, where, orderBy } = params;
-    return this.prisma.trip.findMany({ 
-      skip, 
-      take, 
-      where, 
+    return this.prisma.trip.findMany({
+      skip,
+      take,
+      where,
       orderBy,
       include: {
         user: {
@@ -42,14 +42,14 @@ export class TripsRepository {
           }
         },
         days: {
+          orderBy: { sortOrder: 'asc' },
           include: {
-            activities: true
+            activities: {
+              orderBy: { sortOrder: 'asc' }
+            }
           }
         },
         members: {
-          where: {
-            status: 'accepted' // Chỉ include những members đã accepted
-          },
           select: {
             id: true,
             userId: true,
@@ -71,7 +71,7 @@ export class TripsRepository {
   }
 
   async findOne(id: string): Promise<Trip | null> {
-    return this.prisma.trip.findUnique({ 
+    return this.prisma.trip.findUnique({
       where: { id },
       include: {
         user: {
@@ -93,8 +93,23 @@ export class TripsRepository {
           }
         },
         days: {
+          orderBy: { sortOrder: 'asc' },
           include: {
-            activities: true
+            activities: {
+              orderBy: { sortOrder: 'asc' }
+            }
+          }
+        },
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                fullName: true,
+                profilePicture: true
+              }
+            }
           }
         }
       }

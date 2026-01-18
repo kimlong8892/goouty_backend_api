@@ -6,17 +6,17 @@ import { GetTripTemplatesQueryDto } from './dto/get-trip-templates-query.dto';
 
 @Injectable()
 export class TripTemplatesRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
-  async create(data: CreateTripTemplateDto & { userId: string }) {
+  async create(data: CreateTripTemplateDto) {
     return this.prisma.tripTemplate.create({
       data: {
         title: data.title,
         description: data.description,
         avatar: data.avatar,
-        provinceId: data.provinceId,
+        fee: data.fee || 0,
+        province: data.provinceId ? { connect: { id: data.provinceId } } : undefined,
         isPublic: data.isPublic || false,
-        userId: data.userId,
         days: data.days ? {
           create: data.days.map(day => ({
             title: day.title,
@@ -29,6 +29,7 @@ export class TripTemplatesRepository {
                 durationMin: activity.durationMin,
                 location: activity.location,
                 notes: activity.notes,
+                avatar: activity.avatar,
                 important: activity.important || false,
                 activityOrder: activity.activityOrder,
               }))
@@ -37,14 +38,6 @@ export class TripTemplatesRepository {
         } : undefined
       },
       include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
-            profilePicture: true
-          }
-        },
         province: {
           select: {
             id: true,
@@ -67,32 +60,28 @@ export class TripTemplatesRepository {
     });
   }
 
-  async findAll(options?: { 
-    userId?: string; 
-    isPublic?: boolean; 
-    search?: string; 
+  async findAll(options?: {
+    isPublic?: boolean;
+    search?: string;
     provinceId?: string;
-    page?: number; 
-    limit?: number 
+    page?: number;
+    limit?: number;
+    userId?: string;
   }) {
-    const { userId, isPublic, search, provinceId, page = 1, limit = 10 } = options || {};
+    const { isPublic, search, provinceId, page = 1, limit = 10, userId } = options || {};
     const skip = (page - 1) * limit;
 
     // Build where conditions
     const where: any = {};
-    
-    if (userId) {
-      where.userId = userId;
-    }
-    
+
     if (isPublic !== undefined) {
       where.isPublic = isPublic;
     }
-    
+
     if (provinceId) {
       where.provinceId = provinceId;
     }
-    
+
     if (search) {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' as const } },
@@ -105,14 +94,6 @@ export class TripTemplatesRepository {
       this.prisma.tripTemplate.findMany({
         where,
         include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              fullName: true,
-              profilePicture: true
-            }
-          },
           province: {
             select: {
               id: true,
@@ -130,7 +111,11 @@ export class TripTemplatesRepository {
               }
             },
             orderBy: { dayOrder: 'asc' }
-          }
+          },
+          favoritedBy: userId ? {
+            where: { id: userId },
+            select: { id: true }
+          } : false
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -139,8 +124,16 @@ export class TripTemplatesRepository {
       this.prisma.tripTemplate.count({ where })
     ]);
 
+    const templatesWithWishlist = templates.map(template => {
+      const { favoritedBy, ...rest } = template as any;
+      return {
+        ...rest,
+        isWishlisted: userId ? (favoritedBy && favoritedBy.length > 0) : false
+      };
+    });
+
     return {
-      templates,
+      templates: templatesWithWishlist,
       pagination: {
         page,
         limit,
@@ -151,17 +144,9 @@ export class TripTemplatesRepository {
   }
 
   async findOne(id: string) {
-    return this.prisma.tripTemplate.findUnique({
+    const template = await this.prisma.tripTemplate.findUnique({
       where: { id },
       include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
-            profilePicture: true
-          }
-        },
         province: {
           select: {
             id: true,
@@ -182,6 +167,37 @@ export class TripTemplatesRepository {
         }
       }
     });
+
+    if (!template) {
+      return null;
+    }
+
+    const [next, previous] = await Promise.all([
+      // Next: older than current (createdAt < current) - List is DESC
+      this.prisma.tripTemplate.findFirst({
+        where: {
+          createdAt: { lt: template.createdAt },
+          isPublic: template.isPublic
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, title: true, avatar: true, createdAt: true }
+      }),
+      // Previous: newer than current (createdAt > current)
+      this.prisma.tripTemplate.findFirst({
+        where: {
+          createdAt: { gt: template.createdAt },
+          isPublic: template.isPublic
+        },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, title: true, avatar: true, createdAt: true }
+      })
+    ]);
+
+    return {
+      ...template,
+      next,
+      previous
+    };
   }
 
   async update(id: string, data: UpdateTripTemplateDto) {
@@ -190,20 +206,13 @@ export class TripTemplatesRepository {
       data: {
         title: data.title,
         description: data.description,
-        provinceId: data.provinceId,
+        province: data.provinceId ? { connect: { id: data.provinceId } } : undefined,
         isPublic: data.isPublic,
+        fee: data.fee,
         // Note: Updating days and activities would require more complex logic
         // For now, we'll handle this separately
       },
       include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
-            profilePicture: true
-          }
-        },
         province: {
           select: {
             id: true,
@@ -232,20 +241,124 @@ export class TripTemplatesRepository {
     });
   }
 
-  async findPublicTemplates(query: GetTripTemplatesQueryDto) {
+  async findPublicTemplates(query: GetTripTemplatesQueryDto & { userId?: string }) {
     return this.findAll({
       isPublic: true,
       search: query.search,
       provinceId: query.provinceId,
       page: query.page,
-      limit: query.limit
+      limit: query.limit,
+      userId: query.userId
     });
   }
 
-  async findUserTemplates(userId: string, options?: { search?: string; page?: number; limit?: number }) {
+  async findUserTemplates(options?: { search?: string; page?: number; limit?: number; userId?: string }) {
     return this.findAll({
-      userId,
       ...options
     });
+  }
+
+  async addToWishlist(userId: string, templateId: string) {
+    const isFavorited = await this.prisma.tripTemplate.findFirst({
+      where: {
+        id: templateId,
+        favoritedBy: { some: { id: userId } }
+      }
+    });
+
+    if (isFavorited) {
+      return isFavorited;
+    }
+
+    return this.prisma.tripTemplate.update({
+      where: { id: templateId },
+      data: {
+        favoritedBy: {
+          connect: { id: userId }
+        }
+      }
+    });
+  }
+
+  async removeFromWishlist(userId: string, templateId: string) {
+    const isFavorited = await this.prisma.tripTemplate.findFirst({
+      where: {
+        id: templateId,
+        favoritedBy: { some: { id: userId } }
+      }
+    });
+
+    if (!isFavorited) {
+      return this.prisma.tripTemplate.findUnique({ where: { id: templateId } });
+    }
+
+    return this.prisma.tripTemplate.update({
+      where: { id: templateId },
+      data: {
+        favoritedBy: {
+          disconnect: { id: userId }
+        }
+      }
+    });
+  }
+
+  async getUserWishlist(userId: string, options?: { page?: number; limit?: number }) {
+    const { page = 1, limit = 10 } = options || {};
+    const skip = (page - 1) * limit;
+
+    const [templates, total] = await Promise.all([
+      this.prisma.tripTemplate.findMany({
+        where: {
+          favoritedBy: {
+            some: { id: userId }
+          }
+        },
+        include: {
+          province: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              divisionType: true,
+              codename: true,
+              phoneCode: true
+            }
+          },
+          days: {
+            include: {
+              activities: {
+                orderBy: { activityOrder: 'asc' }
+              }
+            },
+            orderBy: { dayOrder: 'asc' }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit
+      }),
+      this.prisma.tripTemplate.count({
+        where: {
+          favoritedBy: {
+            some: { id: userId }
+          }
+        }
+      })
+    ]);
+
+    const templatesWithWishlist = templates.map(template => ({
+      ...template,
+      isWishlisted: true
+    }));
+
+    return {
+      templates: templatesWithWishlist,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   }
 }

@@ -1,0 +1,143 @@
+name: Deploy Backend Prod Cloud Run
+
+on:
+  push:
+    branches: [ "prod" ]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: asia-southeast1
+  REPO_NAME: goouty-repo
+  SERVICE_NAME: goouty-backend-prod
+  WORKDIR: .
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: PROD
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Setup cho Docker Build
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker to use gcloud as a credential helper
+        run: |
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+
+
+      - name: Build and Push Docker Image
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          # Build Docker image cho production
+          docker build -f Dockerfile.prod -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} .
+          # Push image lên Artifact Registry
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+
+      - name: Prepare Environment Variables
+        id: env-vars
+        env:
+          ALL_SECRETS: ${{ toJson(secrets) }}
+          ALL_VARS: ${{ toJson(vars) }}
+        run: |
+          echo "Generating environment variables..."
+          
+          # 1. Load public variables from env.json
+          if [ -f .github/env-config/prod/env.json ]; then
+            # Extract PORT for Cloud Run flag (avoiding env var conflict)
+            PORT_VAL=$(jq -r '.PORT // "3000"' .github/env-config/prod/env.json)
+            echo "PORT=$PORT_VAL" >> $GITHUB_OUTPUT
+            
+            # Extract other vars, excluding PORT
+            jq -r 'to_entries | .[] | select(.key != "PORT") | "\(.key)=\(.value)"' .github/env-config/prod/env.json > .env.temp
+          else
+            echo "PORT=3000" >> $GITHUB_OUTPUT
+          fi
+          
+          # 2. Load secrets based on secrets.json mapping
+          if [ -f .github/env-config/prod/secrets.json ]; then
+            jq -n --argjson secrets "$ALL_SECRETS" --argjson vars "$ALL_VARS" --argjson mapping "$(cat .github/env-config/prod/secrets.json)" '
+              $mapping | to_entries | .[] | 
+              .key as $k | .value as $v |
+              ($secrets[$v] // $vars[$v]) as $val |
+              if $val != null then "\($k)=\($val)" else empty end
+            ' -r >> .env.temp
+          fi
+
+          # 3. Overrides for Cloud Run
+          
+
+
+          echo "Debug: Keys successfully resolved and written to .env.temp:"
+          if [ -f .env.temp ]; then
+            cut -d= -f1 .env.temp
+            
+            # Validation: Ensure critical secrets were resolved
+            if ! grep -q "JWT_SECRET=" .env.temp; then
+              echo "::error::JWT_SECRET was NOT found in resolved variables! You MUST add 'JWT_SECRET' to your GitHub Repository Secrets."
+              exit 1
+            fi
+             if ! grep -q "S3_ACCESS_KEY_ID=" .env.temp; then
+              echo "::error::S3_ACCESS_KEY_ID was NOT found! Check GitHub Secrets."
+              exit 1
+            fi
+          else
+            echo "No .env.temp file found!"
+            exit 1
+          fi
+
+          echo "NODE_ENV=production" >> .env.temp
+
+          # 4. Save to GITHUB_OUTPUT for next step
+          {
+            echo "ENV_VARS<<EOF"
+            cat .env.temp
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Run Database Migration
+        run: |
+          echo "Running database migration..."
+          docker run --rm \
+            --env-file .env.temp \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            /bin/sh -c "npx ts-node prisma/clear-locks.ts && npx prisma migrate deploy && npm run seed:conditional"
+
+      - name: Create Cloud Tasks Queues
+        run: |
+          echo "Checking and creating Cloud Task queues..."
+          # Extract queue names starting with QUEUE_ from env.json
+          QUEUES=$(jq -r 'to_entries | .[] | select(.key | startswith("QUEUE_")) | .value' .github/env-config/prod/env.json)
+          for q in $QUEUES; do
+            if [ ! -z "$q" ] && [ "$q" != "null" ]; then
+              if ! gcloud tasks queues describe $q --location ${{ env.REGION }} > /dev/null 2>&1; then
+                echo "Creating queue: $q"
+                gcloud tasks queues create $q --location ${{ env.REGION }}
+              else
+                echo "Queue already exists: $q"
+              fi
+            fi
+          done
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.REGION }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          env_vars: ${{ steps.env-vars.outputs.ENV_VARS }}
+          flags: '--port ${{ steps.env-vars.outputs.PORT }} --allow-unauthenticated'
