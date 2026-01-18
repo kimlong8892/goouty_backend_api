@@ -287,10 +287,19 @@ export class TripsService {
 
     // Send notification about trip update
     try {
+      // Fetch full trip details to get province name and formatted dates
+      const fullTrip = await this.prisma.trip.findUnique({
+        where: { id },
+        include: { province: true }
+      });
+
       await this.notificationService.sendTripUpdatedNotification(
         id,
         updatedTrip.title,
-        requestUserId
+        requestUserId,
+        fullTrip?.province?.name || '',
+        fullTrip?.startDate ? fullTrip.startDate.toLocaleDateString('vi-VN') : '',
+        fullTrip?.endDate ? fullTrip.endDate.toLocaleDateString('vi-VN') : ''
       );
     } catch (error) {
       console.error('Failed to send trip update notification:', error);

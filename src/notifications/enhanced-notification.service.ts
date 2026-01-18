@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { DevicesService } from '../devices/devices.service';
 import { WebPushService } from './web-push.service';
 import { EmailService } from '../email/email.service';
+import { ConfigService } from '@nestjs/config';
 import { NotificationTemplateService, NotificationContext } from './notification-template.service';
 import {
   CreateNotificationDto,
@@ -33,6 +34,7 @@ export class EnhancedNotificationService {
     private webPushService: WebPushService,
     private emailService: EmailService,
     private templateService: NotificationTemplateService,
+    private configService: ConfigService,
   ) { }
 
   /**
@@ -78,13 +80,21 @@ export class EnhancedNotificationService {
     tripId: string,
     tripTitle: string,
     updatedBy: string,
+    location?: string,
+    startDate?: string,
+    endDate?: string,
     options: SendNotificationOptions = {}
   ) {
+    const frontendUrl = this.configService.get<string>('APP_URL');
     const context: NotificationContext = {
       tripId,
       tripTitle,
       actionBy: updatedBy,
-      updatedAt: new Date().toLocaleString('vi-VN')
+      updatedAt: new Date().toLocaleString('vi-VN'),
+      detailUrl: `${frontendUrl}/trip/${tripId}`,
+      location: location || '',
+      startDate: startDate || '',
+      endDate: endDate || ''
     };
 
     return this.sendNotificationToTripMembersDirectly(
@@ -130,13 +140,15 @@ export class EnhancedNotificationService {
     addedBy: string,
     options: SendNotificationOptions = {}
   ) {
+    const frontendUrl = this.configService.get<string>('APP_URL');
     const context: NotificationContext = {
       tripId,
       tripTitle,
       expenseTitle,
       expenseAmount,
       actionBy: addedBy,
-      createdAt: new Date().toLocaleString('vi-VN')
+      createdAt: new Date().toLocaleString('vi-VN'),
+      detailUrl: `${frontendUrl}/trip/${tripId}`
     };
 
     return this.sendNotificationToTripMembersDirectly(
@@ -157,12 +169,14 @@ export class EnhancedNotificationService {
     updatedBy: string,
     options: SendNotificationOptions = {}
   ) {
+    const frontendUrl = this.configService.get<string>('APP_URL');
     const context: NotificationContext = {
       tripId,
       tripTitle,
       expenseTitle,
       actionBy: updatedBy,
-      updatedAt: new Date().toLocaleString('vi-VN')
+      updatedAt: new Date().toLocaleString('vi-VN'),
+      detailUrl: `${frontendUrl}/trip/${tripId}`
     };
 
     return this.sendNotificationToTripMembersDirectly(
@@ -185,6 +199,7 @@ export class EnhancedNotificationService {
     paidBy: string,
     options: SendNotificationOptions = {}
   ) {
+    const frontendUrl = this.configService.get<string>('APP_URL');
     const context: NotificationContext = {
       tripId,
       tripTitle,
@@ -192,7 +207,8 @@ export class EnhancedNotificationService {
       creditorName,
       paymentAmount,
       actionBy: paidBy,
-      createdAt: new Date().toLocaleString('vi-VN')
+      createdAt: new Date().toLocaleString('vi-VN'),
+      detailUrl: `${frontendUrl}/trip/${tripId}`
     };
 
     return this.sendNotificationToTripMembersDirectly(
