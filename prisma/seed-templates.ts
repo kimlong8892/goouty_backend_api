@@ -116,7 +116,7 @@ async function main() {
       `,
       icon: '📝',
       color: '#f59e0b',
-      variables: ['tripTitle', 'actionBy', 'updatedAt', 'detailUrl', 'location', 'startDate', 'endDate']
+      variables: ['tripTitle', 'actionBy', 'updatedAt', 'detailUrl', 'location', 'startDate', 'endDate', 'inviterName']
     },
     {
       code: 'trip_deleted',

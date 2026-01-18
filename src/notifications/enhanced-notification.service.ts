@@ -94,7 +94,8 @@ export class EnhancedNotificationService {
       detailUrl: `${frontendUrl}/trip/${tripId}`,
       location: location || '',
       startDate: startDate || '',
-      endDate: endDate || ''
+      endDate: endDate || '',
+      inviterName: updatedBy // Mapping updatedBy to inviterName for template consistency
     };
 
     return this.sendNotificationToTripMembersDirectly(
