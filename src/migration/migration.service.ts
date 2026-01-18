@@ -32,8 +32,8 @@ export class MigrationService {
                 trips: 0,
             };
 
-            // 1. Clone Templates
-            this.logger.log('Cloning Templates...');
+            // 1. Clone Templates (Notification Templates)
+            this.logger.log('Cloning Notification Templates...');
             const templates = await sourceClient.template.findMany();
             for (const t of templates) {
                 await this.prisma.template.upsert({
@@ -44,7 +44,58 @@ export class MigrationService {
                 results.templates++;
             }
 
-            // 2. Clone Trips (Complex part)
+            // 2. Clone Provinces (Retain IDs for FK consistency)
+            this.logger.log('Cloning Provinces...');
+            const provinces = await sourceClient.province.findMany();
+            for (const p of provinces) {
+                await this.prisma.province.upsert({
+                    where: { id: p.id },
+                    update: p,
+                    create: p,
+                });
+            }
+
+            // 3. Clone Trip Templates (with Days and Activities)
+            this.logger.log('Cloning Trip Templates...');
+            const tripTemplates = await sourceClient.tripTemplate.findMany({
+                include: {
+                    days: {
+                        include: {
+                            activities: true
+                        }
+                    }
+                }
+            });
+
+            for (const tt of tripTemplates) {
+                const { days, favoritedBy, trips, ...ttData } = tt as any;
+                // We ignore favoritedBy and trips relations for now to avoid circular dependency issues or complexity
+
+                const existingTT = await this.prisma.tripTemplate.findUnique({ where: { id: tt.id } });
+                if (!existingTT) {
+                    await this.prisma.tripTemplate.create({
+                        data: {
+                            ...ttData,
+                            days: {
+                                create: days.map(day => {
+                                    const { tripTemplateId, activities, ...dayData } = day;
+                                    return {
+                                        ...dayData,
+                                        activities: {
+                                            create: activities.map(act => {
+                                                const { tripTemplateDayId, ...actData } = act;
+                                                return actData;
+                                            })
+                                        }
+                                    };
+                                })
+                            }
+                        }
+                    });
+                }
+            }
+
+            // 4. Clone Trips (Complex part)
             this.logger.log('Fetching Trips from source...');
             const sourceTrips = await sourceClient.trip.findMany({
                 include: {
@@ -57,7 +108,7 @@ export class MigrationService {
                 },
             });
 
-            // 3. Clone Users involved and map IDs (Source ID -> Target ID)
+            // 5. Clone Users involved and map IDs (Source ID -> Target ID)
             this.logger.log('Cloning relevant Users and mapping IDs...');
             const userIds = new Set<string>();
             const userIdMap = new Map<string, string>(); // Source ID -> Target ID
