@@ -30,7 +30,7 @@ import { I18nModule, AcceptLanguageResolver, QueryResolver, HeaderResolver } fro
 import * as path from 'path';
 import { I18nHelperModule } from './common/i18n/i18n-helper.module';
 import { RequestLoggerMiddleware } from './common/middleware/request-logger.middleware';
-import { TimezoneInterceptor } from './common/interceptors/timezone.interceptor';
+
 
 @Module({
   imports: [
@@ -169,10 +169,6 @@ import { TimezoneInterceptor } from './common/interceptors/timezone.interceptor'
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: TimezoneInterceptor,
     },
   ],
 })
