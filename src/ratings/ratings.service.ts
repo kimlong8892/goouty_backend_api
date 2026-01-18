@@ -60,4 +60,26 @@ export class RatingsService {
             },
         };
     }
+
+    async checkUserRating(userId: string) {
+        const rating = await this.prisma.rating.findFirst({
+            where: {
+                userId: userId,
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        profilePicture: true,
+                    },
+                },
+            },
+        });
+
+        return {
+            hasRated: !!rating,
+            rating: rating || null,
+        };
+    }
 }
