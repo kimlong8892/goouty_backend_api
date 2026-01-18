@@ -706,23 +706,33 @@ export class ExpensesService {
 
     // Send notification about payment transaction
     if ((dto.status ?? 'success') === 'success') {
+      console.log('🔔 [PAYMENT_COMPLETED] Starting notification process...');
+      console.log('🔔 [PAYMENT_COMPLETED] Settlement ID:', settlementId);
+      console.log('🔔 [PAYMENT_COMPLETED] Trip ID:', settlement.tripId);
+      console.log('🔔 [PAYMENT_COMPLETED] Payment Amount:', dto.amount);
+      console.log('🔔 [PAYMENT_COMPLETED] Paid By User ID:', userId);
+
       try {
         const trip = await this.prisma.trip.findUnique({
           where: { id: settlement.tripId },
           select: { title: true }
         });
+        console.log('🔔 [PAYMENT_COMPLETED] Trip found:', trip?.title);
 
         const debtor = await this.prisma.user.findUnique({
           where: { id: settlement.debtorId },
-          select: { fullName: true }
+          select: { fullName: true, email: true }
         });
+        console.log('🔔 [PAYMENT_COMPLETED] Debtor:', debtor?.fullName || debtor?.email);
 
         const creditor = await this.prisma.user.findUnique({
           where: { id: settlement.creditorId },
-          select: { fullName: true }
+          select: { fullName: true, email: true }
         });
+        console.log('🔔 [PAYMENT_COMPLETED] Creditor:', creditor?.fullName || creditor?.email);
 
         if (trip && debtor && creditor) {
+          console.log('🔔 [PAYMENT_COMPLETED] Calling sendPaymentCompletedNotification...');
           await this.notificationService.sendPaymentCompletedNotification(
             settlement.tripId,
             trip.title,
@@ -731,10 +741,17 @@ export class ExpensesService {
             dto.amount,
             userId
           );
+          console.log('✅ [PAYMENT_COMPLETED] Notification sent successfully!');
+        } else {
+          console.warn('⚠️ [PAYMENT_COMPLETED] Missing data - Trip:', !!trip, 'Debtor:', !!debtor, 'Creditor:', !!creditor);
         }
       } catch (error) {
-        console.error('Failed to send payment notification:', error);
+        console.error('❌ [PAYMENT_COMPLETED] Failed to send payment notification:', error);
+        console.error('❌ [PAYMENT_COMPLETED] Error details:', error.message);
+        console.error('❌ [PAYMENT_COMPLETED] Error stack:', error.stack);
       }
+    } else {
+      console.log('⏭️ [PAYMENT_COMPLETED] Skipping notification - Transaction status is not success:', dto.status);
     }
 
     return this.mapTransactionToResponseDto(transaction);
