@@ -1,9 +1,9 @@
-import {Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Query, Put, UseInterceptors, UploadedFile} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Query, Put, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TripsService } from './trips.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
-import {ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiConsumes, ApiBody} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { TripResponseDto } from './dto/trip-response.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { TripMemberResponseDto } from './dto/trip-member-response.dto';
@@ -11,9 +11,9 @@ import { GenerateShareLinkDto } from './dto/generate-share-link.dto';
 import { JoinTripDto } from './dto/join-trip.dto';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { UploadTripAvatarDto, UploadTripAvatarResponseDto } from './dto/upload-trip-avatar.dto';
-import {DaysService} from "../days/days.service";
-import {DayResponseDto} from "../days/dto/day-response.dto";
-import {JwtAuthGuard} from "../auth/guards/jwt-auth.guard";
+import { DaysService } from "../days/days.service";
+import { DayResponseDto } from "../days/dto/day-response.dto";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('trips')
@@ -24,7 +24,7 @@ export class TripsController {
   constructor(
     private readonly tripsService: TripsService,
     private readonly daysService: DaysService
-  ) {}
+  ) { }
 
   // Public endpoint - no auth required
   @Public()
@@ -62,11 +62,13 @@ export class TripsController {
   findAll(
     @Request() req: any,
     @Query('search') search?: string,
+    @Query('provinceId') provinceId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string
   ) {
     return this.tripsService.findAll(req.user.userId, {
       search,
+      provinceId,
       page: page ? parseInt(page) : 1,
       limit: limit ? parseInt(limit) : 10
     });

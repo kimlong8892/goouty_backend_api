@@ -111,33 +111,11 @@ jobs:
 
       - name: Run Database Migration
         run: |
-          echo "Preparing environment variables for Cloud Run Job..."
-          # Convert .env.temp to comma-separated string for gcloud
-          ENV_FLAGS=$(paste -sd "," .env.temp)
-
-          JOB_NAME="migrate-${{ env.SERVICE_NAME }}"
-          
-          echo "Deploying/Updating Cloud Run Job: $JOB_NAME"
-          
-          # Check if job exists
-          if gcloud run jobs describe $JOB_NAME --region ${{ env.REGION }} > /dev/null 2>&1; then
-             gcloud run jobs update $JOB_NAME \
-              --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
-              --set-env-vars "$ENV_FLAGS" \
-              --command "/bin/sh" \
-              --args "-c","npx prisma migrate deploy && npm run seed:conditional" \
-              --region ${{ env.REGION }}
-          else
-             gcloud run jobs create $JOB_NAME \
-              --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
-              --set-env-vars "$ENV_FLAGS" \
-              --command "/bin/sh" \
-              --args "-c","npx prisma migrate deploy && npm run seed:conditional" \
-              --region ${{ env.REGION }}
-          fi
-
-          echo "Executing migration..."
-          gcloud run jobs execute $JOB_NAME --region ${{ env.REGION }} --wait
+          echo "Running database migration..."
+          docker run --rm \
+            --env-file .env.temp \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            /bin/sh -c "npx ts-node prisma/clear-locks.ts && npx prisma migrate deploy && npm run seed:conditional"
 
       - name: Create Cloud Tasks Queues
         run: |

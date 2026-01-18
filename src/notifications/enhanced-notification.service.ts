@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { DevicesService } from '../devices/devices.service';
 import { WebPushService } from './web-push.service';
 import { EmailService } from '../email/email.service';
+import { ConfigService } from '@nestjs/config';
 import { NotificationTemplateService, NotificationContext } from './notification-template.service';
 import {
   CreateNotificationDto,
@@ -33,6 +34,7 @@ export class EnhancedNotificationService {
     private webPushService: WebPushService,
     private emailService: EmailService,
     private templateService: NotificationTemplateService,
+    private configService: ConfigService,
   ) { }
 
   /**
@@ -78,13 +80,22 @@ export class EnhancedNotificationService {
     tripId: string,
     tripTitle: string,
     updatedBy: string,
+    location?: string,
+    startDate?: string,
+    endDate?: string,
     options: SendNotificationOptions = {}
   ) {
+    const frontendUrl = this.configService.get<string>('APP_URL');
     const context: NotificationContext = {
       tripId,
       tripTitle,
       actionBy: updatedBy,
-      updatedAt: new Date().toLocaleString('vi-VN')
+      updatedAt: new Date().toLocaleString('vi-VN'),
+      detailUrl: `${frontendUrl}/trip/${tripId}`,
+      location: location || '',
+      startDate: startDate || '',
+      endDate: endDate || '',
+      inviterName: updatedBy // Mapping updatedBy to inviterName for template consistency
     };
 
     return this.sendNotificationToTripMembersDirectly(
@@ -130,13 +141,15 @@ export class EnhancedNotificationService {
     addedBy: string,
     options: SendNotificationOptions = {}
   ) {
+    const frontendUrl = this.configService.get<string>('APP_URL');
     const context: NotificationContext = {
       tripId,
       tripTitle,
       expenseTitle,
       expenseAmount,
       actionBy: addedBy,
-      createdAt: new Date().toLocaleString('vi-VN')
+      createdAt: new Date().toLocaleString('vi-VN'),
+      detailUrl: `${frontendUrl}/trip/${tripId}`
     };
 
     return this.sendNotificationToTripMembersDirectly(
@@ -154,15 +167,19 @@ export class EnhancedNotificationService {
     tripId: string,
     tripTitle: string,
     expenseTitle: string,
+    expenseAmount: number,
     updatedBy: string,
     options: SendNotificationOptions = {}
   ) {
+    const frontendUrl = this.configService.get<string>('APP_URL');
     const context: NotificationContext = {
       tripId,
       tripTitle,
       expenseTitle,
+      expenseAmount,
       actionBy: updatedBy,
-      updatedAt: new Date().toLocaleString('vi-VN')
+      updatedAt: new Date().toLocaleString('vi-VN'),
+      detailUrl: `${frontendUrl}/trip/${tripId}`
     };
 
     return this.sendNotificationToTripMembersDirectly(
@@ -185,6 +202,7 @@ export class EnhancedNotificationService {
     paidBy: string,
     options: SendNotificationOptions = {}
   ) {
+    const frontendUrl = this.configService.get<string>('APP_URL');
     const context: NotificationContext = {
       tripId,
       tripTitle,
@@ -192,7 +210,8 @@ export class EnhancedNotificationService {
       creditorName,
       paymentAmount,
       actionBy: paidBy,
-      createdAt: new Date().toLocaleString('vi-VN')
+      createdAt: new Date().toLocaleString('vi-VN'),
+      detailUrl: `${frontendUrl}/trip/${tripId}`
     };
 
     return this.sendNotificationToTripMembersDirectly(
@@ -211,6 +230,9 @@ export class EnhancedNotificationService {
     tripTitle: string,
     invitedUserId: string,
     inviterName?: string,
+    location?: string,
+    startDate?: string,
+    endDate?: string,
     options: SendNotificationOptions = {}
   ) {
     const context: NotificationContext = {
@@ -219,6 +241,9 @@ export class EnhancedNotificationService {
       inviterName,
       actionBy: invitedUserId,
       createdAt: new Date().toLocaleString('vi-VN'),
+      location: location || '',
+      startDate: startDate || '',
+      endDate: endDate || '',
       ...(options.data || {})
     };
 
@@ -412,6 +437,7 @@ export class EnhancedNotificationService {
       'expense_updated': NotificationType.EXPENSE_UPDATED,
       'payment_created': NotificationType.SETTLEMENT_CREATED,
       'system_announcement': NotificationType.SYSTEM_ANNOUNCEMENT,
+      'trip_invitation': NotificationType.INFO,
       'info': NotificationType.INFO,
       'success': NotificationType.SUCCESS,
       'warning': NotificationType.WARNING,
@@ -674,6 +700,43 @@ export class EnhancedNotificationService {
   }
 
   /**
+   * Clean email HTML by removing Unlayer design metadata and extracting content inside html tag
+   */
+  private cleanEmailHtml(html: string): string {
+    if (!html) return '';
+
+    let cleaned = html;
+
+    // 1. Truncate trailing Unlayer metadata
+    // We prioritize removing the specific unlayer design comment block first
+    // regardless of whether there is an </html> tag or not, because sometimes
+    // there might be content after </html> that isn't the unlayer comment.
+
+    const unlayerIndex = cleaned.indexOf('<!-- unlayer:design');
+    if (unlayerIndex !== -1) {
+      cleaned = cleaned.substring(0, unlayerIndex);
+    }
+
+    // THEN check for </html> and truncate after it if it exists
+    // This is safer because unlayer comment is usually at the very end
+    const endHtmlIndex = cleaned.lastIndexOf('</html>');
+    if (endHtmlIndex !== -1) {
+      cleaned = cleaned.substring(0, endHtmlIndex + 7); // +7 length of </html>
+    }
+
+    // 2. Aggressively remove all HTML comments within the content
+    cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
+
+    // 3. Unlayer or JSON stringify sometimes escapes newlines as literal \n characters
+    cleaned = cleaned.replace(/\\r\\n/g, ' ').replace(/\\n/g, ' ').replace(/\\r/g, ' ');
+
+    // 4. Normalize whitespace
+    cleaned = cleaned.replace(/\s+/g, ' ');
+
+    return cleaned.trim();
+  }
+
+  /**
    * Send notification to a single user
    */
   public async sendNotificationToUser(
@@ -686,6 +749,15 @@ export class EnhancedNotificationService {
     try {
       let notification = null;
 
+      // Determine URL based on notification type
+      // Determine URL based on notification type and data
+      let notificationUrl = context.acceptUrl || (options.data && options.data.acceptUrl) || context.url || (options.data && options.data.url);
+
+      if (!notificationUrl) {
+        notificationUrl = context.tripId ? `/trip/${context.tripId}` : '/';
+      }
+
+
       // Create notification in database ONLY if userId exists
       if (userId) {
         notification = await this.createNotification(userId, {
@@ -696,7 +768,7 @@ export class EnhancedNotificationService {
             ...options.data,
             type,
             context,
-            url: `/trip/${context.tripId}` || '/'
+            url: notificationUrl
           }
         });
       }
@@ -725,7 +797,7 @@ export class EnhancedNotificationService {
                   ...options.data,
                   notificationId: notification?.id || null,
                   type,
-                  url: `/trip/${context.tripId}` || '/'
+                  url: notificationUrl
                 }
               };
 
@@ -758,9 +830,12 @@ export class EnhancedNotificationService {
 
           if (recipientEmail) {
             const rawBody = template.emailBody || template.emailTemplate;
-            const emailHtml = rawBody
+            let emailHtml = rawBody
               ? this.templateService.replacePlaceholders(rawBody, context)
               : await this.templateService.getEmailTemplate(type, context);
+
+            // Clean Unlayer metadata from email HTML
+            emailHtml = this.cleanEmailHtml(emailHtml);
 
             await this.emailService.sendEmail({
               to: recipientEmail,

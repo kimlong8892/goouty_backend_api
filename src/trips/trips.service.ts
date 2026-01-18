@@ -39,6 +39,18 @@ export class TripsService {
       }
     }
 
+    let endDate: Date | undefined;
+    if (createTripDto.endDate) {
+      endDate = new Date(createTripDto.endDate);
+      if (isNaN(endDate.getTime())) {
+        throw new BadRequestException('Invalid end date format');
+      }
+
+      if (startDate && endDate < startDate) {
+        throw new BadRequestException('End date must be after start date');
+      }
+    }
+
     // Create trip and add creator as admin member in a transaction
     const trip = await this.prisma.$transaction(async (prisma) => {
       // Create the trip
@@ -46,6 +58,7 @@ export class TripsService {
         title: createTripDto.title,
         description: createTripDto.description,
         startDate: startDate,
+        endDate: endDate,
         user: { connect: { id: userId } }
       };
 
@@ -91,14 +104,20 @@ export class TripsService {
     return trip;
   }
 
-  async findAll(userId: string, options?: { search?: string; page?: number; limit?: number }) {
-    const { search, page = 1, limit = 10 } = options || {};
+  async findAll(userId: string, options?: { search?: string; provinceId?: string; page?: number; limit?: number }) {
+    const { search, provinceId, page = 1, limit = 10 } = options || {};
     const skip = (page - 1) * limit;
 
     // Build search conditions
-    const searchConditions = search ? {
-      title: { contains: search, mode: 'insensitive' as const }
-    } : {};
+    const searchConditions: any = {};
+
+    if (search) {
+      searchConditions.title = { contains: search, mode: 'insensitive' };
+    }
+
+    if (provinceId) {
+      searchConditions.provinceId = provinceId;
+    }
 
     // Lấy tất cả chuyến đi mà người dùng là chủ sở hữu (không áp dụng pagination ở đây)
     const ownedTrips = await this.tripsRepository.findAll({
@@ -141,6 +160,7 @@ export class TripsService {
           }
         },
         days: {
+          orderBy: { sortOrder: 'asc' },
           include: {
             activities: {
               orderBy: { sortOrder: 'asc' }
@@ -247,14 +267,39 @@ export class TripsService {
       data.startDate = null;
     }
 
+    if (updateTripDto.endDate) {
+      const endDate = new Date(updateTripDto.endDate);
+      if (isNaN(endDate.getTime())) {
+        throw new BadRequestException('Invalid end date format');
+      }
+      data.endDate = endDate;
+
+      // Check date validity if both dates are present (either in update or existing)
+      const startDate = data.startDate || existingTrip.startDate;
+      if (startDate && endDate < startDate) {
+        throw new BadRequestException('End date must be after start date');
+      }
+    } else if (updateTripDto.endDate === null) {
+      data.endDate = null;
+    }
+
     const updatedTrip = await this.tripsRepository.update(id, data);
 
     // Send notification about trip update
     try {
+      // Fetch full trip details to get province name and formatted dates
+      const fullTrip = await this.prisma.trip.findUnique({
+        where: { id },
+        include: { province: true }
+      });
+
       await this.notificationService.sendTripUpdatedNotification(
         id,
         updatedTrip.title,
-        requestUserId
+        requestUserId,
+        fullTrip?.province?.name || '',
+        fullTrip?.startDate ? fullTrip.startDate.toLocaleDateString('vi-VN') : '',
+        fullTrip?.endDate ? fullTrip.endDate.toLocaleDateString('vi-VN') : ''
       );
     } catch (error) {
       console.error('Failed to send trip update notification:', error);
@@ -436,6 +481,9 @@ export class TripsService {
         trip.title,
         userToAdd?.id || '',
         inviter?.fullName || inviter?.email || 'Một người bạn',
+        (trip as any).province?.name || 'Chưa xác định',
+        trip.startDate ? trip.startDate.toLocaleDateString('vi-VN') : '',
+        trip.endDate ? trip.endDate.toLocaleDateString('vi-VN') : '',
         {
           skipEmail: false,
           data: {
@@ -585,6 +633,9 @@ export class TripsService {
       trip.title,
       member.userId || '',
       inviter?.fullName || inviter?.email || 'Một người bạn',
+      (trip as any).province?.name || 'Chưa xác định',
+      trip.startDate ? trip.startDate.toLocaleDateString('vi-VN') : '',
+      trip.endDate ? trip.endDate.toLocaleDateString('vi-VN') : '',
       {
         skipEmail: false,
         data: {
@@ -878,7 +929,6 @@ export class TripsService {
       where: { id: member.id },
       data: {
         status: 'accepted',
-        inviteToken: null,
         joinedAt: new Date(),
       },
       include: {
@@ -963,6 +1013,9 @@ export class TripsService {
             trip.title,
             userId,
             undefined,
+            undefined, // location
+            undefined, // startDate
+            undefined, // endDate
             { skipEmail: true } // Email đã được gửi trước đó
           );
         }
@@ -1004,7 +1057,6 @@ export class TripsService {
       where: { id: member.id },
       data: {
         status: 'accepted',
-        inviteToken: null,
         joinedAt: new Date(),
       },
       include: {
@@ -1221,7 +1273,6 @@ export class TripsService {
           data: {
             title: templateDay.title,
             description: templateDay.description,
-            date: new Date(), // Set to current date, user can modify later
             trip: { connect: { id: trip.id } }
           }
         });

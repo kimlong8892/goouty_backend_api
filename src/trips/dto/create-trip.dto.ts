@@ -17,6 +17,11 @@ export class CreateTripDto {
   @IsDateString()
   startDate?: string;
 
+  @ApiPropertyOptional({ description: 'Trip end date (ngày về)', example: '2025-09-25T00:00:00.000Z' })
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
+
   @ApiPropertyOptional({ description: 'Trip description' })
   @IsOptional()
   @IsString()

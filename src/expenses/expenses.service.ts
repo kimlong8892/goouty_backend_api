@@ -154,7 +154,7 @@ export class ExpensesService {
         trip.title,
         createExpenseDto.title,
         Number(createExpenseDto.amount),
-        userId
+        expense.payer.fullName || expense.payer.email || 'Một thành viên'
       );
     } catch (error) {
       console.error('Failed to send expense creation notification:', error);
@@ -386,11 +386,18 @@ export class ExpensesService {
       });
 
       if (trip) {
+        // Fetch updater user info
+        const updater = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { fullName: true, email: true }
+        });
+
         await this.notificationService.sendExpenseUpdatedNotification(
           expense.tripId,
           trip.title,
           updatedExpense.title,
-          userId
+          Number(updatedExpense.amount),
+          updater?.fullName || updater?.email || 'Một thành viên'
         );
       }
     } catch (error) {

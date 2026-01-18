@@ -1,5 +1,6 @@
-import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform, Type } from 'class-transformer';
 
 export class CreateActivityDto {
   @ApiProperty({ description: 'Activity title' })
@@ -15,6 +16,7 @@ export class CreateActivityDto {
   @ApiPropertyOptional({ description: 'Duration in minutes' })
   @IsOptional()
   @IsNumber()
+  @Type(() => Number)
   durationMin?: number;
 
   @ApiPropertyOptional({ description: 'Location' })
@@ -27,13 +29,23 @@ export class CreateActivityDto {
   @IsString()
   notes?: string;
 
+  @ApiPropertyOptional({
+    description: 'Avatar image file',
+    type: 'string',
+    format: 'binary'
+  })
+  @IsOptional()
+  avatar?: any; // Changed to any to avoid type conflicts, though effectively it's not bound by DTO validation for file uploads
+
   @ApiPropertyOptional({ description: 'Mark activity as important', default: false })
   @IsOptional()
+  // Handle 'true' string from multipart
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   important?: boolean;
 
   @ApiProperty({ description: 'Day ID' })
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
   dayId: string;
 }

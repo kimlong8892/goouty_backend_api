@@ -12,9 +12,7 @@ export class CreateDayDto {
   @IsOptional()
   description?: string;
 
-  @ApiProperty({ description: 'Day datetime (includes time)', example: '2025-01-01T09:00:00.000Z' })
-  @IsDateString()
-  date: string;
+
 
   @ApiProperty({ description: 'Trip ID this day belongs to' })
   @IsString()

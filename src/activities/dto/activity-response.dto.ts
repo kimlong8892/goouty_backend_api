@@ -19,6 +19,9 @@ export class ActivityResponseDto {
   @ApiPropertyOptional()
   notes?: string;
 
+  @ApiPropertyOptional()
+  avatar?: string;
+
   @ApiProperty()
   important: boolean;
 

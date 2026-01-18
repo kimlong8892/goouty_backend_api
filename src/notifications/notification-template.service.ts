@@ -29,8 +29,6 @@ export interface NotificationContext {
 @Injectable()
 export class NotificationTemplateService {
   private readonly logger = new Logger(NotificationTemplateService.name);
-  private templateCache: Map<string, any> = new Map();
-
   constructor(private prisma: PrismaService) { }
 
   /**
@@ -39,17 +37,10 @@ export class NotificationTemplateService {
   async getTemplate(type: string, context: NotificationContext): Promise<NotificationTemplate> {
     try {
       const code = type.toLowerCase();
-      let templateData = this.templateCache.get(code);
 
-      if (!templateData) {
-        templateData = await this.prisma.template.findUnique({
-          where: { code },
-        });
-
-        if (templateData) {
-          this.templateCache.set(code, templateData);
-        }
-      }
+      const templateData = await this.prisma.template.findUnique({
+        where: { code },
+      });
 
       // Fallback to default if not found
       if (!templateData && type !== 'default') {
@@ -93,17 +84,10 @@ export class NotificationTemplateService {
   async getEmailTemplate(templateCode: string, context: NotificationContext): Promise<string> {
     try {
       const code = templateCode.toLowerCase();
-      let templateData = this.templateCache.get(code);
 
-      if (!templateData) {
-        templateData = await this.prisma.template.findUnique({
-          where: { code },
-        });
-
-        if (templateData) {
-          this.templateCache.set(code, templateData);
-        }
-      }
+      const templateData = await this.prisma.template.findUnique({
+        where: { code },
+      });
 
       const html = templateData?.emailBody || '';
       return this.replacePlaceholders(html, context);
@@ -151,11 +135,5 @@ export class NotificationTemplateService {
     }).format(amount);
   }
 
-  /**
-   * Clear template cache
-   */
-  clearCache() {
-    this.templateCache.clear();
-  }
 }
 

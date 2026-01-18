@@ -7,7 +7,7 @@ async function main() {
     try {
         const [provinceCount, templateCount] = await Promise.all([
             prisma.province.count(),
-            (prisma as any).template.count()
+            (prisma as any).template.count(),
         ]);
 
         if (provinceCount === 0) {
@@ -15,16 +15,11 @@ async function main() {
             execSync('npm run seed:provinces', { stdio: 'inherit' });
         }
 
-        if (templateCount === 0) {
-            console.log('🌱 Templates missing. Seeding templates...');
-            execSync('npm run seed:templates', { stdio: 'inherit' });
-        }
+        // Always run templates seed to ensure new codes are added
+        console.log('🌱 Checking notification templates...');
+        execSync('npm run seed:templates', { stdio: 'inherit' });
 
-        if (provinceCount === 0 || templateCount === 0) {
-            console.log('✅ Basic essential data seeding completed.');
-        } else {
-            console.log('✅ Essential data already exists. Skipping seed.');
-        }
+        console.log('✅ Essential data seeding completed.');
     } catch (error) {
         console.error('❌ Error checking database status:', error);
         // If the table doesn't exist yet, it might be the very first run

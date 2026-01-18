@@ -2,18 +2,19 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DaysRepository } from './days.repository';
 import { CreateDayDto } from './dto/create-day.dto';
 import { UpdateDayDto } from './dto/update-day.dto';
+import { ReorderDaysDto } from './dto/reorder-days.dto';
 
 @Injectable()
 export class DaysService {
-  constructor(private readonly daysRepository: DaysRepository) {}
+  constructor(private readonly daysRepository: DaysRepository) { }
 
   async create(createDayDto: CreateDayDto) {
     const { tripId, ...dayData } = createDayDto;
 
+    const maxOrder = await this.daysRepository.findMaxOrder(tripId);
     return this.daysRepository.create({
       ...dayData,
-      // "date" now includes time component
-      date: new Date(createDayDto.date),
+      sortOrder: maxOrder + 1,
       trip: { connect: { id: tripId } }
     });
   }
@@ -21,7 +22,7 @@ export class DaysService {
   async findAll(tripId: string) {
     return this.daysRepository.findAll({
       where: { tripId },
-      orderBy: { date: 'asc' }
+      orderBy: { sortOrder: 'asc' }
     });
   }
 
@@ -39,10 +40,7 @@ export class DaysService {
 
     const data: any = { ...updateDayDto };
 
-    if (updateDayDto.date) {
-      // "date" now includes time component
-      data.date = new Date(updateDayDto.date);
-    }
+
 
     if (updateDayDto.tripId) {
       data.trip = { connect: { id: updateDayDto.tripId } };
@@ -56,5 +54,14 @@ export class DaysService {
     // Check if day exists
     await this.findOne(id);
     return this.daysRepository.remove(id);
+  }
+
+  async reorder(reorderDaysDto: ReorderDaysDto) {
+    const items = reorderDaysDto.dayIds.map((id, index) => ({
+      id,
+      order: index,
+    }));
+    await this.daysRepository.reorder(items);
+    return { success: true };
   }
 }

@@ -2,310 +2,325 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const templates = [
-    {
-        code: 'trip_invitation',
-        title: 'Lời mời tham gia chuyến đi',
-        message: 'Bạn đã được mời tham gia chuyến đi "{{tripTitle}}" bởi {{inviterName}}',
-        emailSubject: '[Goouty] Lời mời tham gia chuyến đi: {{tripTitle}}',
-        emailBody: `<!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lời mời tham gia chuyến đi</title>
-  <style>
-    body { font-family: Arial, sans-serif; background:#f6f9fc; color:#222; }
-    .container { max-width:600px; margin:0 auto; background:#ffffff; padding:24px; border-radius:8px; }
-    .btn { display:inline-block; padding:12px 18px; background:#2563eb; color:#ffffff !important; text-decoration:none; border-radius:6px; }
-    .muted { color:#6b7280; font-size:12px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h2>📨 Lời mời tham gia chuyến đi</h2>
-    <p>Xin chào {{inviteeName}},</p>
-    <p><strong>{{inviterName}}</strong> đã mời bạn tham gia chuyến đi <strong>"{{tripTitle}}"</strong> trên GoOuty.</p>
-    <p>Nếu bạn đồng ý tham gia, vui lòng nhấn nút bên dưới:</p>
-    <p>
-      <a class="btn" href="{{acceptUrl}}" target="_blank">Chấp nhận lời mời</a>
-    </p>
-    <p class="muted" style="margin-top: 16px; padding: 12px; background: #f3f4f6; border-radius: 6px;">
-      <strong>💡 Lưu ý:</strong> Nếu bạn chưa có tài khoản GoOuty, bạn sẽ được hướng dẫn đăng ký (bằng email hoặc Google) trước khi chấp nhận lời mời. Sau khi đăng ký, lời mời sẽ tự động được kích hoạt.
-    </p>
-    <p class="muted">Nếu bạn không muốn tham gia, bạn có thể bỏ qua email này.</p>
-    <hr />
-    <p class="muted">Email được gửi tự động từ hệ thống GoOuty.</p>
-  </div>
-</body>
-</html>`,
-        icon: '✉️',
-        color: '#6c5dd3'
-    },
-    {
-        code: 'forgot_password',
-        title: 'Đặt lại mật khẩu',
-        message: 'Yêu cầu đặt lại mật khẩu cho tài khoản Goouty của bạn.',
-        emailSubject: '[Goouty] Đặt lại mật khẩu',
-        emailBody: `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Đặt lại mật khẩu Goouty</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        h2 { color: #333; }
-        p { line-height: 1.6; color: #555; }
-        .btn { display: inline-block; padding: 10px 20px; background-color: #007bff; color: #fff; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 20px; }
-        .footer { margin-top: 30px; font-size: 12px; color: #999; text-align: center; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Đặt lại mật khẩu</h2>
-        <p>Xin chào {{name}},</p>
-        <p>Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản Goouty của bạn.</p>
-        <p>Vui lòng nhấp vào nút bên dưới để đặt lại mật khẩu của bạn:</p>
-        <a href="{{resetUrl}}" class="btn">Đặt lại mật khẩu</a>
-        <p>Liên kết này sẽ hết hạn sau 15 phút.</p>
-        <p>Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.</p>
-        <div class="footer">
-            &copy; 2025 Goouty. All rights reserved.
-        </div>
-    </div>
-</body>
-</html>`,
-        icon: '🔑',
-        color: '#EF4444'
-    },
-    {
-        code: 'trip_created',
-        title: 'Chuyến đi mới',
-        message: 'Chuyến đi "{{tripTitle}}" đã được tạo thành công!',
-        emailSubject: '[Goouty] Chuyến đi mới: {{tripTitle}}',
-        emailBody: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #3B82F6;">Chuyến đi mới đã được tạo!</h2>
-          <p>Xin chào <strong>{{userName}}</strong>,</p>
-          <p>Chuyến đi "<strong>{{tripTitle}}</strong>" đã được tạo thành công bởi <strong>{{actionBy}}</strong>.</p>
-          <p>Hãy truy cập ứng dụng để xem chi tiết chuyến đi.</p>
-          <div style="margin-top: 20px; padding: 15px; background-color: #F3F4F6; border-radius: 8px;">
-            <p><strong>Tên chuyến đi:</strong> {{tripTitle}}</p>
-            <p><strong>Người tạo:</strong> {{actionBy}}</p>
-            <p><strong>Thời gian:</strong> {{createdAt}}</p>
-          </div>
-        </div>
-      `,
-        icon: '✈️',
-        color: '#3B82F6'
-    },
-    {
-        code: 'trip_updated',
-        title: 'Cập nhật chuyến đi',
-        message: 'Chuyến đi "{{tripTitle}}" đã được cập nhật',
-        emailSubject: '[Goouty] Cập nhật chuyến đi: {{tripTitle}}',
-        emailBody: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #F59E0B;">Chuyến đi đã được cập nhật</h2>
-          <p>Xin chào <strong>{{userName}}</strong>,</p>
-          <p>Chuyến đi "<strong>{{tripTitle}}</strong>" đã được cập nhật bởi <strong>{{actionBy}}</strong>.</p>
-          <p>Hãy truy cập ứng dụng để xem những thay đổi mới nhất.</p>
-        </div>
-      `,
-        icon: '📝',
-        color: '#F59E0B'
-    },
-    {
-        code: 'trip_deleted',
-        title: 'Xóa chuyến đi',
-        message: 'Chuyến đi "{{tripTitle}}" đã được xóa',
-        emailSubject: '[Goouty] Chuyến đi đã được xóa: {{tripTitle}}',
-        emailBody: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #EF4444;">Chuyến đi đã được xóa</h2>
-          <p>Xin chào <strong>{{userName}}</strong>,</p>
-          <p>Chuyến đi "<strong>{{tripTitle}}</strong>" đã được xóa bởi <strong>{{actionBy}}</strong>.</p>
-          <p>Nếu bạn có thắc mắc, hãy liên hệ với người quản lý chuyến đi.</p>
-        </div>
-      `,
-        icon: '🗑️',
-        color: '#EF4444'
-    },
-    {
-        code: 'expense_added',
-        title: 'Chi phí mới',
-        message: 'Chi phí "{{expenseTitle}}" ({{expenseAmount}}) đã được thêm vào chuyến đi "{{tripTitle}}"',
-        emailSubject: '[Goouty] Chi phí mới: {{expenseTitle}}',
-        emailBody: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #10B981;">Chi phí mới đã được thêm</h2>
-          <p>Xin chào <strong>{{userName}}</strong>,</p>
-          <p>Chi phí "<strong>{{expenseTitle}}</strong>" với số tiền <strong>{{expenseAmount}}</strong> đã được thêm vào chuyến đi "<strong>{{tripTitle}}</strong>" bởi <strong>{{actionBy}}</strong>.</p>
-          <div style="margin-top: 20px; padding: 15px; background-color: #F3F4F6; border-radius: 8px;">
-            <p><strong>Tên chi phí:</strong> {{expenseTitle}}</p>
-            <p><strong>Số tiền:</strong> {{expenseAmount}}</p>
-            <p><strong>Chuyến đi:</strong> {{tripTitle}}</p>
-            <p><strong>Người thêm:</strong> {{actionBy}}</p>
-          </div>
-        </div>
-      `,
-        icon: '💰',
-        color: '#10B981'
-    },
-    {
-        code: 'expense_updated',
-        title: 'Cập nhật chi phí',
-        message: 'Chi phí "{{expenseTitle}}" trong chuyến đi "{{tripTitle}}" đã được cập nhật',
-        emailSubject: '[Goouty] Chi phí đã được cập nhật: {{expenseTitle}}',
-        emailBody: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #8B5CF6;">Chi phí đã được cập nhật</h2>
-          <p>Xin chào <strong>{{userName}}</strong>,</p>
-          <p>Chi phí "<strong>{{expenseTitle}}</strong>" trong chuyến đi "<strong>{{tripTitle}}</strong>" đã được cập nhật bởi <strong>{{actionBy}}</strong>.</p>
-          <p>Hãy truy cập ứng dụng để xem những thay đổi mới nhất.</p>
-        </div>
-      `,
-        icon: '📊',
-        color: '#8B5CF6'
-    },
-    {
-        code: 'payment_created',
-        title: 'Thanh toán',
-        message: '{{debtorName}} đã thanh toán {{paymentAmount}} cho {{creditorName}} trong chuyến đi "{{tripTitle}}"',
-        emailSubject: '[Goouty] Thanh toán mới: {{paymentAmount}}',
-        emailBody: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #06B6D4;">Thanh toán mới</h2>
-          <p>Xin chào <strong>{{userName}}</strong>,</p>
-          <p><strong>{{debtorName}}</strong> đã thanh toán <strong>{{paymentAmount}}</strong> cho <strong>{{creditorName}}</strong> trong chuyến đi "<strong>{{tripTitle}}</strong>".</p>
-          <div style="margin-top: 20px; padding: 15px; background-color: #F3F4F6; border-radius: 8px;">
-            <p><strong>Người trả:</strong> {{debtorName}}</p>
-            <p><strong>Người nhận:</strong> {{creditorName}}</p>
-            <p><strong>Số tiền:</strong> {{paymentAmount}}</p>
-            <p><strong>Chuyến đi:</strong> {{tripTitle}}</p>
-          </div>
-        </div>
-      `,
-        icon: '💳',
-        color: '#06B6D4'
-    },
-    {
-        code: 'system_announcement',
-        title: 'Thông báo hệ thống',
-        message: '{{message}}',
-        emailSubject: '[Goouty] Thông báo hệ thống',
-        emailBody: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #6B7280;">Thông báo hệ thống</h2>
-          <p>Xin chào <strong>{{userName}}</strong>,</p>
-          <p>{{message}}</p>
-        </div>
-      `,
-        icon: '📢',
-        color: '#6B7280'
-    },
-    {
-        code: 'info',
-        title: 'Thông tin',
-        message: '{{message}}',
-        emailSubject: '[Goouty] Thông tin',
-        emailBody: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #3B82F6;">Thông tin</h2>
-          <p>Xin chào <strong>{{userName}}</strong>,</p>
-          <p>{{message}}</p>
-        </div>
-      `,
-        icon: 'ℹ️',
-        color: '#3B82F6'
-    },
-    {
-        code: 'success',
-        title: 'Thành công',
-        message: '{{message}}',
-        emailSubject: '[Goouty] Thành công',
-        emailBody: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #10B981;">Thành công</h2>
-          <p>Xin chào <strong>{{userName}}</strong>,</p>
-          <p>{{message}}</p>
-        </div>
-      `,
-        icon: '✅',
-        color: '#10B981'
-    },
-    {
-        code: 'warning',
-        title: 'Cảnh báo',
-        message: '{{message}}',
-        emailSubject: '[Goouty] Cảnh báo',
-        emailBody: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #F59E0B;">Cảnh báo</h2>
-          <p>Xin chào <strong>{{userName}}</strong>,</p>
-          <p>{{message}}</p>
-        </div>
-      `,
-        icon: '⚠️',
-        color: '#F59E0B'
-    },
-    {
-        code: 'error',
-        title: 'Lỗi',
-        message: '{{message}}',
-        emailSubject: '[Goouty] Lỗi',
-        emailBody: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #EF4444;">Lỗi</h2>
-          <p>Xin chào <strong>{{userName}}</strong>,</p>
-          <p>{{message}}</p>
-        </div>
-      `,
-        icon: '❌',
-        color: '#EF4444'
-    },
-    {
-        code: 'default',
-        title: 'Thông báo',
-        message: '{{message}}',
-        emailSubject: '[Goouty] Thông báo',
-        emailBody: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Thông báo</h2>
-          <p>Xin chào <strong>{{userName}}</strong>,</p>
-          <p>{{message}}</p>
-        </div>
-      `,
-        icon: '🔔',
-        color: '#6B7280'
-    }
-];
-
 async function main() {
-    console.log('🚀 Starting to seed notification templates...');
+  console.log('🌱 Seeding notification templates...');
 
-    let count = 0;
-    for (const template of templates) {
-        try {
-            await (prisma as any).template.upsert({
-                where: { code: template.code },
-                update: template,
-                create: template,
-            });
-            count++;
-        } catch (error: any) {
-            console.error(`❌ Error seeding template ${template.code}:`, error.message);
-        }
+  const templates = [
+    {
+      code: 'auth_otp',
+      title: 'Mã xác thực Goouty',
+      message: 'Mã OTP của bạn là {{otp}}. Mã này có hiệu lực trong 10 phút.',
+      emailSubject: '[Goouty] Mã xác thực của bạn',
+      emailBody: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+          <h2 style="color: #2563eb; text-align: center;">Mã xác thực OTP</h2>
+          <p>Xin chào <strong>{{userName}}</strong>,</p>
+          <p>Bạn đã yêu cầu mã xác thực OTP trên ứng dụng Goouty.</p>
+          <div style="background-color: #f3f4f6; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #111827;">{{otp}}</span>
+          </div>
+          <p>Mã này có hiệu lực trong <strong>10 phút</strong>. Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #6b7280; text-align: center;">© 2025 Goouty. All rights reserved.</p>
+        </div>
+      `,
+      icon: '🔐',
+      color: '#ef4444',
+      variables: ['userName', 'otp', 'userEmail']
+    },
+    {
+      code: 'forgot_password',
+      title: 'Đặt lại mật khẩu Goouty',
+      message: 'Nhấp vào liên kết để đặt lại mật khẩu cho tài khoản Goouty của bạn.',
+      emailSubject: '[Goouty] Yêu cầu đặt lại mật khẩu',
+      emailBody: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+          <h2 style="color: #2563eb; text-align: center;">Đặt lại mật khẩu</h2>
+          <p>Xin chào <strong>{{userName}}</strong>,</p>
+          <p>Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản Goouty của bạn.</p>
+          <p>Vui lòng nhấp vào nút bên dưới để đặt lại mật khẩu của bạn:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{resetUrl}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Đặt lại mật khẩu</a>
+          </div>
+          <p>Liên kết này sẽ hết hạn sau <strong>15 phút</strong>.</p>
+          <p>Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.</p>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #6b7280; text-align: center;">© 2025 Goouty. All rights reserved.</p>
+        </div>
+      `,
+      icon: '🔑',
+      color: '#3b82f6',
+      variables: ['userName', 'resetUrl', 'frontendUrl']
+    },
+    {
+      code: 'trip_invitation',
+      title: 'Lời mời tham gia chuyến đi',
+      message: '{{inviterName}} đã mời bạn tham gia chuyến đi "{{tripTitle}}"',
+      emailSubject: '[Goouty] Lời mời tham gia chuyến đi: {{tripTitle}}',
+      emailBody: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+          <h2 style="color: #2563eb; text-align: center;">Lời mời tham gia chuyến đi</h2>
+          <p>Xin chào <strong>{{userName}}</strong>,</p>
+          <p><strong>{{inviterName}}</strong> đã mời bạn tham gia chuyến đi <strong>"{{tripTitle}}"</strong> trên Goouty.</p>
+          <div style="background-color: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>📍 Địa điểm:</strong> {{location}}</p>
+            <p style="margin: 5px 0;"><strong>📅 Thời gian:</strong> {{startDate}} - {{endDate}}</p>
+          </div>
+          <p>Nếu bạn đồng ý tham gia, vui lòng nhấn nút bên dưới:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{acceptUrl}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Chấp nhận lời mời</a>
+          </div>
+          <p style="color: #6b7280; font-size: 14px; background-color: #f3f4f6; padding: 15px; border-radius: 5px;">
+            <strong>Lưu ý:</strong> Nếu bạn chưa có tài khoản Goouty, bạn sẽ được hướng dẫn đăng ký trước khi chấp nhận lời mời.
+          </p>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #6b7280; text-align: center;">© 2025 Goouty. All rights reserved.</p>
+        </div>
+      `,
+      icon: '📨',
+      color: '#2563eb',
+      variables: ['userName', 'inviterName', 'tripTitle', 'acceptUrl', 'location', 'startDate', 'endDate']
+    },
+    {
+      code: 'trip_created',
+      title: 'Chuyến đi mới',
+      message: 'Chuyến đi "{{tripTitle}}" đã được tạo thành công!',
+      emailSubject: '[Goouty] Chuyến đi mới: {{tripTitle}}',
+      emailBody: '<p>Chuyến đi <strong>{{tripTitle}}</strong> đã được tạo bởi <strong>{{actionBy}}</strong> vào lúc {{createdAt}}.</p>',
+      icon: '🌍',
+      color: '#10b981',
+      variables: ['tripTitle', 'actionBy', 'createdAt']
+    },
+    {
+      code: 'trip_updated',
+      title: 'Chuyến đi được cập nhật',
+      message: 'Chuyến đi "{{tripTitle}}" vừa có thông tin mới.',
+      emailSubject: '[Goouty] Chuyến đi thay đổi: {{tripTitle}}',
+      emailBody: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+          <h2 style="color: #f59e0b; text-align: center;">Chuyến đi đã cập nhật</h2>
+          <p>Xin chào <strong>{{userName}}</strong>,</p>
+          <p>Chuyến đi <strong>{{tripTitle}}</strong> đã được cập nhật bởi <strong>{{actionBy}}</strong>.</p>
+          <div style="background-color: #fffbeb; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #fef3c7;">
+            <p style="margin: 5px 0;"><strong>📍 Địa điểm:</strong> {{location}}</p>
+            <p style="margin: 5px 0;"><strong>📅 Thời gian:</strong> {{startDate}} - {{endDate}}</p>
+            <p style="margin: 5px 0;"><strong>⏰ Cập nhật lúc:</strong> {{updatedAt}}</p>
+          </div>
+          <p>Vui lòng nhấp vào nút bên dưới để xem chi tiết các thay đổi:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{detailUrl}}" style="background-color: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Xem chi tiết chuyến đi</a>
+          </div>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #6b7280; text-align: center;">© 2025 Goouty. All rights reserved.</p>
+        </div>
+      `,
+      icon: '📝',
+      color: '#f59e0b',
+      variables: ['tripTitle', 'actionBy', 'updatedAt', 'detailUrl', 'location', 'startDate', 'endDate', 'inviterName']
+    },
+    {
+      code: 'trip_deleted',
+      title: 'Chuyến đi đã bị xoá',
+      message: 'Chuyến đi "{{tripTitle}}" đã bị xoá.',
+      emailSubject: '[Goouty] Chuyến đi đã bị xoá: {{tripTitle}}',
+      emailBody: '<p>Chuyến đi <strong>{{tripTitle}}</strong> đã bị xoá bởi <strong>{{actionBy}}</strong> vào lúc {{deletedAt}}.</p>',
+      icon: '🗑️',
+      color: '#ef4444',
+      variables: ['tripTitle', 'actionBy', 'deletedAt']
+    },
+    {
+      code: 'expense_added',
+      title: 'Khoản chi mới',
+      message: '{{actionBy}} vừa thêm khoản chi "{{expenseTitle}}" trị giá {{expenseAmount}} vào "{{tripTitle}}"',
+      emailSubject: '[Goouty] Khoản chi mới trong {{tripTitle}}',
+      emailBody: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+          <h2 style="color: #10b981; text-align: center;">Khoản chi mới</h2>
+          <p><strong>{{actionBy}}</strong> vừa thêm một khoản chi mới vào chuyến đi <strong>{{tripTitle}}</strong>.</p>
+          <div style="background-color: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>💰 Khoản chi:</strong> {{expenseTitle}}</p>
+            <p style="margin: 5px 0;"><strong>💵 Số tiền:</strong> {{expenseAmount}}</p>
+            <p style="margin: 5px 0;"><strong>⏰ Thời gian:</strong> {{createdAt}}</p>
+          </div>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{detailUrl}}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Chi tiết chuyến đi</a>
+          </div>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #6b7280; text-align: center;">© 2025 Goouty. All rights reserved.</p>
+        </div>
+      `,
+      icon: '💰',
+      color: '#10b981',
+      variables: ['tripTitle', 'expenseTitle', 'expenseAmount', 'actionBy', 'createdAt', 'detailUrl']
+    },
+    {
+      code: 'expense_updated',
+      title: 'Khoản chi đã cập nhật',
+      message: 'Khoản chi "{{expenseTitle}}" trong chuyến đi "{{tripTitle}}" đã được cập nhật.',
+      emailSubject: '[Goouty] Khoản chi cập nhật: {{expenseTitle}}',
+      emailBody: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+          <h2 style="color: #f59e0b; text-align: center;">Khoản chi cập nhật</h2>
+          <p>Khoản chi <strong>{{expenseTitle}}</strong> trong chuyến đi <strong>{{tripTitle}}</strong> đã được cập nhật bởi <strong>{{actionBy}}</strong>.</p>
+          <div style="background-color: #fffbeb; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #fef3c7;">
+             <p style="margin: 5px 0;"><strong>💰 Số tiền mới:</strong> {{expenseAmount}}</p>
+             <p style="margin: 5px 0;"><strong>⏰ Cập nhật lúc:</strong> {{updatedAt}}</p>
+          </div>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{detailUrl}}" style="background-color: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Xem chi tiết</a>
+          </div>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #6b7280; text-align: center;">© 2025 Goouty. All rights reserved.</p>
+        </div>
+      `,
+      icon: '💸',
+      color: '#f59e0b',
+      variables: ['tripTitle', 'expenseTitle', 'expenseAmount', 'actionBy', 'updatedAt', 'detailUrl']
+    },
+    {
+      code: 'payment_created',
+      title: 'Yêu cầu quyết toán',
+      message: '{{actionBy}} vừa tạo yêu cầu quyết toán {{paymentAmount}} cho "{{tripTitle}}"',
+      emailSubject: '[Goouty] Yêu cầu quyết toán mới',
+      emailBody: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+          <h2 style="color: #3b82f6; text-align: center;">Yêu cầu quyết toán</h2>
+          <p><strong>{{actionBy}}</strong> vừa tạo một yêu cầu quyết toán mới.</p>
+          <div style="background-color: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>👤 Người nợ:</strong> {{debtorName}}</p>
+            <p style="margin: 5px 0;"><strong>👤 Người nhận:</strong> {{creditorName}}</p>
+            <p style="margin: 5px 0;"><strong>💵 Số tiền:</strong> {{paymentAmount}}</p>
+          </div>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{detailUrl}}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Đi tới chuyến đi</a>
+          </div>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #6b7280; text-align: center;">© 2025 Goouty. All rights reserved.</p>
+        </div>
+      `,
+      icon: '💳',
+      color: '#3b82f6',
+      variables: ['tripTitle', 'debtorName', 'creditorName', 'paymentAmount', 'actionBy', 'createdAt', 'detailUrl']
+    },
+    {
+      code: 'payment_completed',
+      title: 'Quyết toán hoàn tất',
+      message: '{{debtorName}} đã thanh toán {{paymentAmount}} cho {{creditorName}} trong "{{tripTitle}}"',
+      emailSubject: '[Goouty] Xác nhận thanh toán: {{paymentAmount}}',
+      emailBody: '<p><strong>{{debtorName}}</strong> đã xác nhận thanh toán số tiền <strong>{{paymentAmount}}</strong> cho <strong>{{creditorName}}</strong>.</p><p>Chuyến đi: {{tripTitle}}</p>',
+      icon: '✅',
+      color: '#10b981',
+      variables: ['tripTitle', 'debtorName', 'creditorName', 'paymentAmount', 'actionBy', 'createdAt']
+    },
+    {
+      code: 'system_announcement',
+      title: 'Thông báo hệ thống',
+      message: '{{message}}',
+      emailSubject: '[Goouty] Thông báo từ hệ thống',
+      emailBody: '<p>{{message}}</p>',
+      icon: '📢',
+      color: '#6366f1',
+      variables: ['message', 'createdAt']
+    },
+    {
+      code: 'info',
+      title: 'Thông tin',
+      message: '{{message}}',
+      emailSubject: '[Goouty] Thông tin mới',
+      emailBody: '<p>{{message}}</p>',
+      icon: 'ℹ️',
+      color: '#3b82f6',
+      variables: ['message', 'createdAt']
+    },
+    {
+      code: 'success',
+      title: 'Thành công',
+      message: '{{message}}',
+      emailSubject: '[Goouty] Thông báo thành công',
+      emailBody: '<p>{{message}}</p>',
+      icon: '✅',
+      color: '#10b981',
+      variables: ['message', 'createdAt']
+    },
+    {
+      code: 'warning',
+      title: 'Cảnh báo',
+      message: '{{message}}',
+      emailSubject: '[Goouty] Cảnh báo quan trọng',
+      emailBody: '<p>{{message}}</p>',
+      icon: '⚠️',
+      color: '#f59e0b',
+      variables: ['message', 'createdAt']
+    },
+    {
+      code: 'error',
+      title: 'Lỗi',
+      message: '{{message}}',
+      emailSubject: '[Goouty] Thông báo lỗi',
+      emailBody: '<p>{{message}}</p>',
+      icon: '❌',
+      color: '#ef4444',
+      variables: ['message', 'createdAt']
+    },
+    {
+      code: 'default',
+      title: 'Thông báo',
+      message: '{{message}}',
+      emailSubject: '[Goouty] Thông báo mới',
+      emailBody: '<p>{{message}}</p>',
+      icon: '🔔',
+      color: '#6b7280',
+      variables: ['message', 'createdAt']
     }
-    console.log(`✅ ${count} templates seeded successfully`);
+  ];
+
+  // Bước 1: Đảm bảo tất cả template tồn tại
+  for (const template of templates) {
+    const exists = await prisma.template.findUnique({
+      where: { code: template.code },
+    });
+
+    if (!exists) {
+      console.log(`🌱 Creating new template: ${template.code}`);
+      await prisma.template.create({
+        data: template,
+      });
+    }
+  }
+
+  // Bước 2: Kiểm tra và cập nhật variables nếu có sự khác biệt so với seed
+  console.log('🔍 Checking for variables sync...');
+  for (const template of templates) {
+    const existing = await prisma.template.findUnique({
+      where: { code: template.code },
+      select: { id: true, variables: true, code: true }
+    });
+
+    if (existing) {
+      const dbVars = Array.isArray(existing.variables) ? existing.variables : [];
+      const seedVars = Array.isArray(template.variables) ? template.variables : [];
+
+      // So sánh sau khi sort để không phụ thuộc vào thứ tự phần tử
+      const isDifferent = JSON.stringify([...dbVars].sort()) !== JSON.stringify([...seedVars].sort());
+
+      if (isDifferent) {
+        console.log(`🔄 Updating variables for: ${template.code}`);
+        await prisma.template.update({
+          where: { id: existing.id },
+          data: { variables: seedVars },
+        });
+      }
+    }
+  }
+
+  console.log('✅ Template sync completed!');
 }
 
 main()
-    .catch((e) => {
-        console.error('❌ Critical error during template seeding:', e);
-        process.exit(1);
-    })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });
+  .catch((e) => {
+    console.error('❌ Error seeding templates:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

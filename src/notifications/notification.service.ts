@@ -3,10 +3,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { DevicesService } from '../devices/devices.service';
 import { WebPushService } from './web-push.service';
 import { EnhancedNotificationService } from './enhanced-notification.service';
-import { 
-  CreateNotificationDto, 
-  UpdateNotificationDto, 
-  NotificationResponseDto, 
+import {
+  CreateNotificationDto,
+  UpdateNotificationDto,
+  NotificationResponseDto,
   NotificationListResponseDto,
   NotificationStatsDto,
   NotificationType,
@@ -22,7 +22,7 @@ export class NotificationService {
     private webPushService: WebPushService,
     @Inject(forwardRef(() => EnhancedNotificationService))
     private enhancedNotificationService: EnhancedNotificationService,
-  ) {}
+  ) { }
 
   async sendTripCreatedNotification(tripId: string, tripTitle: string, createdBy: string) {
     try {
@@ -57,7 +57,7 @@ export class NotificationService {
               console.log(`Would send push notification to device ${device.id} of user ${device.userId}`);
               // await this.webPushService.sendNotification(device.pushSubscription, JSON.stringify(notification));
             }
-            
+
             console.log(`Push notification sent to device ${device.id} of user ${device.userId}`);
           } catch (pushError) {
             console.error(`Failed to send push notification to device ${device.id}:`, pushError);
@@ -105,7 +105,7 @@ export class NotificationService {
               console.log(`Would send test push notification to device ${device.id} of user ${device.userId}`);
               // await this.webPushService.sendNotification(device.pushSubscription, JSON.stringify(notification));
             }
-            
+
             console.log(`Test push notification sent to device ${device.id} of user ${device.userId}`);
           } catch (pushError) {
             console.error(`Failed to send test push notification to device ${device.id}:`, pushError);
@@ -129,7 +129,7 @@ export class NotificationService {
   }) {
     try {
       const updateData: any = {};
-      
+
       if (preferences.notificationsEnabled !== undefined) {
         updateData.notificationsEnabled = preferences.notificationsEnabled;
       }
@@ -179,7 +179,7 @@ export class NotificationService {
   }) {
     try {
       console.log(`Registering device ${deviceData.deviceId} for user ${userId} with push subscription`);
-      
+
       const device = await this.devicesService.createOrUpdateDevice(userId, {
         deviceId: deviceData.deviceId,
         deviceName: deviceData.deviceName,
@@ -202,7 +202,7 @@ export class NotificationService {
   async getCompleteNotificationStatus(userId: string) {
     try {
       console.log(`Checking if current device exists for user ${userId}`);
-      
+
       // 1. Kiểm tra user notification preferences
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
@@ -226,7 +226,7 @@ export class NotificationService {
       // 2. Kiểm tra device hiện tại có trong table Device chưa
       const currentDevice = await this.devicesService.getUserDevices(userId);
       const hasCurrentDevice = currentDevice.length > 0;
-      
+
       console.log(`Device check:`, {
         userId,
         userNotificationsEnabled: user.notificationsEnabled,
@@ -260,7 +260,7 @@ export class NotificationService {
   async sendTestNotificationToAllDevices(userId: string) {
     try {
       console.log(`🔄 Sending test notification to all devices via queue system-notifications (triggered by user ${userId})`);
-      
+
       // Lấy tất cả users có notifications enabled
       const users = await this.prisma.user.findMany({
         where: { notificationsEnabled: true },
@@ -286,7 +286,7 @@ export class NotificationService {
       );
 
       console.log(`📤 Test notification queued for ${users.length} users via system-notifications queue`);
-      
+
       return {
         success: true,
         message: `Đã đưa thông báo test vào queue system-notifications cho ${users.length} users`,
@@ -338,7 +338,7 @@ export class NotificationService {
   ): Promise<NotificationListResponseDto> {
     try {
       const skip = (page - 1) * limit;
-      
+
       const where: any = { userId };
       if (status) where.status = status;
       if (type) where.type = type;
@@ -351,12 +351,37 @@ export class NotificationService {
           take: limit,
         }),
         this.prisma.notification.count({ where }),
-        this.prisma.notification.count({ 
-          where: { userId, status: NotificationStatus.UNREAD } 
+        this.prisma.notification.count({
+          where: { userId, status: NotificationStatus.UNREAD }
         }),
       ]);
 
       const totalPages = Math.ceil(total / limit);
+
+      const listTripId = notifications
+        .filter(n => n?.data?.['type'] === 'trip_invitation')
+        .map(n => n?.data?.['context']?.['tripId'])
+        .filter(Boolean);
+      const listTripJoin = await this.prisma.tripMember.findMany({
+        where: {
+          tripId: {
+            in: listTripId,
+          },
+          userId: userId,
+          status: 'accepted',
+        },
+        include: {
+          trip: true,
+        }
+      });
+
+      notifications.forEach(notification => {
+        const trip = listTripJoin.find(trip => trip.trip.id === notification.data?.['context']?.['tripId']);
+
+        if (trip) {
+          notification.data['url'] = '/trip/' + trip.trip.id;
+        }
+      });
 
       return {
         notifications: notifications as NotificationResponseDto[],
@@ -405,7 +430,7 @@ export class NotificationService {
   ): Promise<NotificationResponseDto> {
     try {
       const updateData: any = { ...updateNotificationDto };
-      
+
       // Nếu mark as read, set readAt
       if (updateNotificationDto.status === NotificationStatus.READ) {
         updateData.readAt = new Date();
@@ -675,7 +700,7 @@ export class NotificationService {
         for (const device of userDevices as any[]) {
           try {
             const pushSubscription = JSON.parse(device.pushSubscription);
-            
+
             const pushPayload = {
               title,
               body,
@@ -717,7 +742,7 @@ export class NotificationService {
   private async sendPushNotification(pushSubscription: any, payload: any) {
     try {
       console.log('Sending push notification:', { pushSubscription, payload });
-      
+
       // Tạo notification payload theo chuẩn Web Push Protocol
       const notificationPayload = {
         title: payload.title,
