@@ -861,7 +861,8 @@ export class EnhancedNotificationService {
             await this.emailService.sendEmail({
               to: recipientEmail,
               subject: template.emailSubject || template.title,
-              html: emailHtml
+              html: emailHtml,
+              notificationType: type,
             });
 
             console.log('✅ [EMAIL] Email sent successfully to:', recipientEmail);
