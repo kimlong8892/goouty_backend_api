@@ -98,6 +98,7 @@ export class CloudTasksService {
                     url: `${this.serviceUrl}/api/internal/send-email`,
                     headers: {
                         'Content-Type': 'application/json',
+                        'x-internal-api-key': this.configService.get<string>('INTERNAL_API_KEY') || '',
                     },
                     body: Buffer.from(JSON.stringify(payload)).toString('base64'),
                 },

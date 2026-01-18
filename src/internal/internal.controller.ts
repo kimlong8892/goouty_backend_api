@@ -1,4 +1,5 @@
-import { Controller, Post, Body, Logger, HttpCode } from '@nestjs/common';
+import { Controller, Post, Body, Logger, HttpCode, Headers, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../email/email.service';
 
 export class SendEmailDto {
@@ -11,7 +12,10 @@ export class SendEmailDto {
 export class InternalController {
     private readonly logger = new Logger(InternalController.name);
 
-    constructor(private readonly emailService: EmailService) { }
+    constructor(
+        private readonly emailService: EmailService,
+        private readonly configService: ConfigService
+    ) { }
 
     /**
      * Endpoint for Cloud Tasks to send emails
@@ -19,7 +23,18 @@ export class InternalController {
      */
     @Post('send-email')
     @HttpCode(200)
-    async sendEmail(@Body() dto: SendEmailDto) {
+    async sendEmail(
+        @Body() dto: SendEmailDto,
+        @Headers('x-internal-api-key') apiKey: string
+    ) {
+        const configuredKey = this.configService.get<string>('INTERNAL_API_KEY');
+
+        // Security check
+        if (!configuredKey || apiKey !== configuredKey) {
+            this.logger.warn(`⛔ [SECURITY] Unauthorized access attempt to internal endpoint from IP. API Key provided: ${apiKey ? 'Yes' : 'No'}`);
+            throw new UnauthorizedException('Invalid Internal API Key');
+        }
+
         try {
             this.logger.log(`📧 [CLOUD_TASK] Processing email task for: ${dto.to}`);
 
