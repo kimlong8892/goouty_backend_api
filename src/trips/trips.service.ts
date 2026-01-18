@@ -293,10 +293,16 @@ export class TripsService {
         include: { province: true }
       });
 
+      // Fetch updater user info
+      const updater = await this.prisma.user.findUnique({
+        where: { id: requestUserId },
+        select: { fullName: true, email: true }
+      });
+
       await this.notificationService.sendTripUpdatedNotification(
         id,
         updatedTrip.title,
-        requestUserId,
+        updater?.fullName || updater?.email || 'Một thành viên',
         fullTrip?.province?.name || '',
         fullTrip?.startDate ? fullTrip.startDate.toLocaleDateString('vi-VN') : '',
         fullTrip?.endDate ? fullTrip.endDate.toLocaleDateString('vi-VN') : ''
