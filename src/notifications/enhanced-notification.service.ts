@@ -167,6 +167,7 @@ export class EnhancedNotificationService {
     tripId: string,
     tripTitle: string,
     expenseTitle: string,
+    expenseAmount: number,
     updatedBy: string,
     options: SendNotificationOptions = {}
   ) {
@@ -175,6 +176,7 @@ export class EnhancedNotificationService {
       tripId,
       tripTitle,
       expenseTitle,
+      expenseAmount,
       actionBy: updatedBy,
       updatedAt: new Date().toLocaleString('vi-VN'),
       detailUrl: `${frontendUrl}/trip/${tripId}`

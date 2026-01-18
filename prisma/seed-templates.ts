@@ -162,6 +162,10 @@ async function main() {
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
           <h2 style="color: #f59e0b; text-align: center;">Khoản chi cập nhật</h2>
           <p>Khoản chi <strong>{{expenseTitle}}</strong> trong chuyến đi <strong>{{tripTitle}}</strong> đã được cập nhật bởi <strong>{{actionBy}}</strong>.</p>
+          <div style="background-color: #fffbeb; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #fef3c7;">
+             <p style="margin: 5px 0;"><strong>💰 Số tiền mới:</strong> {{expenseAmount}}</p>
+             <p style="margin: 5px 0;"><strong>⏰ Cập nhật lúc:</strong> {{updatedAt}}</p>
+          </div>
           <div style="text-align: center; margin: 30px 0;">
             <a href="{{detailUrl}}" style="background-color: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Xem chi tiết</a>
           </div>
@@ -171,7 +175,7 @@ async function main() {
       `,
       icon: '💸',
       color: '#f59e0b',
-      variables: ['tripTitle', 'expenseTitle', 'actionBy', 'updatedAt', 'detailUrl']
+      variables: ['tripTitle', 'expenseTitle', 'expenseAmount', 'actionBy', 'updatedAt', 'detailUrl']
     },
     {
       code: 'payment_created',
