@@ -122,18 +122,25 @@ export class MigrationService {
                         ...tripData,
                         userId: newOwnerId, // Use mapped ID
                         days: {
-                            create: days.map(day => ({
-                                ...day,
-                                activities: {
-                                    create: day.activities
-                                }
-                            }))
+                            create: days.map(day => {
+                                const { tripId, ...dayData } = day; // remove tripId
+                                return {
+                                    ...dayData,
+                                    activities: {
+                                        create: day.activities.map(act => {
+                                            const { dayId, ...actData } = act; // remove dayId
+                                            return actData;
+                                        })
+                                    }
+                                };
+                            })
                         },
                         members: {
                             create: members.map(m => {
                                 const mappedMemberUserId = m.userId ? userIdMap.get(m.userId) : null;
+                                const { tripId, ...memberData } = m; // remove tripId
                                 return {
-                                    ...m,
+                                    ...memberData,
                                     userId: mappedMemberUserId, // Use mapped ID or null
                                     user: undefined
                                 };
