@@ -751,7 +751,7 @@ export class EnhancedNotificationService {
 
       // Determine URL based on notification type
       // Determine URL based on notification type and data
-      let notificationUrl = context.acceptUrl || (options.data && options.data.acceptUrl) || context.url || (options.data && options.data.url);
+      let notificationUrl = context.acceptUrl || (options.data && options.data.acceptUrl) || context.url || (options.data && options.data.url) || context.detailUrl;
 
       if (!notificationUrl) {
         notificationUrl = context.tripId ? `/trip/${context.tripId}` : '/';

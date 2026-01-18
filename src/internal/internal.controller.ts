@@ -7,7 +7,7 @@ export class SendEmailDto {
     html: string;
 }
 
-@Controller('api/internal')
+@Controller('internal')
 export class InternalController {
     private readonly logger = new Logger(InternalController.name);
 
