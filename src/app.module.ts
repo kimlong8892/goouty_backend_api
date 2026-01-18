@@ -16,11 +16,11 @@ import { ProvincesModule } from './provinces/provinces.module';
 import { TripTemplatesModule } from './trip-templates/trip-templates.module';
 import { UploadModule } from './upload/upload.module';
 import { TelegramModule } from './common/telegram/telegram.module';
-import { SeedModule } from './seed/seed.module';
+
 import { LocationsModule } from './locations/locations.module';
 import { RatingsModule } from './ratings/ratings.module';
 import { AiModule } from './ai/ai.module';
-import { MigrationModule } from './migration/migration.module';
+
 import * as Joi from 'joi';
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -153,11 +153,11 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
     UploadModule,
     TelegramModule,
     I18nHelperModule,
-    SeedModule,
+
     LocationsModule,
     RatingsModule,
     AiModule,
-    MigrationModule,
+
   ],
   controllers: [AppController],
   providers: [
