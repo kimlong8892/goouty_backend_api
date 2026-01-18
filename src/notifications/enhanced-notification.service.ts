@@ -705,8 +705,17 @@ export class EnhancedNotificationService {
   private cleanEmailHtml(html: string): string {
     if (!html) return '';
 
-    // First remove specific Unlayer metadata comments if they exist
-    let cleaned = html.replace(/<!--\s*unlayer:design:\{[^>]*-->/gi, '');
+    // Aggressively remove Unlayer metadata and all HTML comments
+    // This regex matches <!-- ... --> including multi-line comments
+    let cleaned = html.replace(/<!--[\s\S]*?-->/g, '');
+
+    // Unlayer or JSON stringify sometimes escapes newlines as literal \n characters
+    // We need to remove them as they show up as text in email clients
+    cleaned = cleaned.replace(/\\r\\n/g, ' ').replace(/\\n/g, ' ').replace(/\\r/g, ' ');
+
+    // Normalize whitespace: replace multiple spaces/newlines with single space
+    // careful not to break HTML attributes, but standard HTML ignores extra whitespace anyway
+    cleaned = cleaned.replace(/\s+/g, ' ');
 
     // Extract content inside <html> tag if present
     // This matches <html ...> CONTENT </html> and returns CONTENT
