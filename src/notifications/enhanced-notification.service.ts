@@ -708,22 +708,23 @@ export class EnhancedNotificationService {
     let cleaned = html;
 
     // 1. Truncate trailing Unlayer metadata
-    // Case A: Full HTML document -> truncate after </html>
+    // We prioritize removing the specific unlayer design comment block first
+    // regardless of whether there is an </html> tag or not, because sometimes
+    // there might be content after </html> that isn't the unlayer comment.
+
+    const unlayerIndex = cleaned.indexOf('<!-- unlayer:design');
+    if (unlayerIndex !== -1) {
+      cleaned = cleaned.substring(0, unlayerIndex);
+    }
+
+    // THEN check for </html> and truncate after it if it exists
+    // This is safer because unlayer comment is usually at the very end
     const endHtmlIndex = cleaned.lastIndexOf('</html>');
     if (endHtmlIndex !== -1) {
       cleaned = cleaned.substring(0, endHtmlIndex + 7); // +7 length of </html>
     }
-    // Case B: Partial HTML (no <html> tag) -> truncate before unlayer design comment
-    else {
-      const unlayerIndex = cleaned.indexOf('<!-- unlayer:design');
-      if (unlayerIndex !== -1) {
-        cleaned = cleaned.substring(0, unlayerIndex);
-      }
-    }
 
     // 2. Aggressively remove all HTML comments within the content
-    // This catches <!-- unlayer:design... --> if it wasn't caught by truncation 
-    // and other conditional comments
     cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
 
     // 3. Unlayer or JSON stringify sometimes escapes newlines as literal \n characters
