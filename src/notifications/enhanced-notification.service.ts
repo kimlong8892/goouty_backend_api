@@ -705,27 +705,24 @@ export class EnhancedNotificationService {
   private cleanEmailHtml(html: string): string {
     if (!html) return '';
 
-    // Aggressively remove Unlayer metadata and all HTML comments
-    // This regex matches <!-- ... --> including multi-line comments
-    let cleaned = html.replace(/<!--[\s\S]*?-->/g, '');
+    let cleaned = html;
 
-    // Unlayer or JSON stringify sometimes escapes newlines as literal \n characters
-    // We need to remove them as they show up as text in email clients
-    cleaned = cleaned.replace(/\\r\\n/g, ' ').replace(/\\n/g, ' ').replace(/\\r/g, ' ');
-
-    // Normalize whitespace: replace multiple spaces/newlines with single space
-    // careful not to break HTML attributes, but standard HTML ignores extra whitespace anyway
-    cleaned = cleaned.replace(/\s+/g, ' ');
-
-    // Extract content inside <html> tag if present
-    // This matches <html ...> CONTENT </html> and returns CONTENT
-    const htmlContentMatch = cleaned.match(/<html[^>]*>([\s\S]*)<\/html>/i);
-
-    if (htmlContentMatch && htmlContentMatch[1]) {
-      return htmlContentMatch[1].trim();
+    // 1. Truncate everything after </html> to remove trailing Unlayer metadata
+    const endHtmlIndex = cleaned.lastIndexOf('</html>');
+    if (endHtmlIndex !== -1) {
+      cleaned = cleaned.substring(0, endHtmlIndex + 7); // +7 length of </html>
     }
 
-    return cleaned;
+    // 2. Aggressively remove Unlayer metadata and all HTML comments within the content
+    cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
+
+    // 3. Unlayer or JSON stringify sometimes escapes newlines as literal \n characters
+    cleaned = cleaned.replace(/\\r\\n/g, ' ').replace(/\\n/g, ' ').replace(/\\r/g, ' ');
+
+    // 4. Normalize whitespace
+    cleaned = cleaned.replace(/\s+/g, ' ');
+
+    return cleaned.trim();
   }
 
   /**
