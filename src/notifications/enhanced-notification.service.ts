@@ -707,13 +707,23 @@ export class EnhancedNotificationService {
 
     let cleaned = html;
 
-    // 1. Truncate everything after </html> to remove trailing Unlayer metadata
+    // 1. Truncate trailing Unlayer metadata
+    // Case A: Full HTML document -> truncate after </html>
     const endHtmlIndex = cleaned.lastIndexOf('</html>');
     if (endHtmlIndex !== -1) {
       cleaned = cleaned.substring(0, endHtmlIndex + 7); // +7 length of </html>
     }
+    // Case B: Partial HTML (no <html> tag) -> truncate before unlayer design comment
+    else {
+      const unlayerIndex = cleaned.indexOf('<!-- unlayer:design');
+      if (unlayerIndex !== -1) {
+        cleaned = cleaned.substring(0, unlayerIndex);
+      }
+    }
 
-    // 2. Aggressively remove Unlayer metadata and all HTML comments within the content
+    // 2. Aggressively remove all HTML comments within the content
+    // This catches <!-- unlayer:design... --> if it wasn't caught by truncation 
+    // and other conditional comments
     cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
 
     // 3. Unlayer or JSON stringify sometimes escapes newlines as literal \n characters
