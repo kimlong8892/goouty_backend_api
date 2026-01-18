@@ -191,9 +191,9 @@ export class EnhancedNotificationService {
   }
 
   /**
-   * Send notification for payment creation
+   * Send notification for payment completion
    */
-  async sendPaymentCreatedNotification(
+  async sendPaymentCompletedNotification(
     tripId: string,
     tripTitle: string,
     debtorName: string,
@@ -215,7 +215,7 @@ export class EnhancedNotificationService {
     };
 
     return this.sendNotificationToTripMembersDirectly(
-      'payment_created',
+      'payment_completed',
       context,
       tripId,
       options
@@ -435,7 +435,7 @@ export class EnhancedNotificationService {
       'trip_deleted': NotificationType.TRIP_DELETED,
       'expense_added': NotificationType.EXPENSE_ADDED,
       'expense_updated': NotificationType.EXPENSE_UPDATED,
-      'payment_created': NotificationType.SETTLEMENT_CREATED,
+      'payment_completed': NotificationType.SETTLEMENT_CREATED,
       'system_announcement': NotificationType.SYSTEM_ANNOUNCEMENT,
       'trip_invitation': NotificationType.INFO,
       'info': NotificationType.INFO,

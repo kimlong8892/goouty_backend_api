@@ -702,7 +702,7 @@ export class ExpensesService {
         });
 
         if (trip && debtor && creditor) {
-          await this.notificationService.sendPaymentCreatedNotification(
+          await this.notificationService.sendPaymentCompletedNotification(
             settlement.tripId,
             trip.title,
             debtor.fullName || 'Người dùng',

@@ -65,15 +65,6 @@ async function main() {
             icon: '💰',
             color: '#10b981'
         },
-        {
-            code: 'payment_created',
-            title: 'Yêu cầu quyết toán',
-            message: '{{actionBy}} vừa tạo yêu cầu quyết toán {{paymentAmount}} cho "{{tripTitle}}"',
-            emailSubject: '[Goouty] Yêu cầu quyết toán mới',
-            emailBody: '<p><strong>{{actionBy}}</strong> vừa tạo yêu cầu quyết toán.</p><p>Người nợ: {{debtorName}}</p><p>Người nhận: {{creditorName}}</p><p>Số tiền: <strong>{{paymentAmount}}</strong></p>',
-            icon: '💳',
-            color: '#3b82f6'
-        }
     ];
 
     for (const template of templates) {
