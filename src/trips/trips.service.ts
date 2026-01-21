@@ -1294,7 +1294,8 @@ export class TripsService {
                 // Create a date with today's date and the specified time
                 const today = new Date();
                 const [hours, minutes] = templateActivity.startTime.split(':');
-                startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(hours), parseInt(minutes));
+                // Use UTC to avoid timezone shifting
+                startTime = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(hours), parseInt(minutes)));
               } else {
                 // If it's already a date string, try to parse it
                 const parsedDate = new Date(templateActivity.startTime);
@@ -1311,6 +1312,7 @@ export class TripsService {
                 notes: templateActivity.notes,
                 important: templateActivity.important,
                 sortOrder: templateActivity.activityOrder,
+                avatar: templateActivity.avatar,
                 day: { connect: { id: day.id } }
               }
             });
