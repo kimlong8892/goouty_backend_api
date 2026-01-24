@@ -157,19 +157,7 @@ export class ExpensesService {
     // Automatically create payment settlements after creating expense
     await this.expenseCalculationService.createPaymentSettlements(createExpenseDto.tripId);
 
-    // Send notification about expense creation
-    try {
-      await this.notificationService.sendExpenseAddedNotification(
-        createExpenseDto.tripId,
-        trip.title,
-        createExpenseDto.title,
-        Number(createExpenseDto.amount),
-        expense.payer.fullName || expense.payer.email || 'Một thành viên'
-      );
-    } catch (error) {
-      console.error('Failed to send expense creation notification:', error);
-      // Don't throw error here to avoid breaking expense creation
-    }
+
 
     return this.mapToResponseDto(expense);
   }
@@ -399,32 +387,7 @@ export class ExpensesService {
     // Automatically update payment settlements after updating expense
     await this.expenseCalculationService.createPaymentSettlements(expense.tripId);
 
-    // Send notification about expense update
-    try {
-      const trip = await this.prisma.trip.findUnique({
-        where: { id: expense.tripId },
-        select: { title: true }
-      });
 
-      if (trip) {
-        // Fetch updater user info
-        const updater = await this.prisma.user.findUnique({
-          where: { id: userId },
-          select: { fullName: true, email: true }
-        });
-
-        await this.notificationService.sendExpenseUpdatedNotification(
-          expense.tripId,
-          trip.title,
-          updatedExpense.title,
-          Number(updatedExpense.amount),
-          updater?.fullName || updater?.email || 'Một thành viên'
-        );
-      }
-    } catch (error) {
-      console.error('Failed to send expense update notification:', error);
-      // Don't throw error here to avoid breaking expense update
-    }
 
     return this.mapToResponseDto(updatedExpense);
   }
@@ -704,55 +667,7 @@ export class ExpensesService {
       await this.lockExpensesForTrip(settlement.tripId);
     }
 
-    // Send notification about payment transaction
-    if ((dto.status ?? 'success') === 'success') {
-      console.log('🔔 [PAYMENT_COMPLETED] Starting notification process...');
-      console.log('🔔 [PAYMENT_COMPLETED] Settlement ID:', settlementId);
-      console.log('🔔 [PAYMENT_COMPLETED] Trip ID:', settlement.tripId);
-      console.log('🔔 [PAYMENT_COMPLETED] Payment Amount:', dto.amount);
-      console.log('🔔 [PAYMENT_COMPLETED] Paid By User ID:', userId);
 
-      try {
-        const trip = await this.prisma.trip.findUnique({
-          where: { id: settlement.tripId },
-          select: { title: true }
-        });
-        console.log('🔔 [PAYMENT_COMPLETED] Trip found:', trip?.title);
-
-        const debtor = await this.prisma.user.findUnique({
-          where: { id: settlement.debtorId },
-          select: { fullName: true, email: true }
-        });
-        console.log('🔔 [PAYMENT_COMPLETED] Debtor:', debtor?.fullName || debtor?.email);
-
-        const creditor = await this.prisma.user.findUnique({
-          where: { id: settlement.creditorId },
-          select: { fullName: true, email: true }
-        });
-        console.log('🔔 [PAYMENT_COMPLETED] Creditor:', creditor?.fullName || creditor?.email);
-
-        if (trip && debtor && creditor) {
-          console.log('🔔 [PAYMENT_COMPLETED] Calling sendPaymentCompletedNotification...');
-          await this.notificationService.sendPaymentCompletedNotification(
-            settlement.tripId,
-            trip.title,
-            debtor.fullName || 'Người dùng',
-            creditor.fullName || 'Người dùng',
-            dto.amount,
-            userId
-          );
-          console.log('✅ [PAYMENT_COMPLETED] Notification sent successfully!');
-        } else {
-          console.warn('⚠️ [PAYMENT_COMPLETED] Missing data - Trip:', !!trip, 'Debtor:', !!debtor, 'Creditor:', !!creditor);
-        }
-      } catch (error) {
-        console.error('❌ [PAYMENT_COMPLETED] Failed to send payment notification:', error);
-        console.error('❌ [PAYMENT_COMPLETED] Error details:', error.message);
-        console.error('❌ [PAYMENT_COMPLETED] Error stack:', error.stack);
-      }
-    } else {
-      console.log('⏭️ [PAYMENT_COMPLETED] Skipping notification - Transaction status is not success:', dto.status);
-    }
 
     return this.mapTransactionToResponseDto(transaction);
   }

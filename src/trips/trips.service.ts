@@ -85,19 +85,7 @@ export class TripsService {
       return trip;
     });
 
-    // Send notification to all users about trip creation
-    try {
-      console.log('🚀 Sending trip creation notification for trip:', trip.id);
-      await this.notificationService.sendTripCreatedNotification(
-        trip.id,
-        trip.title,
-        userId
-      );
-      console.log('✅ Trip creation notification sent successfully');
-    } catch (error) {
-      console.error('❌ Failed to send trip creation notification:', error);
-      // Don't throw error here to avoid breaking trip creation
-    }
+
 
     return trip;
   }
@@ -283,32 +271,7 @@ export class TripsService {
 
     const updatedTrip = await this.tripsRepository.update(id, data);
 
-    // Send notification about trip update
-    try {
-      // Fetch full trip details to get province name and formatted dates
-      const fullTrip = await this.prisma.trip.findUnique({
-        where: { id },
-        include: { province: true }
-      });
 
-      // Fetch updater user info
-      const updater = await this.prisma.user.findUnique({
-        where: { id: requestUserId },
-        select: { fullName: true, email: true }
-      });
-
-      await this.notificationService.sendTripUpdatedNotification(
-        id,
-        updatedTrip.title,
-        updater?.fullName || updater?.email || 'Một thành viên',
-        fullTrip?.province?.name || '',
-        fullTrip?.startDate ? fullTrip.startDate.toLocaleDateString('vi-VN') : '',
-        fullTrip?.endDate ? fullTrip.endDate.toLocaleDateString('vi-VN') : ''
-      );
-    } catch (error) {
-      console.error('Failed to send trip update notification:', error);
-      // Don't throw error here to avoid breaking trip update
-    }
 
     return updatedTrip;
   }
@@ -324,17 +287,7 @@ export class TripsService {
       );
     }
 
-    // Send notification about trip deletion before deleting
-    try {
-      await this.notificationService.sendTripDeletedNotification(
-        id,
-        trip.title,
-        requestUserId
-      );
-    } catch (error) {
-      console.error('Failed to send trip deletion notification:', error);
-      // Don't throw error here to avoid breaking trip deletion
-    }
+
 
     return this.tripsRepository.remove(id);
   }
@@ -474,30 +427,7 @@ export class TripsService {
         select: { fullName: true, email: true },
       });
 
-      // Gửi notification và email qua queue
-      const frontendUrl = this.configService.get<string>('APP_URL');
-      if (!frontendUrl) {
-        this.logger.error('APP_URL is not set in environment variables');
-      }
 
-      await this.notificationService.sendTripInvitationNotification(
-        tripId,
-        trip.title,
-        userToAdd?.id || '',
-        inviter?.fullName || inviter?.email || 'Một người bạn',
-        (trip as any).province?.name || 'Chưa xác định',
-        trip.startDate ? trip.startDate.toLocaleDateString('vi-VN') : '',
-        trip.endDate ? trip.endDate.toLocaleDateString('vi-VN') : '',
-        {
-          skipEmail: false,
-          data: {
-            userEmail: normalizedEmail,
-            userName: userToAdd?.fullName || addMemberDto.email.split('@')[0],
-            inviteeName: userToAdd?.fullName || addMemberDto.email.split('@')[0],
-            acceptUrl: `${frontendUrl}/invite?token=${inviteToken}`
-          }
-        }
-      );
 
       // Return với user info hoặc email
       return {
@@ -626,30 +556,7 @@ export class TripsService {
       throw new BadRequestException('No email found for this invitation');
     }
 
-    // Gửi notification và email qua queue
-    const frontendUrl = this.configService.get<string>('APP_URL');
-    if (!frontendUrl) {
-      this.logger.error('APP_URL is not set in environment variables');
-    }
 
-    await this.notificationService.sendTripInvitationNotification(
-      tripId,
-      trip.title,
-      member.userId || '',
-      inviter?.fullName || inviter?.email || 'Một người bạn',
-      (trip as any).province?.name || 'Chưa xác định',
-      trip.startDate ? trip.startDate.toLocaleDateString('vi-VN') : '',
-      trip.endDate ? trip.endDate.toLocaleDateString('vi-VN') : '',
-      {
-        skipEmail: false,
-        data: {
-          userEmail: emailToSend,
-          userName: member.user?.fullName || emailToSend.split('@')[0],
-          inviteeName: member.user?.fullName || emailToSend.split('@')[0],
-          acceptUrl: `${frontendUrl}/invite?token=${newInviteToken}`
-        }
-      }
-    );
 
     return updatedMember;
   }
@@ -1009,20 +916,7 @@ export class TripsService {
           },
         });
 
-        // Send notification to the newly registered user
-        const trip = (invitation as any).trip as { id: string; title: string } | undefined;
-        if (trip) {
-          void this.notificationService.sendTripInvitationNotification(
-            invitation.tripId,
-            trip.title,
-            userId,
-            undefined,
-            undefined, // location
-            undefined, // startDate
-            undefined, // endDate
-            { skipEmail: true } // Email đã được gửi trước đó
-          );
-        }
+
       } catch (error) {
         // Handle potential unique constraint errors if findUnique didn't catch it
         console.error(`Error linking invitation ${invitation.id}:`, error);

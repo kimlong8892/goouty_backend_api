@@ -4,10 +4,10 @@ import { NotificationService } from './notification.service';
 import { EnhancedNotificationService } from './enhanced-notification.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SubscribePushDto, UpdateNotificationPreferencesDto } from './dto/notification-preferences.dto';
-import { 
-  CreateNotificationDto, 
-  UpdateNotificationDto, 
-  NotificationResponseDto, 
+import {
+  CreateNotificationDto,
+  UpdateNotificationDto,
+  NotificationResponseDto,
   NotificationListResponseDto,
   NotificationStatsDto,
   MarkAsReadDto,
@@ -23,18 +23,9 @@ export class NotificationController {
   constructor(
     private readonly notificationService: NotificationService,
     private readonly enhancedNotificationService: EnhancedNotificationService
-  ) {}
+  ) { }
 
-  @Post('test-all-devices')
-  @ApiOperation({ summary: 'Send test notification to all devices' })
-  @ApiResponse({ status: 200, description: 'Test notification sent to all devices' })
-  async sendTestNotificationToAllDevices(@Request() req) {
-    const userId = req.user.userId;
-    if (!userId) {
-      throw new Error('User ID not found in request');
-    }
-    return this.notificationService.sendTestNotificationToAllDevices(userId);
-  }
+
 
   @Post('subscribe')
   @ApiOperation({ summary: 'Subscribe user to push notifications' })
@@ -55,7 +46,7 @@ export class NotificationController {
     // Get userId from request
     const userId = req.user.userId;
     console.log('User ID from request:', userId);
-    
+
     if (!userId) {
       throw new Error('User ID not found in request');
     }
@@ -136,6 +127,9 @@ export class NotificationController {
 
   // ==================== NOTIFICATION CRUD APIs ====================
 
+  // DEPRECATED: createNotification endpoint removed
+  // TODO: Implement Kafka producer for notification creation
+  /*
   @Post()
   @ApiOperation({ summary: 'Create a new notification' })
   @ApiResponse({ status: 201, description: 'Notification created successfully', type: NotificationResponseDto })
@@ -149,6 +143,7 @@ export class NotificationController {
     }
     return this.notificationService.createNotification(userId, createNotificationDto);
   }
+  */
 
   @Get()
   @ApiOperation({ summary: 'Get user notifications' })
@@ -258,6 +253,9 @@ export class NotificationController {
 
   // ==================== SEND NOTIFICATION APIs ====================
 
+  // DEPRECATED: sendNotificationToUser endpoint removed
+  // TODO: Implement Kafka producer for sending notifications
+  /*
   @Post('send-to-user')
   @ApiOperation({ summary: 'Send notification to specific user' })
   @ApiResponse({ status: 200, description: 'Notification sent successfully' })
@@ -283,7 +281,11 @@ export class NotificationController {
       body.data
     );
   }
+  */
 
+  // DEPRECATED: sendNotificationWithDatabase endpoint removed
+  // TODO: Implement Kafka producer for sending notifications
+  /*
   @Post('send-with-database')
   @ApiOperation({ summary: 'Send notification and save to database' })
   @ApiResponse({ status: 200, description: 'Notification sent and saved successfully' })
@@ -311,60 +313,5 @@ export class NotificationController {
       body.pushSubscription
     );
   }
-
-  // ==================== ENHANCED NOTIFICATION APIs ====================
-
-  @Post('system-announcement')
-  @ApiOperation({ summary: 'Send system announcement to all users' })
-  @ApiResponse({ status: 200, description: 'System announcement sent successfully' })
-  async sendSystemAnnouncement(
-    @Request() req,
-    @Body() body: {
-      message: string;
-      skipEmail?: boolean;
-      skipPush?: boolean;
-    }
-  ) {
-    const userId = req.user.userId;
-    if (!userId) {
-      throw new Error('User ID not found in request');
-    }
-    
-    return this.enhancedNotificationService.sendSystemAnnouncement(
-      body.message,
-      {
-        skipEmail: body.skipEmail,
-        skipPush: body.skipPush
-      }
-    );
-  }
-
-  @Post('custom-notification')
-  @ApiOperation({ summary: 'Send custom notification to specific users' })
-  @ApiResponse({ status: 200, description: 'Custom notification sent successfully' })
-  async sendCustomNotification(
-    @Request() req,
-    @Body() body: {
-      type: string;
-      context: any;
-      userIds: string[];
-      skipEmail?: boolean;
-      skipPush?: boolean;
-    }
-  ) {
-    const userId = req.user.userId;
-    if (!userId) {
-      throw new Error('User ID not found in request');
-    }
-    
-    return this.enhancedNotificationService.sendCustomNotification(
-      body.type,
-      body.context,
-      body.userIds,
-      {
-        skipEmail: body.skipEmail,
-        skipPush: body.skipPush
-      }
-    );
-  }
+  */
 }
