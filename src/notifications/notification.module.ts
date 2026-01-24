@@ -5,13 +5,12 @@ import { NotificationTemplateService } from './notification-template.service';
 import { NotificationController } from './notification.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { DevicesModule } from '../devices/devices.module';
-import { EmailModule } from '../email/email.module';
+
 import { WebPushService } from './web-push.service';
 @Module({
   imports: [
     PrismaModule,
     DevicesModule,
-    EmailModule,
   ],
   providers: [
     NotificationService,

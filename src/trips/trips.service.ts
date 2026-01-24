@@ -6,7 +6,6 @@ import { AddMemberDto } from './dto/add-member.dto';
 import { JoinTripDto } from './dto/join-trip.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomBytes } from 'crypto';
-import { EmailService } from '../email/email.service';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { EnhancedNotificationService } from '../notifications/enhanced-notification.service';
 import { UploadService } from '../upload/upload.service';
@@ -21,7 +20,6 @@ export class TripsService {
   constructor(
     private readonly tripsRepository: TripsRepository,
     private readonly prisma: PrismaService,
-    private readonly emailService: EmailService,
     private readonly notificationService: EnhancedNotificationService,
     private readonly uploadService: UploadService,
     private readonly i18n: I18nService,
