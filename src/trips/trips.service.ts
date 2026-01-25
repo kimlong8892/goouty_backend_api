@@ -59,7 +59,8 @@ export class TripsService {
         endDate: endDate,
         user: { connect: { id: userId } },
         createdBy: { connect: { id: userId } },
-        lastUpdatedBy: { connect: { id: userId } }
+        lastUpdatedBy: { connect: { id: userId } },
+        isNotificationOnCreate: createTripDto.isNotificationOnCreate ?? true
       };
 
       // Only add province relation if provinceId is provided
@@ -1119,7 +1120,8 @@ export class TripsService {
       description: template.description,
       provinceId: template.provinceId,
       templateId: templateId, // Ghi nhận template ID
-      startDate: undefined // Let user set date later
+      startDate: undefined, // Let user set date later
+      isNotificationOnCreate: false
     };
 
     // Create the trip
@@ -1175,8 +1177,10 @@ export class TripsService {
             title: templateDay.title,
             description: templateDay.description,
             trip: { connect: { id: trip.id } },
+            template: { connect: { id: templateDay.id } },
             createdBy: { connect: { id: userId } },
-            lastUpdatedBy: { connect: { id: userId } }
+            lastUpdatedBy: { connect: { id: userId } },
+            isNotificationOnCreate: false
           }
         });
 
@@ -1211,8 +1215,10 @@ export class TripsService {
                 sortOrder: templateActivity.activityOrder,
                 avatar: templateActivity.avatar,
                 day: { connect: { id: day.id } },
+                template: { connect: { id: templateActivity.id } },
                 createdBy: { connect: { id: userId } },
-                lastUpdatedBy: { connect: { id: userId } }
+                lastUpdatedBy: { connect: { id: userId } },
+                isNotificationOnCreate: false
               }
             });
           }

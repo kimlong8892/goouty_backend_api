@@ -17,7 +17,8 @@ export class DaysService {
       sortOrder: maxOrder + 1,
       trip: { connect: { id: tripId } },
       createdBy: { connect: { id: userId } },
-      lastUpdatedBy: { connect: { id: userId } }
+      lastUpdatedBy: { connect: { id: userId } },
+      isNotificationOnCreate: createDayDto.isNotificationOnCreate ?? true
     });
   }
 

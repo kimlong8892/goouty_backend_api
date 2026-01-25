@@ -35,7 +35,8 @@ export class ActivitiesService {
       startTime: createActivityDto.startTime ? new Date(createActivityDto.startTime) : null,
       day: { connect: { id: dayId } },
       createdBy: { connect: { id: userId } },
-      lastUpdatedBy: { connect: { id: userId } }
+      lastUpdatedBy: { connect: { id: userId } },
+      isNotificationOnCreate: createActivityDto.isNotificationOnCreate ?? true
     });
   }
 
