@@ -1233,6 +1233,19 @@ export class TripsService {
   }
 
   async createPendingTrip(createPendingTripDto: CreatePendingTripDto, userId: string) {
+    // Validate user exists
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true }
+    });
+
+    if (!user) {
+      this.logger.error(`User not found: ${userId}`);
+      throw new NotFoundException('User not found');
+    }
+
+    this.logger.log(`Creating pending trip for user ${user.email} (${userId})`);
+
     return this.prisma.pendingTrip.create({
       data: {
         url: createPendingTripDto.url,
