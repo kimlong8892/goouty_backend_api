@@ -12,7 +12,7 @@ export class ActivitiesService {
     private readonly uploadService: UploadService
   ) { }
 
-  async create(createActivityDto: CreateActivityDto, file?: Express.Multer.File) {
+  async create(createActivityDto: CreateActivityDto, userId: string, file?: Express.Multer.File) {
     const { dayId, ...activityData } = createActivityDto;
 
     let avatarUrl = activityData.avatar;
@@ -33,26 +33,65 @@ export class ActivitiesService {
       avatar: avatarUrl,
       sortOrder,
       startTime: createActivityDto.startTime ? new Date(createActivityDto.startTime) : null,
-      day: { connect: { id: dayId } }
+      day: { connect: { id: dayId } },
+      createdBy: { connect: { id: userId } },
+      lastUpdatedBy: { connect: { id: userId } }
     });
   }
 
   async findAll(dayId: string) {
     return this.activitiesRepository.findAll({
       where: { dayId },
-      orderBy: { sortOrder: 'asc' }
+      orderBy: { sortOrder: 'asc' },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        },
+        lastUpdatedBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        }
+      }
     });
   }
 
   async findOne(id: string) {
-    const activity = await this.activitiesRepository.findOne(id);
+    const activity = await this.activitiesRepository.findOne(id, {
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        },
+        lastUpdatedBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        }
+      }
+    });
     if (!activity) {
       throw new NotFoundException(`Activity with ID ${id} not found`);
     }
     return activity;
   }
 
-  async update(id: string, updateActivityDto: UpdateActivityDto, file?: Express.Multer.File) {
+  async update(id: string, updateActivityDto: UpdateActivityDto, userId: string, file?: Express.Multer.File) {
     // Check if activity exists
     const activity = await this.findOne(id);
 
@@ -77,6 +116,7 @@ export class ActivitiesService {
       data.day = { connect: { id: updateActivityDto.dayId } };
       delete data.dayId;
     }
+    data.lastUpdatedById = userId;
 
     return this.activitiesRepository.update(id, data);
   }
