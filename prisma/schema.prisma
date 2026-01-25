@@ -43,6 +43,7 @@ model User {
   updatedActivities   Activity[]           @relation("ActivityLastUpdatedBy")
   createdExpenses     Expense[]            @relation("ExpenseCreatedBy")
   updatedExpenses     Expense[]            @relation("ExpenseLastUpdatedBy")
+  pendingTrips        PendingTrip[]        @relation("UserPendingTrips")
 }
 
 model Trip {
@@ -410,4 +411,25 @@ model UserAiUsage {
 
   @@unique([userId, date])
   @@index([userId, date])
+}
+
+enum PendingTripStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model PendingTrip {
+  id        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  url       String
+  userId    String            @db.Uuid
+  status    PendingTripStatus @default(PENDING)
+  error     String?           @db.Text
+  createdAt DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime          @updatedAt @db.Timestamptz(3)
+  user      User              @relation("UserPendingTrips", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
 }
