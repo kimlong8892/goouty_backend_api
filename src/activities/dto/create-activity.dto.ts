@@ -48,4 +48,8 @@ export class CreateActivityDto {
   @IsUUID()
   @IsNotEmpty()
   dayId: string;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  isNotificationOnCreate?: boolean;
 }

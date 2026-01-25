@@ -17,4 +17,7 @@ export class CreateDayDto {
   @ApiProperty({ description: 'Trip ID this day belongs to' })
   @IsString()
   tripId: string;
+
+  @IsOptional()
+  isNotificationOnCreate?: boolean;
 }
