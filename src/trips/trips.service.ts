@@ -13,6 +13,7 @@ import { I18nService } from 'nestjs-i18n';
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
 import { CreatePendingTripDto } from './dto/create-pending-trip.dto';
+import { formatInTimeZone } from 'date-fns-tz';
 
 @Injectable()
 export class TripsService {
@@ -1230,6 +1231,39 @@ export class TripsService {
 
     // Return the created trip with full details
     return this.findOne(trip.id);
+  }
+
+  async findAllPending(userId: string, options?: { page?: number; limit?: number }) {
+    const { page = 1, limit = 10 } = options || {};
+    const skip = (page - 1) * limit;
+
+    const [pendingTrips, total] = await Promise.all([
+      this.prisma.pendingTrip.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.pendingTrip.count({
+        where: { userId },
+      }),
+    ]);
+
+    const formattedTrips = pendingTrips.map(trip => ({
+      ...trip,
+      createdAt: trip.createdAt,
+      updatedAt: trip.updatedAt,
+    }));
+
+    return {
+      data: formattedTrips,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async createPendingTrip(createPendingTripDto: CreatePendingTripDto, userId: string) {

@@ -64,6 +64,20 @@ export class TripsController {
     return this.tripsService.createPendingTrip(createPendingTripDto, req.user.userId);
   }
 
+  @Get('pending')
+  @ApiOperation({ summary: 'Get all pending trips for authenticated user' })
+  @ApiResponse({ status: 200, description: 'Return all pending trips for authenticated user' })
+  findAllPending(
+    @Request() req: any,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string
+  ) {
+    return this.tripsService.findAllPending(req.user.userId, {
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 10
+    });
+  }
+
   @Get()
   @ApiOperation({ summary: 'Get all trips for authenticated user with search and pagination' })
   @ApiResponse({ status: 200, description: 'Return all trips for authenticated user', type: [TripResponseDto] })
