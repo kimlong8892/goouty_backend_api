@@ -34,4 +34,12 @@ export class CreateTripDto {
 
   @IsOptional()
   isNotificationOnCreate?: boolean;
+
+  @IsOptional()
+  @IsString()
+  avatar?: string;
+
+  @IsOptional()
+  @IsUUID()
+  id?: string;
 }

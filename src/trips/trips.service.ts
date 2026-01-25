@@ -5,7 +5,7 @@ import { UpdateTripDto } from './dto/update-trip.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { JoinTripDto } from './dto/join-trip.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { EnhancedNotificationService } from '../notifications/enhanced-notification.service';
 import { UploadService } from '../upload/upload.service';
@@ -53,6 +53,7 @@ export class TripsService {
     const trip = await this.prisma.$transaction(async (prisma) => {
       // Create the trip
       const tripData: any = {
+        id: createTripDto.id,
         title: createTripDto.title,
         description: createTripDto.description,
         startDate: startDate,
@@ -60,7 +61,8 @@ export class TripsService {
         user: { connect: { id: userId } },
         createdBy: { connect: { id: userId } },
         lastUpdatedBy: { connect: { id: userId } },
-        isNotificationOnCreate: createTripDto.isNotificationOnCreate ?? true
+        isNotificationOnCreate: createTripDto.isNotificationOnCreate ?? true,
+        avatar: createTripDto.avatar
       };
 
       // Only add province relation if provinceId is provided
@@ -1114,20 +1116,11 @@ export class TripsService {
       throw new NotFoundException('Trip template not found or not accessible');
     }
 
-    // Create trip from template
-    const tripData: CreateTripDto = {
-      title: tripTitle || template.title,
-      description: template.description,
-      provinceId: template.provinceId,
-      templateId: templateId, // Ghi nhận template ID
-      startDate: undefined, // Let user set date later
-      isNotificationOnCreate: false
-    };
-
-    // Create the trip
-    const trip = await this.create(tripData, userId);
+    // Pre-generate trip ID to use in avatar path
+    const tripId = randomUUID();
 
     // Copy avatar from template if exists
+    let avatar = undefined;
     if (template.avatar) {
       try {
         const url = new URL(template.avatar);
@@ -1146,27 +1139,35 @@ export class TripsService {
           // Generate a unique filename to avoid collisions
           const extension = path.extname(sourceKey) || '.jpg';
           const fileName = `avatar-${Date.now()}${extension}`;
-          const targetKey = `trip-avatars/${trip.id}/${fileName}`;
+          const targetKey = `trip-avatars/${tripId}/${fileName}`;
 
           const copyResult = await this.uploadService.copyFile(sourceKey, targetKey);
-
-          // Update trip with new avatar URL
-          await this.prisma.trip.update({
-            where: { id: trip.id },
-            data: { avatar: copyResult.url }
-          });
+          avatar = copyResult.url;
         } else {
           // If it's an external URL, just copy the URL
-          await this.prisma.trip.update({
-            where: { id: trip.id },
-            data: { avatar: template.avatar }
-          });
+          avatar = template.avatar;
         }
       } catch (error) {
         this.logger.error(`Failed to handle template avatar: ${error.message}`);
-        // Don't throw error to avoid breaking trip creation
+        // Fallback to template avatar even if copy fails
+        avatar = template.avatar;
       }
     }
+
+    // Create trip from template
+    const tripData: CreateTripDto = {
+      id: tripId,
+      title: tripTitle || template.title,
+      description: template.description,
+      provinceId: template.provinceId,
+      templateId: templateId, // Ghi nhận template ID
+      startDate: undefined, // Let user set date later
+      isNotificationOnCreate: false,
+      avatar: avatar
+    };
+
+    // Create the trip
+    const trip = await this.create(tripData, userId);
 
     // Create days and activities from template
     if (template.days && template.days.length > 0) {
