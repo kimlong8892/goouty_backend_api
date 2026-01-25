@@ -8,14 +8,16 @@ import { ReorderDaysDto } from './dto/reorder-days.dto';
 export class DaysService {
   constructor(private readonly daysRepository: DaysRepository) { }
 
-  async create(createDayDto: CreateDayDto) {
+  async create(createDayDto: CreateDayDto, userId: string) {
     const { tripId, ...dayData } = createDayDto;
 
     const maxOrder = await this.daysRepository.findMaxOrder(tripId);
     return this.daysRepository.create({
       ...dayData,
       sortOrder: maxOrder + 1,
-      trip: { connect: { id: tripId } }
+      trip: { connect: { id: tripId } },
+      createdBy: { connect: { id: userId } },
+      lastUpdatedBy: { connect: { id: userId } }
     });
   }
 
@@ -34,7 +36,7 @@ export class DaysService {
     return day;
   }
 
-  async update(id: string, updateDayDto: UpdateDayDto) {
+  async update(id: string, updateDayDto: UpdateDayDto, userId: string) {
     // Check if day exists
     await this.findOne(id);
 
@@ -46,6 +48,7 @@ export class DaysService {
       data.trip = { connect: { id: updateDayDto.tripId } };
       delete data.tripId;
     }
+    data.lastUpdatedById = userId;
 
     return this.daysRepository.update(id, data);
   }

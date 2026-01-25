@@ -57,7 +57,9 @@ export class TripsService {
         description: createTripDto.description,
         startDate: startDate,
         endDate: endDate,
-        user: { connect: { id: userId } }
+        user: { connect: { id: userId } },
+        createdBy: { connect: { id: userId } },
+        lastUpdatedBy: { connect: { id: userId } }
       };
 
       // Only add province relation if provinceId is provided
@@ -269,6 +271,7 @@ export class TripsService {
       data.endDate = null;
     }
 
+    data.lastUpdatedById = requestUserId;
     const updatedTrip = await this.tripsRepository.update(id, data);
 
 
@@ -1171,7 +1174,9 @@ export class TripsService {
           data: {
             title: templateDay.title,
             description: templateDay.description,
-            trip: { connect: { id: trip.id } }
+            trip: { connect: { id: trip.id } },
+            createdBy: { connect: { id: userId } },
+            lastUpdatedBy: { connect: { id: userId } }
           }
         });
 
@@ -1205,7 +1210,9 @@ export class TripsService {
                 important: templateActivity.important,
                 sortOrder: templateActivity.activityOrder,
                 avatar: templateActivity.avatar,
-                day: { connect: { id: day.id } }
+                day: { connect: { id: day.id } },
+                createdBy: { connect: { id: userId } },
+                lastUpdatedBy: { connect: { id: userId } }
               }
             });
           }

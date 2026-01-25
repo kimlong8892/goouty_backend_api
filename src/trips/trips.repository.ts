@@ -65,6 +65,22 @@ export class TripsRepository {
               }
             }
           }
+        },
+        createdBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        },
+        lastUpdatedBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
         }
       }
     });
@@ -110,6 +126,22 @@ export class TripsRepository {
                 profilePicture: true
               }
             }
+          }
+        },
+        createdBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        },
+        lastUpdatedBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
           }
         }
       }

@@ -35,6 +35,12 @@ model User {
   tripMembers          TripMember[]
   wishlistTemplates    TripTemplate[] @relation("UserWishlist")
   ratings              Rating[]
+  createdTrips        Trip[]               @relation("TripCreatedBy")
+  updatedTrips        Trip[]               @relation("TripLastUpdatedBy")
+  createdDays         Day[]                @relation("DayCreatedBy")
+  updatedDays         Day[]                @relation("DayLastUpdatedBy")
+  createdActivities   Activity[]           @relation("ActivityCreatedBy")
+  updatedActivities   Activity[]           @relation("ActivityLastUpdatedBy")
 }
 
 model Trip {
@@ -58,6 +64,10 @@ model Trip {
   template           TripTemplate?       @relation(fields: [templateId], references: [id])
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   members            TripMember[]
+  createdById        String?             @db.Uuid
+  lastUpdatedById    String?             @db.Uuid
+  createdBy          User?               @relation("TripCreatedBy", fields: [createdById], references: [id])
+  lastUpdatedBy      User?               @relation("TripLastUpdatedBy", fields: [lastUpdatedById], references: [id])
 
   @@index([provinceId])
   @@index([templateId])
@@ -74,6 +84,10 @@ model Day {
   createdAt   DateTime @db.Timestamptz(3)   @default(now())
   updatedAt   DateTime @db.Timestamptz(3)   @updatedAt @default(now())
   sortOrder   Int        @default(0)
+  createdById     String?             @db.Uuid
+  lastUpdatedById String?             @db.Uuid
+  createdBy       User?               @relation("DayCreatedBy", fields: [createdById], references: [id])
+  lastUpdatedBy   User?               @relation("DayLastUpdatedBy", fields: [lastUpdatedById], references: [id])
 }
 
 model TripMember {
@@ -109,6 +123,10 @@ model Activity {
   avatar      String?
   createdAt   DateTime @db.Timestamptz(3)  @default(now())
   updatedAt   DateTime @db.Timestamptz(3)  @updatedAt @default(now())
+  createdById     String?             @db.Uuid
+  lastUpdatedById String?             @db.Uuid
+  createdBy       User?               @relation("ActivityCreatedBy", fields: [createdById], references: [id])
+  lastUpdatedBy   User?               @relation("ActivityLastUpdatedBy", fields: [lastUpdatedById], references: [id])
 }
 
 model Expense {
