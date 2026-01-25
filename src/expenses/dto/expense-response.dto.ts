@@ -11,6 +11,13 @@ export class ExpenseParticipantResponseDto {
   createdAt: Date;
 }
 
+export class UserSummaryDto {
+  id: string;
+  email: string;
+  fullName: string;
+  profilePicture?: string;
+}
+
 export class ExpenseResponseDto {
   id: string;
   title: string;
@@ -19,18 +26,16 @@ export class ExpenseResponseDto {
   description?: string;
   createdAt: Date;
   updatedAt: Date;
-  
+
   tripId: string;
   payerId: string;
-  
-  payer: {
-    id: string;
-    email: string;
-    fullName: string;
-    profilePicture?: string;
-  };
-  
+
+  payer: UserSummaryDto;
+
   participants: ExpenseParticipantResponseDto[];
+
+  createdBy?: UserSummaryDto;
+  lastUpdatedBy?: UserSummaryDto;
 }
 
 export class ExpenseListResponseDto {
@@ -42,16 +47,14 @@ export class ExpenseListResponseDto {
   isLocked?: boolean;
   createdAt: Date;
   updatedAt: Date;
-  
+
   tripId: string;
   payerId: string;
-  
-  payer: {
-    id: string;
-    email: string;
-    fullName: string;
-    profilePicture?: string;
-  };
-  
+
+  payer: UserSummaryDto;
+
   participants: ExpenseParticipantResponseDto[];
+
+  createdBy?: UserSummaryDto;
+  lastUpdatedBy?: UserSummaryDto;
 }

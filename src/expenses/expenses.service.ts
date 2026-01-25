@@ -79,7 +79,6 @@ export class ExpensesService {
     }
 
     // Validate expense amount to prevent database overflow
-    // DECIMAL(20,2) max value is 999,999,999,999,999,999.99
     const MAX_EXPENSE_AMOUNT = 999999999999999999.99;
     if (Number(createExpenseDto.amount) > MAX_EXPENSE_AMOUNT) {
       throw new BadRequestException(`Expense amount exceeds maximum allowed value (${MAX_EXPENSE_AMOUNT})`);
@@ -123,6 +122,8 @@ export class ExpensesService {
         description: createExpenseDto.description,
         tripId: createExpenseDto.tripId,
         payerId: createExpenseDto.payerId,
+        createdById: userId,
+        lastUpdatedById: userId,
         participants: {
           create: createExpenseDto.participantIds.map((participantId, idx) => ({
             userId: participantId,
@@ -150,14 +151,28 @@ export class ExpensesService {
               }
             }
           }
+        },
+        createdBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        },
+        lastUpdatedBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
         }
       }
     });
 
     // Automatically create payment settlements after creating expense
     await this.expenseCalculationService.createPaymentSettlements(createExpenseDto.tripId);
-
-
 
     return this.mapToResponseDto(expense);
   }
@@ -200,6 +215,22 @@ export class ExpensesService {
               }
             }
           }
+        },
+        createdBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        },
+        lastUpdatedBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -231,6 +262,22 @@ export class ExpensesService {
                 profilePicture: true
               }
             }
+          }
+        },
+        createdBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        },
+        lastUpdatedBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
           }
         }
       }
@@ -360,6 +407,7 @@ export class ExpensesService {
         ...(updateExpenseDto.date && { date: new Date(updateExpenseDto.date) }),
         ...(updateExpenseDto.description !== undefined && { description: updateExpenseDto.description }),
         ...(updateExpenseDto.payerId && { payerId: updateExpenseDto.payerId }),
+        lastUpdatedById: userId,
         ...(updateParticipantsBlock || {})
       } as Prisma.ExpenseUpdateInput,
       include: {
@@ -367,7 +415,8 @@ export class ExpensesService {
           select: {
             id: true,
             email: true,
-            fullName: true
+            fullName: true,
+            profilePicture: true
           }
         },
         participants: {
@@ -376,9 +425,26 @@ export class ExpensesService {
               select: {
                 id: true,
                 email: true,
-                fullName: true
+                fullName: true,
+                profilePicture: true
               }
             }
+          }
+        },
+        createdBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        },
+        lastUpdatedBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
           }
         }
       }
@@ -386,8 +452,6 @@ export class ExpensesService {
 
     // Automatically update payment settlements after updating expense
     await this.expenseCalculationService.createPaymentSettlements(expense.tripId);
-
-
 
     return this.mapToResponseDto(updatedExpense);
   }
@@ -596,8 +660,6 @@ export class ExpensesService {
     dto: CreatePaymentTransactionDto,
     userId: string
   ): Promise<PaymentTransactionResponseDto> {
-    console.log("Data debug =============>", dto);
-
     const settlement = await this.prisma.paymentSettlement.findUnique({
       where: { id: settlementId },
       include: { trip: true }
@@ -618,7 +680,6 @@ export class ExpensesService {
     }
 
     // FORCE RECALCULATION: Ensure settlement data is correct before validating
-    // This fixes the issue where previous bugs led to incorrect settlement amounts
     await this.expenseCalculationService.createPaymentSettlements(settlement.tripId);
 
     // Re-fetch settlement to get the updated amount
@@ -640,7 +701,6 @@ export class ExpensesService {
       _sum: { amount: true }
     });
     const totalPaid = Number(aggregate._sum.amount ?? 0);
-    // Use updatedSettlement.amount which is now correct (Total Contract Value)
     const remainingBefore = Number(updatedSettlement.amount) - totalPaid;
 
     if (dto.amount > remainingBefore + 1e-6) {
@@ -666,8 +726,6 @@ export class ExpensesService {
     if ((dto.status ?? 'success') === 'success') {
       await this.lockExpensesForTrip(settlement.tripId);
     }
-
-
 
     return this.mapTransactionToResponseDto(transaction);
   }
@@ -743,7 +801,7 @@ export class ExpensesService {
         amount: Number(p.amount),
         createdAt: p.createdAt
       }))
-    };
+    } as any;
   }
 
   private mapToResponseDto(expense: any): ExpenseResponseDto {
@@ -765,9 +823,8 @@ export class ExpensesService {
         amount: Number(p.amount),
         createdAt: p.createdAt
       }))
-    };
+    } as any;
   }
-
 
   private async lockExpensesForTrip(tripId: string): Promise<void> {
     // Lock all expenses in this trip

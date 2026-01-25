@@ -41,6 +41,8 @@ model User {
   updatedDays         Day[]                @relation("DayLastUpdatedBy")
   createdActivities   Activity[]           @relation("ActivityCreatedBy")
   updatedActivities   Activity[]           @relation("ActivityLastUpdatedBy")
+  createdExpenses     Expense[]            @relation("ExpenseCreatedBy")
+  updatedExpenses     Expense[]            @relation("ExpenseLastUpdatedBy")
 }
 
 model Trip {
@@ -143,6 +145,10 @@ model Expense {
   payer        User                 @relation("ExpensePayer", fields: [payerId], references: [id], onDelete: Cascade)
   trip         Trip                 @relation(fields: [tripId], references: [id], onDelete: Cascade)
   participants ExpenseParticipant[]
+  createdById     String?             @db.Uuid
+  lastUpdatedById String?             @db.Uuid
+  createdBy       User?               @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+  lastUpdatedBy   User?               @relation("ExpenseLastUpdatedBy", fields: [lastUpdatedById], references: [id])
 }
 
 model ExpenseParticipant {
