@@ -12,6 +12,7 @@ import { UploadService } from '../upload/upload.service';
 import { I18nService } from 'nestjs-i18n';
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
+import { CreatePendingTripDto } from './dto/create-pending-trip.dto';
 
 @Injectable()
 export class TripsService {
@@ -1229,5 +1230,14 @@ export class TripsService {
 
     // Return the created trip with full details
     return this.findOne(trip.id);
+  }
+
+  async createPendingTrip(createPendingTripDto: CreatePendingTripDto, userId: string) {
+    return this.prisma.pendingTrip.create({
+      data: {
+        url: createPendingTripDto.url,
+        userId: userId,
+      },
+    });
   }
 }
