@@ -154,19 +154,7 @@ export class AuthService {
       },
     });
 
-    // Send email directly
-    await this.notificationService.sendCustomNotification(
-      'FORGOT_PASSWORD',
-      {
-        resetToken,
-        resetUrl: `${process.env.APP_URL}/reset-password?token=${resetToken}`,
-        frontendUrl: process.env.APP_URL,
-      },
-      [user.id],
-      {
-        skipPush: true,
-      },
-    );
+
 
     return { message: 'If email exists, a reset link has been sent.' };
   }
@@ -224,19 +212,7 @@ export class AuthService {
       },
     });
 
-    // Send email
-    await this.notificationService.sendCustomNotification(
-      'auth_otp',
-      {
-        otp,
-        userName: user.fullName || user.email,
-        userEmail: user.email,
-      },
-      [user.id],
-      {
-        skipPush: true,
-      },
-    );
+
 
     return { message: 'Mã OTP đã được gửi về email của bạn.' };
   }

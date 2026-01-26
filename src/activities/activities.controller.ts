@@ -1,14 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseInterceptors, UploadedFile, UseGuards, Request } from '@nestjs/common';
 import { ActivitiesService } from './activities.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
 import { ReorderActivitiesDto } from './dto/reorder-activities.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { ActivityResponseDto } from './dto/activity-response.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+
 @ApiTags('activities')
 @Controller('activities')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class ActivitiesController {
   constructor(private readonly activitiesService: ActivitiesService) { }
 
@@ -19,15 +23,16 @@ export class ActivitiesController {
   @ApiResponse({ status: 201, description: 'Activity created successfully', type: ActivityResponseDto })
   create(
     @Body() createActivityDto: CreateActivityDto,
+    @Request() req: any,
     @UploadedFile() file?: Express.Multer.File,
   ) {
     if (file) {
       // If file is present, we'll handle it in the service
       // But we can't easily assign it to DTO here if DTO expects string
       // The service will handle the upload and update the DTO/entity
-      return this.activitiesService.create(createActivityDto, file);
+      return this.activitiesService.create(createActivityDto, req.user.userId, file);
     }
-    return this.activitiesService.create(createActivityDto);
+    return this.activitiesService.create(createActivityDto, req.user.userId);
   }
 
   @Get()
@@ -64,9 +69,10 @@ export class ActivitiesController {
   update(
     @Param('id') id: string,
     @Body() updateActivityDto: UpdateActivityDto,
+    @Request() req: any,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.activitiesService.update(id, updateActivityDto, file);
+    return this.activitiesService.update(id, updateActivityDto, req.user.userId, file);
   }
 
   @Delete(':id')

@@ -9,14 +9,14 @@ import { ActivitiesModule } from './activities/activities.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { UsersModule } from "./users/users.module";
 import { AuthModule } from "./auth/auth.module";
-import { EmailModule } from './email/email.module';
+
 import { NotificationModule } from './notifications/notification.module';
 import { DevicesModule } from './devices/devices.module';
 import { ProvincesModule } from './provinces/provinces.module';
 import { TripTemplatesModule } from './trip-templates/trip-templates.module';
 import { UploadModule } from './upload/upload.module';
 import { TelegramModule } from './common/telegram/telegram.module';
-import { InternalModule } from './internal/internal.module';
+
 
 import { LocationsModule } from './locations/locations.module';
 import { RatingsModule } from './ratings/ratings.module';
@@ -63,13 +63,7 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
         S3_PUBLIC_URL: Joi.string().optional(),
         S3_FORCE_PATH_STYLE: Joi.string().valid('true', 'false').optional(),
 
-        // Mail / SMTP
-        SMTP_HOST: Joi.string().optional(),
-        SMTP_PORT: Joi.number().optional(),
-        SMTP_USER: Joi.string().email().optional(),
-        SMTP_PASS: Joi.string().optional(),
-        SMTP_SENDER: Joi.string().email().optional(),
-        SMTP_SSL: Joi.string().valid('true', 'false').optional(),
+
 
         // Telegram
         TELEGRAM_BOT_TOKEN: Joi.string().optional(),
@@ -93,15 +87,7 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
         // Gemini API
         GEMINI_API_KEY: Joi.string().optional(),
 
-        // Cloud Tasks
-        USE_CLOUD_TASKS: Joi.string().valid('true', 'false').optional(),
-        GCP_PROJECT_ID: Joi.string().optional(),
-        GCP_LOCATION: Joi.string().optional(),
-        CLOUD_TASKS_SERVICE_URL: Joi.string().uri().optional(),
-        QUEUE_TRIP: Joi.string().optional(),
-        QUEUE_EXPENSE: Joi.string().optional(),
-        QUEUE_PAYMENT: Joi.string().optional(),
-        QUEUE_SYSTEM: Joi.string().optional(),
+
       }),
     }),
     LoggerModule.forRootAsync({
@@ -156,7 +142,7 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
     ExpensesModule,
     UsersModule,
     AuthModule,
-    EmailModule,
+
     NotificationModule,
     DevicesModule,
     ProvincesModule,
@@ -164,7 +150,6 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
     UploadModule,
     TelegramModule,
     I18nHelperModule,
-    InternalModule,
 
     LocationsModule,
     RatingsModule,

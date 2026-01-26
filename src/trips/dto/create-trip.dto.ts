@@ -31,4 +31,15 @@ export class CreateTripDto {
   @IsOptional()
   @IsUUID()
   templateId?: string;
+
+  @IsOptional()
+  isNotificationOnCreate?: boolean;
+
+  @IsOptional()
+  @IsString()
+  avatar?: string;
+
+  @IsOptional()
+  @IsUUID()
+  id?: string;
 }

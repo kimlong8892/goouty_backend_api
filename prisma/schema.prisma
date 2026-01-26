@@ -35,6 +35,15 @@ model User {
   tripMembers          TripMember[]
   wishlistTemplates    TripTemplate[] @relation("UserWishlist")
   ratings              Rating[]
+  createdTrips        Trip[]               @relation("TripCreatedBy")
+  updatedTrips        Trip[]               @relation("TripLastUpdatedBy")
+  createdDays         Day[]                @relation("DayCreatedBy")
+  updatedDays         Day[]                @relation("DayLastUpdatedBy")
+  createdActivities   Activity[]           @relation("ActivityCreatedBy")
+  updatedActivities   Activity[]           @relation("ActivityLastUpdatedBy")
+  createdExpenses     Expense[]            @relation("ExpenseCreatedBy")
+  updatedExpenses     Expense[]            @relation("ExpenseLastUpdatedBy")
+  pendingTrips        PendingTrip[]        @relation("UserPendingTrips")
 }
 
 model Trip {
@@ -51,6 +60,7 @@ model Trip {
   provinceId         String?             @db.Uuid
   templateId         String?             @db.Uuid
   avatar             String?
+  isNotificationOnCreate Boolean           @default(true)
   days               Day[]
   expenses           Expense[]
   paymentSettlements PaymentSettlement[]
@@ -58,6 +68,11 @@ model Trip {
   template           TripTemplate?       @relation(fields: [templateId], references: [id])
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   members            TripMember[]
+  createdById        String?             @db.Uuid
+  lastUpdatedById    String?             @db.Uuid
+  createdBy          User?               @relation("TripCreatedBy", fields: [createdById], references: [id])
+  lastUpdatedBy      User?               @relation("TripLastUpdatedBy", fields: [lastUpdatedById], references: [id])
+  pendingTrips       PendingTrip[]       @relation("PendingTrips")
 
   @@index([provinceId])
   @@index([templateId])
@@ -74,6 +89,13 @@ model Day {
   createdAt   DateTime @db.Timestamptz(3)   @default(now())
   updatedAt   DateTime @db.Timestamptz(3)   @updatedAt @default(now())
   sortOrder   Int        @default(0)
+  isNotificationOnCreate Boolean @default(true)
+  createdById     String?             @db.Uuid
+  lastUpdatedById String?             @db.Uuid
+  templateId      String?             @db.Uuid
+  template        TripTemplateDay?    @relation(fields: [templateId], references: [id])
+  createdBy       User?               @relation("DayCreatedBy", fields: [createdById], references: [id])
+  lastUpdatedBy   User?               @relation("DayLastUpdatedBy", fields: [lastUpdatedById], references: [id])
 }
 
 model TripMember {
@@ -104,11 +126,18 @@ model Activity {
   notes       String?
   important   Boolean   @default(false)
   sortOrder   Int       @default(0)
+  isNotificationOnCreate Boolean @default(true)
   dayId       String    @db.Uuid
   day         Day       @relation(fields: [dayId], references: [id], onDelete: Cascade)
   avatar      String?
   createdAt   DateTime @db.Timestamptz(3)  @default(now())
   updatedAt   DateTime @db.Timestamptz(3)  @updatedAt @default(now())
+  createdById     String?             @db.Uuid
+  lastUpdatedById String?             @db.Uuid
+  templateId      String?             @db.Uuid
+  template        TripTemplateActivity? @relation(fields: [templateId], references: [id])
+  createdBy       User?               @relation("ActivityCreatedBy", fields: [createdById], references: [id])
+  lastUpdatedBy   User?               @relation("ActivityLastUpdatedBy", fields: [lastUpdatedById], references: [id])
 }
 
 model Expense {
@@ -125,6 +154,10 @@ model Expense {
   payer        User                 @relation("ExpensePayer", fields: [payerId], references: [id], onDelete: Cascade)
   trip         Trip                 @relation(fields: [tripId], references: [id], onDelete: Cascade)
   participants ExpenseParticipant[]
+  createdById     String?             @db.Uuid
+  lastUpdatedById String?             @db.Uuid
+  createdBy       User?               @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+  lastUpdatedBy   User?               @relation("ExpenseLastUpdatedBy", fields: [lastUpdatedById], references: [id])
 }
 
 model ExpenseParticipant {
@@ -274,7 +307,7 @@ model TripTemplateDay {
   tripTemplate   TripTemplate           @relation(fields: [tripTemplateId], references: [id], onDelete: Cascade)
   createdAt      DateTime @db.Timestamptz(3)               @default(now())
   updatedAt      DateTime @db.Timestamptz(3)               @updatedAt @default(now())
-
+  days           Day[]
   @@index([tripTemplateId])
 }
 
@@ -292,7 +325,7 @@ model TripTemplateActivity {
   avatar        String?
   createdAt     DateTime @db.Timestamptz(3)        @default(now())
   updatedAt     DateTime @db.Timestamptz(3)        @updatedAt @default(now())
-
+  activities    Activity[]
   @@index([dayId])
 }
 
@@ -379,4 +412,28 @@ model UserAiUsage {
 
   @@unique([userId, date])
   @@index([userId, date])
+}
+
+enum PendingTripStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model PendingTrip {
+  id        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  url       String
+  userId    String            @db.Uuid
+  tripId    String?           @db.Uuid
+  status    PendingTripStatus @default(PENDING)
+  error     String?           @db.Text
+  createdAt DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime          @updatedAt @db.Timestamptz(3)
+  user      User              @relation("UserPendingTrips", fields: [userId], references: [id], onDelete: Cascade)
+  trip      Trip?             @relation("PendingTrips", fields: [tripId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([tripId])
 }

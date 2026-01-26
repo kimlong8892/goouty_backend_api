@@ -11,6 +11,7 @@ import { GenerateShareLinkDto } from './dto/generate-share-link.dto';
 import { JoinTripDto } from './dto/join-trip.dto';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { UploadTripAvatarDto, UploadTripAvatarResponseDto } from './dto/upload-trip-avatar.dto';
+import { CreatePendingTripDto } from './dto/create-pending-trip.dto';
 import { DaysService } from "../days/days.service";
 import { DayResponseDto } from "../days/dto/day-response.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -54,6 +55,27 @@ export class TripsController {
     @Request() req: any
   ) {
     return this.tripsService.createTripFromTemplate(templateId, req.user.userId, body?.title);
+  }
+
+  @Post('create-pending')
+  @ApiOperation({ summary: 'Register a URL to create a trip later' })
+  @ApiResponse({ status: 201, description: 'URL registered successfully' })
+  createPending(@Body() createPendingTripDto: CreatePendingTripDto, @Request() req: any) {
+    return this.tripsService.createPendingTrip(createPendingTripDto, req.user.userId);
+  }
+
+  @Get('pending')
+  @ApiOperation({ summary: 'Get all pending trips for authenticated user' })
+  @ApiResponse({ status: 200, description: 'Return all pending trips for authenticated user' })
+  findAllPending(
+    @Request() req: any,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string
+  ) {
+    return this.tripsService.findAllPending(req.user.userId, {
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 10
+    });
   }
 
   @Get()

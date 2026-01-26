@@ -17,7 +17,30 @@ export class DaysRepository {
     orderBy?: Prisma.DayOrderByWithRelationInput | Prisma.DayOrderByWithRelationInput[];
   }): Promise<Day[]> {
     const { skip, take, where, orderBy } = params;
-    return this.prisma.day.findMany({ skip, take, where, orderBy });
+    return this.prisma.day.findMany({
+      skip,
+      take,
+      where,
+      orderBy,
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        },
+        lastUpdatedBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        }
+      }
+    });
   }
 
   async findOne(id: string): Promise<Day | null> {
@@ -26,6 +49,22 @@ export class DaysRepository {
       include: {
         activities: {
           orderBy: { sortOrder: 'asc' }
+        },
+        createdBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
+        },
+        lastUpdatedBy: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            profilePicture: true
+          }
         }
       }
     });

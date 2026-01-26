@@ -5,14 +5,15 @@ import { UpdateTripDto } from './dto/update-trip.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { JoinTripDto } from './dto/join-trip.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import { randomBytes } from 'crypto';
-import { EmailService } from '../email/email.service';
+import { randomBytes, randomUUID } from 'crypto';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { EnhancedNotificationService } from '../notifications/enhanced-notification.service';
 import { UploadService } from '../upload/upload.service';
 import { I18nService } from 'nestjs-i18n';
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
+import { CreatePendingTripDto } from './dto/create-pending-trip.dto';
+import { formatInTimeZone } from 'date-fns-tz';
 
 @Injectable()
 export class TripsService {
@@ -21,7 +22,6 @@ export class TripsService {
   constructor(
     private readonly tripsRepository: TripsRepository,
     private readonly prisma: PrismaService,
-    private readonly emailService: EmailService,
     private readonly notificationService: EnhancedNotificationService,
     private readonly uploadService: UploadService,
     private readonly i18n: I18nService,
@@ -55,11 +55,16 @@ export class TripsService {
     const trip = await this.prisma.$transaction(async (prisma) => {
       // Create the trip
       const tripData: any = {
+        id: createTripDto.id,
         title: createTripDto.title,
         description: createTripDto.description,
         startDate: startDate,
         endDate: endDate,
-        user: { connect: { id: userId } }
+        user: { connect: { id: userId } },
+        createdBy: { connect: { id: userId } },
+        lastUpdatedBy: { connect: { id: userId } },
+        isNotificationOnCreate: createTripDto.isNotificationOnCreate ?? true,
+        avatar: createTripDto.avatar
       };
 
       // Only add province relation if provinceId is provided
@@ -87,19 +92,7 @@ export class TripsService {
       return trip;
     });
 
-    // Send notification to all users about trip creation
-    try {
-      console.log('🚀 Sending trip creation notification for trip:', trip.id);
-      await this.notificationService.sendTripCreatedNotification(
-        trip.id,
-        trip.title,
-        userId
-      );
-      console.log('✅ Trip creation notification sent successfully');
-    } catch (error) {
-      console.error('❌ Failed to send trip creation notification:', error);
-      // Don't throw error here to avoid breaking trip creation
-    }
+
 
     return trip;
   }
@@ -283,34 +276,10 @@ export class TripsService {
       data.endDate = null;
     }
 
+    data.lastUpdatedById = requestUserId;
     const updatedTrip = await this.tripsRepository.update(id, data);
 
-    // Send notification about trip update
-    try {
-      // Fetch full trip details to get province name and formatted dates
-      const fullTrip = await this.prisma.trip.findUnique({
-        where: { id },
-        include: { province: true }
-      });
 
-      // Fetch updater user info
-      const updater = await this.prisma.user.findUnique({
-        where: { id: requestUserId },
-        select: { fullName: true, email: true }
-      });
-
-      await this.notificationService.sendTripUpdatedNotification(
-        id,
-        updatedTrip.title,
-        updater?.fullName || updater?.email || 'Một thành viên',
-        fullTrip?.province?.name || '',
-        fullTrip?.startDate ? fullTrip.startDate.toLocaleDateString('vi-VN') : '',
-        fullTrip?.endDate ? fullTrip.endDate.toLocaleDateString('vi-VN') : ''
-      );
-    } catch (error) {
-      console.error('Failed to send trip update notification:', error);
-      // Don't throw error here to avoid breaking trip update
-    }
 
     return updatedTrip;
   }
@@ -326,17 +295,7 @@ export class TripsService {
       );
     }
 
-    // Send notification about trip deletion before deleting
-    try {
-      await this.notificationService.sendTripDeletedNotification(
-        id,
-        trip.title,
-        requestUserId
-      );
-    } catch (error) {
-      console.error('Failed to send trip deletion notification:', error);
-      // Don't throw error here to avoid breaking trip deletion
-    }
+
 
     return this.tripsRepository.remove(id);
   }
@@ -476,30 +435,7 @@ export class TripsService {
         select: { fullName: true, email: true },
       });
 
-      // Gửi notification và email qua queue
-      const frontendUrl = this.configService.get<string>('APP_URL');
-      if (!frontendUrl) {
-        this.logger.error('APP_URL is not set in environment variables');
-      }
 
-      await this.notificationService.sendTripInvitationNotification(
-        tripId,
-        trip.title,
-        userToAdd?.id || '',
-        inviter?.fullName || inviter?.email || 'Một người bạn',
-        (trip as any).province?.name || 'Chưa xác định',
-        trip.startDate ? trip.startDate.toLocaleDateString('vi-VN') : '',
-        trip.endDate ? trip.endDate.toLocaleDateString('vi-VN') : '',
-        {
-          skipEmail: false,
-          data: {
-            userEmail: normalizedEmail,
-            userName: userToAdd?.fullName || addMemberDto.email.split('@')[0],
-            inviteeName: userToAdd?.fullName || addMemberDto.email.split('@')[0],
-            acceptUrl: `${frontendUrl}/invite?token=${inviteToken}`
-          }
-        }
-      );
 
       // Return với user info hoặc email
       return {
@@ -628,30 +564,7 @@ export class TripsService {
       throw new BadRequestException('No email found for this invitation');
     }
 
-    // Gửi notification và email qua queue
-    const frontendUrl = this.configService.get<string>('APP_URL');
-    if (!frontendUrl) {
-      this.logger.error('APP_URL is not set in environment variables');
-    }
 
-    await this.notificationService.sendTripInvitationNotification(
-      tripId,
-      trip.title,
-      member.userId || '',
-      inviter?.fullName || inviter?.email || 'Một người bạn',
-      (trip as any).province?.name || 'Chưa xác định',
-      trip.startDate ? trip.startDate.toLocaleDateString('vi-VN') : '',
-      trip.endDate ? trip.endDate.toLocaleDateString('vi-VN') : '',
-      {
-        skipEmail: false,
-        data: {
-          userEmail: emailToSend,
-          userName: member.user?.fullName || emailToSend.split('@')[0],
-          inviteeName: member.user?.fullName || emailToSend.split('@')[0],
-          acceptUrl: `${frontendUrl}/invite?token=${newInviteToken}`
-        }
-      }
-    );
 
     return updatedMember;
   }
@@ -1011,20 +924,7 @@ export class TripsService {
           },
         });
 
-        // Send notification to the newly registered user
-        const trip = (invitation as any).trip as { id: string; title: string } | undefined;
-        if (trip) {
-          void this.notificationService.sendTripInvitationNotification(
-            invitation.tripId,
-            trip.title,
-            userId,
-            undefined,
-            undefined, // location
-            undefined, // startDate
-            undefined, // endDate
-            { skipEmail: true } // Email đã được gửi trước đó
-          );
-        }
+
       } catch (error) {
         // Handle potential unique constraint errors if findUnique didn't catch it
         console.error(`Error linking invitation ${invitation.id}:`, error);
@@ -1218,19 +1118,11 @@ export class TripsService {
       throw new NotFoundException('Trip template not found or not accessible');
     }
 
-    // Create trip from template
-    const tripData: CreateTripDto = {
-      title: tripTitle || template.title,
-      description: template.description,
-      provinceId: template.provinceId,
-      templateId: templateId, // Ghi nhận template ID
-      startDate: undefined // Let user set date later
-    };
-
-    // Create the trip
-    const trip = await this.create(tripData, userId);
+    // Pre-generate trip ID to use in avatar path
+    const tripId = randomUUID();
 
     // Copy avatar from template if exists
+    let avatar = undefined;
     if (template.avatar) {
       try {
         const url = new URL(template.avatar);
@@ -1249,27 +1141,35 @@ export class TripsService {
           // Generate a unique filename to avoid collisions
           const extension = path.extname(sourceKey) || '.jpg';
           const fileName = `avatar-${Date.now()}${extension}`;
-          const targetKey = `trip-avatars/${trip.id}/${fileName}`;
+          const targetKey = `trip-avatars/${tripId}/${fileName}`;
 
           const copyResult = await this.uploadService.copyFile(sourceKey, targetKey);
-
-          // Update trip with new avatar URL
-          await this.prisma.trip.update({
-            where: { id: trip.id },
-            data: { avatar: copyResult.url }
-          });
+          avatar = copyResult.url;
         } else {
           // If it's an external URL, just copy the URL
-          await this.prisma.trip.update({
-            where: { id: trip.id },
-            data: { avatar: template.avatar }
-          });
+          avatar = template.avatar;
         }
       } catch (error) {
         this.logger.error(`Failed to handle template avatar: ${error.message}`);
-        // Don't throw error to avoid breaking trip creation
+        // Fallback to template avatar even if copy fails
+        avatar = template.avatar;
       }
     }
+
+    // Create trip from template
+    const tripData: CreateTripDto = {
+      id: tripId,
+      title: tripTitle || template.title,
+      description: template.description,
+      provinceId: template.provinceId,
+      templateId: templateId, // Ghi nhận template ID
+      startDate: undefined, // Let user set date later
+      isNotificationOnCreate: false,
+      avatar: avatar
+    };
+
+    // Create the trip
+    const trip = await this.create(tripData, userId);
 
     // Create days and activities from template
     if (template.days && template.days.length > 0) {
@@ -1279,7 +1179,11 @@ export class TripsService {
           data: {
             title: templateDay.title,
             description: templateDay.description,
-            trip: { connect: { id: trip.id } }
+            trip: { connect: { id: trip.id } },
+            template: { connect: { id: templateDay.id } },
+            createdBy: { connect: { id: userId } },
+            lastUpdatedBy: { connect: { id: userId } },
+            isNotificationOnCreate: false
           }
         });
 
@@ -1313,7 +1217,11 @@ export class TripsService {
                 important: templateActivity.important,
                 sortOrder: templateActivity.activityOrder,
                 avatar: templateActivity.avatar,
-                day: { connect: { id: day.id } }
+                day: { connect: { id: day.id } },
+                template: { connect: { id: templateActivity.id } },
+                createdBy: { connect: { id: userId } },
+                lastUpdatedBy: { connect: { id: userId } },
+                isNotificationOnCreate: false
               }
             });
           }
@@ -1323,5 +1231,60 @@ export class TripsService {
 
     // Return the created trip with full details
     return this.findOne(trip.id);
+  }
+
+  async findAllPending(userId: string, options?: { page?: number; limit?: number }) {
+    const { page = 1, limit = 10 } = options || {};
+    const skip = (page - 1) * limit;
+
+    const [pendingTrips, total] = await Promise.all([
+      this.prisma.pendingTrip.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.pendingTrip.count({
+        where: { userId },
+      }),
+    ]);
+
+    const formattedTrips = pendingTrips.map(trip => ({
+      ...trip,
+      createdAt: trip.createdAt,
+      updatedAt: trip.updatedAt,
+    }));
+
+    return {
+      data: formattedTrips,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async createPendingTrip(createPendingTripDto: CreatePendingTripDto, userId: string) {
+    // Validate user exists
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true }
+    });
+
+    if (!user) {
+      this.logger.error(`User not found: ${userId}`);
+      throw new NotFoundException('User not found');
+    }
+
+    this.logger.log(`Creating pending trip for user ${user.email} (${userId})`);
+
+    return this.prisma.pendingTrip.create({
+      data: {
+        url: createPendingTripDto.url,
+        userId: userId,
+      },
+    });
   }
 }

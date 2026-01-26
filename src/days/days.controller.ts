@@ -1,14 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
 import { DaysService } from './days.service';
 import { CreateDayDto } from './dto/create-day.dto';
 import { UpdateDayDto } from './dto/update-day.dto';
 import { ReorderDaysDto } from './dto/reorder-days.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { TripResponseDto } from "../trips/dto/trip-response.dto";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { DayResponseDto } from './dto/day-response.dto';
 import { ActivitiesService } from "../activities/activities.service";
 
 @ApiTags('days')
 @Controller('days')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class DaysController {
   constructor(
     private readonly daysService: DaysService,
@@ -18,8 +22,8 @@ export class DaysController {
   @Post()
   @ApiOperation({ summary: 'Create a new day' })
   @ApiResponse({ status: 201, description: 'Day created successfully', type: DayResponseDto })
-  create(@Body() createDayDto: CreateDayDto) {
-    return this.daysService.create(createDayDto);
+  create(@Body() createDayDto: CreateDayDto, @Request() req: any) {
+    return this.daysService.create(createDayDto, req.user.userId);
   }
 
   @Patch('reorder')
@@ -53,8 +57,8 @@ export class DaysController {
   @ApiResponse({ status: 200, description: 'Day updated successfully', type: DayResponseDto })
   @ApiResponse({ status: 404, description: 'Day not found' })
   @ApiParam({ name: 'id', description: 'Day ID' })
-  update(@Param('id') id: string, @Body() updateDayDto: UpdateDayDto) {
-    return this.daysService.update(id, updateDayDto);
+  update(@Param('id') id: string, @Body() updateDayDto: UpdateDayDto, @Request() req: any) {
+    return this.daysService.update(id, updateDayDto, req.user.userId);
   }
 
   @Delete(':id')
