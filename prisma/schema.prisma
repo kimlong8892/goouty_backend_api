@@ -293,6 +293,7 @@ model TripTemplate {
   days        TripTemplateDay[]
   trips       Trip[]
   favoritedBy User[]            @relation("UserWishlist")
+  pendingTripTemplates PendingTripTemplate[] @relation("PendingTripTemplates")
 
   @@index([provinceId])
 }
@@ -436,4 +437,18 @@ model PendingTrip {
   @@index([userId])
   @@index([status])
   @@index([tripId])
+}
+
+model PendingTripTemplate {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  url            String            @unique
+  tripTemplateId String?           @db.Uuid
+  status         PendingTripStatus @default(PENDING)
+  error          String?           @db.Text
+  createdAt      DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime          @updatedAt @db.Timestamptz(3)
+  tripTemplate   TripTemplate?     @relation("PendingTripTemplates", fields: [tripTemplateId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([tripTemplateId])
 }
