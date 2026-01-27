@@ -44,7 +44,6 @@ model User {
   createdExpenses     Expense[]            @relation("ExpenseCreatedBy")
   updatedExpenses     Expense[]            @relation("ExpenseLastUpdatedBy")
   pendingTrips        PendingTrip[]        @relation("UserPendingTrips")
-  pendingTripTemplates PendingTripTemplate[] @relation("UserPendingTripTemplates")
 }
 
 model Trip {
@@ -443,16 +442,13 @@ model PendingTrip {
 model PendingTripTemplate {
   id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   url            String            @unique
-  userId         String            @db.Uuid
   tripTemplateId String?           @db.Uuid
   status         PendingTripStatus @default(PENDING)
   error          String?           @db.Text
   createdAt      DateTime          @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime          @updatedAt @db.Timestamptz(3)
-  user           User              @relation("UserPendingTripTemplates", fields: [userId], references: [id], onDelete: Cascade)
   tripTemplate   TripTemplate?     @relation("PendingTripTemplates", fields: [tripTemplateId], references: [id], onDelete: SetNull)
 
-  @@index([userId])
   @@index([status])
   @@index([tripTemplateId])
 }
