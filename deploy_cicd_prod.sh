@@ -14,7 +14,7 @@ docker compose \
   -p goouty-api-prod \
   -f docker-compose.prod.yml \
   --env-file .env.prod \
-  up -d --build app db dozzle
+  up -d --build app
 
 echo "Checking Cloudflare Tunnel status..."
 if [ "$(docker ps -q -f name=cloudflared_prod)" ]; then
