@@ -39,10 +39,11 @@ jobs:
             User ${{ secrets.SSH_USER }}
             ProxyCommand /usr/bin/cloudflared access ssh --hostname %h
             StrictHostKeyChecking no
-            ServerAliveInterval 10
-            ServerAliveCountMax 1000
+            ServerAliveInterval 30
+            ServerAliveCountMax 120
             ConnectTimeout 120
             TCPKeepAlive yes
+            IPQoS throughput
           EOF
 
       - name: Generate .env.dev from JSON and Secrets
