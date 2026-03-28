@@ -18,9 +18,6 @@ services:
       - node_modules_dev:/usr/src/app/node_modules
     command: npm run start:dev
     restart: always
-    depends_on:
-      db:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api"]
       interval: 30s
@@ -28,29 +25,5 @@ services:
       retries: 3
       start_period: 40s
 
-  db:
-    image: postgres:15
-    container_name: db_dev
-    restart: unless-stopped
-    ports:
-      - "5433:5432"
-    environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: Admin123
-      POSTGRES_DB: goouty
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d goouty"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
 volumes:
-  postgres_data:
-  pgadmin_data:
   node_modules_dev:
-
-networks:
-  default:
-    name: goouty-network
