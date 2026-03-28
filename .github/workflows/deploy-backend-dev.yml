@@ -39,10 +39,13 @@ jobs:
             User ${{ secrets.SSH_USER }}
             ProxyCommand /usr/bin/cloudflared access ssh --hostname %h
             StrictHostKeyChecking no
-            ServerAliveInterval 30
-            ServerAliveCountMax 120
+            ServerAliveInterval 15
+            ServerAliveCountMax 240
             ConnectTimeout 120
             TCPKeepAlive yes
+            ControlMaster auto
+            ControlPath ~/.ssh/ansible-%r@%h:%p
+            ControlPersist 30m
             IPQoS throughput
           EOF
 
@@ -92,8 +95,12 @@ jobs:
 
       - name: Deploy with Docker Compose
         run: |
-          sshpass -p "${{ secrets.SSH_PASS }}" ssh dev-server "cd ${{ secrets.PROJECT_PATH }} && \
+          # Use non-interactive ssh (-n) to prevent input issues
+          # Increase timeout and handle potential disconnects
+          sshpass -p "${{ secrets.SSH_PASS }}" ssh -n dev-server "cd ${{ secrets.PROJECT_PATH }} && \
             chmod +x deploy_cicd_dev.sh && \
+            STDOUT_LOG=\$(mktemp) && \
+            echo 'Building... logs will be streamed' && \
             ./deploy_cicd_dev.sh && \
             docker image prune -f"
 
