@@ -45,7 +45,6 @@ jobs:
             ConnectTimeout 120
             TCPKeepAlive yes
             IPQoS throughput
-            BatchMode yes
           EOF
 
       - name: Generate .env.prod from JSON and Secrets
