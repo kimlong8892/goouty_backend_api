@@ -9,12 +9,12 @@ docker compose \
   --env-file .env.prod \
   run --rm app sh -c "npm install && npx prisma generate && npm run build"
 
-echo "Updating Backend Prod container..."
+echo "Updating Backend Prod containers (excluding cloudflared to avoid SSH disconnect)..."
 docker compose \
   -p goouty-api-prod \
   -f docker-compose.prod.yml \
   --env-file .env.prod \
-  up -d --build
+  up -d --build app db dozzle
 
 echo "Checking Cloudflare Tunnel status..."
 if [ "$(docker ps -q -f name=cloudflared_prod)" ]; then

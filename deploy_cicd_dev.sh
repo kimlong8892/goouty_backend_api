@@ -9,12 +9,12 @@ docker compose \
   --env-file .env.dev \
   run --rm app sh -c "npm install && npx prisma generate"
 
-echo "Updating Backend Dev container..."
+echo "Updating Backend Dev containers (excluding cloudflared to avoid SSH disconnect)..."
 docker compose \
   -p goouty-api-dev \
   -f docker-compose.dev.yml \
   --env-file .env.dev \
-  up -d --build
+  up -d --build app db dozzle
 
 echo "Checking Cloudflare Tunnel status..."
 if [ "$(docker ps -q -f name=cloudflared_dev)" ]; then
