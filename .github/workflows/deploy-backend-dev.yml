@@ -1,0 +1,102 @@
+name: Deploy Backend Dev VPS
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: DEV
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass jq
+
+      - name: Install cloudflared
+        run: |
+          sudo mkdir -p /usr/share/keyrings
+          curl -L https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+          echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
+          sudo apt-get update
+          sudo apt-get install -y cloudflared
+
+      - name: Setup SSH Config
+        run: |
+          mkdir -p ~/.ssh
+          
+          # Setup SSH config for Cloudflare Tunnel
+          cat <<EOF >> ~/.ssh/config
+          Host dev-server
+            HostName ${{ secrets.SSH_HOST }}
+            User ${{ secrets.SSH_USER }}
+            ProxyCommand /usr/bin/cloudflared access ssh --hostname %h
+            StrictHostKeyChecking no
+            ServerAliveInterval 10
+            ServerAliveCountMax 1000
+            ConnectTimeout 120
+            TCPKeepAlive yes
+          EOF
+
+      - name: Generate .env.dev from JSON and Secrets
+        id: env-vars
+        env:
+          ALL_SECRETS: ${{ toJson(secrets) }}
+          ALL_VARS: ${{ toJson(vars) }}
+        run: |
+          echo "Generating environment variables for .env.dev..."
+          
+          # 1. Load public variables from env.json
+          if [ -f .github/env-config/dev/env.json ]; then
+            jq -r 'to_entries | .[] | "\(.key)=\(.value)"' .github/env-config/dev/env.json > .env.dev
+          else
+            touch .env.dev
+          fi
+          
+          # 2. Load secrets based on secrets.json mapping (if exists)
+          if [ -f .github/env-config/dev/secrets.json ]; then
+            jq -n --argjson secrets "$ALL_SECRETS" --argjson vars "$ALL_VARS" --argjson mapping "$(cat .github/env-config/dev/secrets.json)" '
+              $mapping | to_entries | .[] | 
+              .key as $k | .value as $v |
+              ($secrets[$v] // $vars[$v]) as $val |
+              if $val != null then "\($k)=\($val)" else empty end
+            ' -r >> .env.dev
+          fi
+
+          echo "Preview of generated keys (values hidden):"
+          cut -d= -f1 .env.dev
+
+      - name: Copy files to server (rsync)
+        run: |
+          # Create directory if not exists
+          sshpass -p "${{ secrets.SSH_PASS }}" ssh dev-server "mkdir -p ${{ secrets.PROJECT_PATH }}"
+          
+          # Sync files (including generated .env.dev)
+          # Using high timeout and verbose output to track progress
+          sshpass -p "${{ secrets.SSH_PASS }}" rsync -avz --timeout=1000 \
+            --include '.env.dev' \
+            --exclude 'node_modules' \
+            --exclude '.git' \
+            --exclude 'dist' \
+            --exclude '.next' \
+            --exclude '.env*' \
+            -e ssh ./ dev-server:${{ secrets.PROJECT_PATH }}
+
+      - name: Deploy with Docker Compose
+        run: |
+          sshpass -p "${{ secrets.SSH_PASS }}" ssh dev-server "cd ${{ secrets.PROJECT_PATH }} && \
+            chmod +x deploy_cicd_dev.sh && \
+            ./deploy_cicd_dev.sh && \
+            docker image prune -f"
+
+      - name: Check Container Status
+        run: |
+          sshpass -p "${{ secrets.SSH_PASS }}" ssh dev-server "cd ${{ secrets.PROJECT_PATH }} && \
+            docker compose -f docker-compose.dev.yml ps"
